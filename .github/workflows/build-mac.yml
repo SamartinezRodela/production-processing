@@ -70,7 +70,7 @@ jobs:
 
       - name: Install Electron dependencies
         working-directory: nest-electron
-        run: npm ci
+        run: npm install
 
       - name: Build Electron
         working-directory: nest-electron
