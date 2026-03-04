@@ -43,6 +43,15 @@ jobs:
           cd ..
           echo "✅ Python embebido listo"
 
+      - name: Verify Python embedded exists
+        run: |
+          if [ -d "nest-files-py-embedded-mac" ]; then
+            echo "✅ Python embebido para Mac encontrado"
+            ls -la nest-files-py-embedded-mac/
+          else
+            echo "⚠️ Python embebido para Mac no encontrado"
+          fi
+
       - name: Install Frontend dependencies
         working-directory: nest-ui-fe
         run: npm ci
@@ -69,7 +78,7 @@ jobs:
 
       - name: Create Mac Installer (DMG)
         working-directory: nest-electron
-        run: npm run dist:mac
+        run: npm run dist:mac -- --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

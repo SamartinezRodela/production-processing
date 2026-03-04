@@ -4,6 +4,10 @@
   "description": "Production Processing Application",
   "author": "Atlthic Sewing",
   "main": "dist/main.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SamartinezRodela/production-processing.git"
+  },
   "scripts": {
     "build": "tsc",
     "watch": "tsc --watch",
