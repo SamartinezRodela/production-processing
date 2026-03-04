@@ -76,19 +76,47 @@ jobs:
         working-directory: nest-electron
         run: npm run build
 
-      - name: Create Mac Installer (DMG)
+      - name: Create Mac App with electron-packager
         working-directory: nest-electron
-        run: npm run dist:mac -- --publish never
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_IDENTITY_AUTO_DISCOVERY: false
+        run: |
+          echo "📦 Usando electron-packager (sin firma)..."
+          npm run dist:mac-simple
+          echo "✅ App creada exitosamente"
+
+      - name: Copy resources to Mac App
+        run: |
+          echo "📁 Copiando recursos..."
+
+          # Encontrar la carpeta de la app
+          APP_PATH=$(find nest-electron/release -name "Production Processing-darwin-*" -type d | head -n 1)
+          echo "App path: $APP_PATH"
+
+          # Copiar frontend
+          cp -r nest-ui-fe/dist/nest-ui-fe/browser "$APP_PATH/Production Processing.app/Contents/Resources/frontend"
+
+          # Copiar backend
+          mkdir -p "$APP_PATH/Production Processing.app/Contents/Resources/backend"
+          cp -r nest-ui-be/dist "$APP_PATH/Production Processing.app/Contents/Resources/backend/"
+          cp -r nest-ui-be/node_modules "$APP_PATH/Production Processing.app/Contents/Resources/backend/"
+          cp nest-ui-be/package.json "$APP_PATH/Production Processing.app/Contents/Resources/backend/"
+
+          # Copiar Python embebido
+          if [ -d "nest-files-py-embedded-mac" ]; then
+            cp -r nest-files-py-embedded-mac "$APP_PATH/Production Processing.app/Contents/Resources/python"
+            echo "✅ Python embebido copiado"
+          else
+            echo "⚠️ Python embebido no encontrado"
+          fi
+
+          echo "✅ Recursos copiados"
 
       - name: Compress Mac App
         run: |
-          cd nest-electron/release/mac-arm64
-          zip -r "Production-Processing-Mac.zip" "Production Processing.app"
-          mv "Production-Processing-Mac.zip" ../
-          cd ../../..
+          APP_PATH=$(find nest-electron/release -name "Production Processing-darwin-*" -type d | head -n 1)
+          cd "$(dirname "$APP_PATH")"
+          zip -r "Production-Processing-Mac.zip" "$(basename "$APP_PATH")"
+          mv "Production-Processing-Mac.zip" ../../
+          cd ../..
           echo "✅ App comprimida exitosamente"
 
       - name: Upload Mac App (ZIP)
