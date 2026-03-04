@@ -83,36 +83,32 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
-      - name: Upload Mac Installer (ZIP)
-        uses: actions/upload-artifact@v4
-        with:
-          name: Production-Processing-Mac-ZIP
-          path: nest-electron/release/*.zip
-          retention-days: 30
-
-      - name: Upload Mac Installer (DMG)
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: Production-Processing-Mac-DMG
-          path: nest-electron/release/*.dmg
-          retention-days: 30
-
-      - name: Get DMG filename
-        id: dmg-name
+      - name: Compress Mac App
         run: |
-          DMG_FILE=$(ls nest-electron/release/*.dmg | head -n 1)
-          echo "dmg_path=$DMG_FILE" >> $GITHUB_OUTPUT
-          echo "dmg_name=$(basename $DMG_FILE)" >> $GITHUB_OUTPUT
+          cd nest-electron/release/mac-arm64
+          zip -r "Production-Processing-Mac.zip" "Production Processing.app"
+          mv "Production-Processing-Mac.zip" ../
+          cd ../../..
+          echo "✅ App comprimida exitosamente"
+
+      - name: Upload Mac App (ZIP)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Production-Processing-Mac-App
+          path: nest-electron/release/Production-Processing-Mac.zip
+          retention-days: 30
 
       - name: Display Download Instructions
         run: |
           echo "✅ Compilación exitosa!"
-          echo "📦 Instaladores creados"
+          echo "📦 Aplicación Mac creada"
           echo ""
           echo "Para descargar:"
           echo "1. Ve a la pestaña 'Actions' en GitHub"
           echo "2. Selecciona este workflow"
-          echo "3. Descarga 'Production-Processing-Mac-ZIP' o 'Production-Processing-Mac-DMG'"
+          echo "3. Descarga 'Production-Processing-Mac-App'"
           echo ""
-          echo "Nota: Si el DMG falla, usa el ZIP"
+          echo "Para instalar en Mac:"
+          echo "1. Descomprime el ZIP"
+          echo "2. Arrastra 'Production Processing.app' a Applications"
+          echo "3. Click derecho → Abrir (primera vez)"
