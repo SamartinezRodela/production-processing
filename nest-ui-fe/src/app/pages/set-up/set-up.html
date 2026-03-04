@@ -1,0 +1,442 @@
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-0 main-content transition-all duration-300">
+  <!-- Window Header -->
+  <div
+    class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-3 flex items-center justify-between"
+  >
+    <h1 class="text-lg font-semibold text-gray-800 dark:text-gray-100">Settings</h1>
+    <div class="flex items-center gap-2">
+      <app-button
+        [variant]="'ghost'"
+        [icon]="'arrow-left'"
+        [iconPosition]="'only'"
+        [iconSize]="20"
+        (clicked)="goBack()"
+        [customClass]="'p-2'"
+      />
+
+      <app-button
+        [variant]="'ghost'"
+        [icon]="'log-out'"
+        [iconPosition]="'only'"
+        [iconSize]="20"
+        (clicked)="logout()"
+        [customClass]="'p-2 hover:bg-gray-100 rounded-lg'"
+      />
+    </div>
+  </div>
+
+  <div
+    class="p-8"
+    appKeyboardShortcuts
+    [isActive]="!isModalOpen() && !isConfirmModalOpen()"
+    [enableCtrlS]="true"
+    (ctrlSPressed)="save()"
+  >
+    <div class="max-w-3xl mx-auto space-y-6">
+      <!-- Operating System Section -->
+      <div
+        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
+      >
+        <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-4">
+          Operating System
+        </h2>
+        <div class="flex items-center gap-6">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="os"
+              [checked]="operatingSystem() === 'macos'"
+              (change)="setOS('macos')"
+              class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+            />
+            <span class="text-sm text-gray-700 dark:text-gray-300">Mac OS</span>
+          </label>
+
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="os"
+              [checked]="operatingSystem() === 'windows'"
+              (change)="setOS('windows')"
+              class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+            />
+            <span class="text-sm text-gray-700 dark:text-gray-300">Windows</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Base Path Section -->
+      <div
+        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
+      >
+        <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Base Path</h2>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+          Select the base folder for template files.
+        </p>
+        <div class="flex items-center gap-3">
+          <app-input
+            [(value)]="basePath"
+            [placeholder]="'C:\\Projects\\NEST-UI-V2\\Base_Files'"
+            [customClass]="'flex-1 w-150'"
+          />
+          <app-button
+            [label]="'Browse'"
+            [variant]="'white'"
+            [size]="'md'"
+            [icon]="'folder'"
+            [iconPosition]="'left'"
+            [iconSize]="16"
+            (clicked)="browsePath()"
+            [customClass]="'text-sm'"
+          />
+        </div>
+      </div>
+
+      <!-- Facilities Section -->
+      <div
+        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
+      >
+        <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-4">Facilities</h2>
+
+        <div class="mb-4">
+          <app-select
+            [options]="facilityOptions"
+            [placeholder]="'Select Facility'"
+            [(value)]="selectedFacility"
+            [selectClass]="'h-10 text-sm w-full'"
+          />
+        </div>
+
+        <div class="flex items-center gap-2">
+          <app-button
+            [label]="'Add'"
+            [variant]="'primary'"
+            [size]="'md'"
+            [icon]="'plus'"
+            [iconPosition]="'left'"
+            [iconSize]="16"
+            (clicked)="addFacility()"
+            [customClass]="'text-sm text-gray-100 w-full'"
+          />
+
+          <app-button
+            [label]="'Edit'"
+            [variant]="'white'"
+            [size]="'md'"
+            [icon]="'edit'"
+            [iconPosition]="'left'"
+            [iconSize]="16"
+            (clicked)="editFacility()"
+            [disabled]="facilities().length === 0"
+            [customClass]="'text-sm w-full'"
+          />
+
+          <app-button
+            [label]="'Remove'"
+            [variant]="'white'"
+            [size]="'md'"
+            [icon]="'trash'"
+            [iconPosition]="'left'"
+            [iconSize]="16"
+            (clicked)="removeFacility()"
+            [disabled]="facilities().length === 0"
+            [customClass]="'text-sm w-full'"
+          />
+        </div>
+
+        <!-- Facilities List -->
+        @if (facilities().length > 0) {
+          <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">Current Facilities:</p>
+            <div class="flex flex-wrap gap-2">
+              @for (facility of facilities(); track facility.id) {
+                <span
+                  class="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-full border border-gray-200 dark:border-gray-600"
+                  [class.bg-blue-50]="facility.id === selectedFacility()"
+                  [class.dark:bg-blue-900]="facility.id === selectedFacility()"
+                  [class.border-blue-300]="facility.id === selectedFacility()"
+                  [class.dark:border-blue-600]="facility.id === selectedFacility()"
+                  [class.text-blue-700]="facility.id === selectedFacility()"
+                  [class.dark:text-blue-300]="facility.id === selectedFacility()"
+                >
+                  {{ facility.name }}
+                </span>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Después de la sección de Facilities -->
+      <div
+        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
+      >
+        <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-4">
+          Process Types (Orders)
+        </h2>
+        <div class="mb-4">
+          <app-select
+            label="Selected Order:"
+            [options]="orderOptions"
+            [value]="selectedOrder()"
+            (valueChange)="onOrderChange($event)"
+            [selectClass]="'h-10 text-sm w-full'"
+          />
+        </div>
+        <div class="flex items-center gap-2">
+          <app-button
+            (clicked)="addOrder()"
+            [label]="'Add'"
+            [variant]="'primary'"
+            [size]="'md'"
+            [icon]="'plus'"
+            [iconPosition]="'left'"
+            [iconSize]="16"
+            [customClass]="'text-sm text-gray-100 w-full'"
+          />
+
+          <app-button
+            (clicked)="editOrder()"
+            [label]="'Edit'"
+            [variant]="'white'"
+            [size]="'md'"
+            [icon]="'edit'"
+            [iconPosition]="'left'"
+            [iconSize]="16"
+            [customClass]="'text-sm w-full'"
+          />
+
+          <app-button
+            (clicked)="removeOrder()"
+            [label]="'Remove'"
+            [variant]="'white'"
+            [size]="'md'"
+            [icon]="'trash'"
+            [iconPosition]="'left'"
+            [iconSize]="16"
+            [customClass]="'text-sm w-full'"
+          />
+        </div>
+
+        <!-- Orders List -->
+        @if (orders().length > 0) {
+          <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">Current Orders:</p>
+            <div class="flex flex-wrap gap-2">
+              @for (order of orders(); track order.id) {
+                <span
+                  class="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-full border border-gray-200 dark:border-gray-600"
+                  [class.bg-blue-50]="order.id === selectedOrder()"
+                  [class.dark:bg-blue-900]="order.id === selectedOrder()"
+                  [class.border-blue-300]="order.id === selectedOrder()"
+                  [class.dark:border-blue-600]="order.id === selectedOrder()"
+                  [class.text-blue-700]="order.id === selectedOrder()"
+                  [class.dark:text-blue-300]="order.id === selectedOrder()"
+                >
+                  {{ order.name }}
+                </span>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Advanced Settings Section -->
+      <div
+        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
+      >
+        <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-4">
+          Advanced Settings
+        </h2>
+
+        <div class="space-y-3">
+          <!-- Dark Mode Toggle -->
+          <label class="flex items-center justify-between cursor-pointer group">
+            <div class="flex items-center gap-3">
+              <div
+                class="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 group-hover:bg-gray-300 dark:group-hover:bg-gray-500 transition-colors"
+              >
+                <app-icon
+                  [name]="themeService.isDarkMode() ? 'moon' : 'sun'"
+                  [size]="20"
+                  class="text-gray-600 dark:text-gray-400"
+                />
+              </div>
+              <div>
+                <span class="text-sm text-gray-700 dark:text-gray-400 font-medium">
+                  {{ themeService.isDarkMode() ? 'Dark Mode' : 'Light Mode' }}</span
+                >
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                  {{ themeService.isDarkMode() ? 'Switch to light theme' : 'Switch to dark theme' }}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              (click)="themeService.toggleTheme()"
+              [class]="themeService.isDarkMode() ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'"
+              class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            >
+              <span
+                [class]="themeService.isDarkMode() ? 'translate-x-6' : 'translate-x-1'"
+                class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow-sm"
+              ></span>
+            </button>
+          </label>
+
+          <!-- Auto-save -->
+          <!-- <label class="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              [(ngModel)]="autoSave"
+              class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <div>
+              <span class="text-sm text-gray-700 dark:text-gray-200 font-medium">Auto-save</span>
+              <p class="text-xs text-gray-500 dark:text-gray-400">Automatically save changes</p>
+            </div>
+          </label> -->
+
+          <!-- Notifications -->
+          <!-- <label class="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              [(ngModel)]="notifications"
+              class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <div>
+              <span class="text-sm text-gray-700 dark:text-gray-200 font-medium"
+                >Notifications</span
+              >
+              <p class="text-xs text-gray-500 dark:text-gray-400">Show desktop notifications</p>
+            </div>
+          </label> -->
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center justify-center pt-4">
+        <app-button
+          [label]="'Reset to Defaults'"
+          [variant]="'ghost'"
+          [size]="'md'"
+          [icon]="'rotate-ccw'"
+          [iconPosition]="'left'"
+          [iconSize]="16"
+          (clicked)="resetToDefaults()"
+          [customClass]="'text-gray-600 dark:text-gray-400 text-sm'"
+        />
+
+        <app-button
+          [label]="'Save Settings'"
+          [variant]="'primary'"
+          [size]="'lg'"
+          (clicked)="save()"
+          [customClass]="'px-8 text-sm text-gray-100'"
+        />
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para Add/Edit Facility/Order -->
+<app-modal
+  [isOpen]="isModalOpen()"
+  [title]="
+    modalType() === 'facility'
+      ? modalMode() === 'add'
+        ? 'Add New Facility'
+        : 'Edit Facility'
+      : modalMode() === 'add'
+        ? 'Add New Order'
+        : 'Edit Order'
+  "
+  [size]="'sm'"
+  (closed)="closeModal()"
+  appKeyboardShortcuts
+  [isActive]="isModalOpen()"
+  [enableEnter]="true"
+  [enableEscape]="true"
+  [enableCtrlS]="true"
+  (enterPressed)="modalType() === 'facility' ? saveFacility() : saveOrder()"
+  (escapePressed)="closeModal()"
+  (ctrlSPressed)="modalType() === 'facility' ? saveFacility() : saveOrder()"
+>
+  <!-- Modal Body -->
+  <div class="space-y-4">
+    <app-input
+      [label]="modalType() === 'facility' ? 'Facility Name' : 'Order Name'"
+      [(value)]="editingFacilityName"
+      [placeholder]="modalType() === 'facility' ? 'Enter facility name' : 'Enter order name'"
+      [required]="true"
+    />
+  </div>
+
+  <!-- Modal Footer -->
+  <div footer class="flex items-center justify-end gap-2">
+    <app-button
+      [label]="'Cancel'"
+      [variant]="'white'"
+      [size]="'md'"
+      (clicked)="closeModal()"
+      [customClass]="'text-sm '"
+    />
+    <app-button
+      [label]="modalMode() === 'add' ? 'Add' : 'Save'"
+      [variant]="'primary'"
+      [size]="'md'"
+      (clicked)="modalType() === 'facility' ? saveFacility() : saveOrder()"
+      [customClass]="'text-sm text-gray-100'"
+    />
+  </div>
+</app-modal>
+
+<!-- Modal de Confirmación (Remove/Reset) -->
+<app-modal
+  [isOpen]="isConfirmModalOpen()"
+  [title]="confirmModalTitle()"
+  [size]="'sm'"
+  (closed)="closeConfirmModal()"
+  appKeyboardShortcuts
+  [isActive]="isConfirmModalOpen()"
+  [enableEnter]="true"
+  [enableEscape]="true"
+  [enableCtrlS]="true"
+  (enterPressed)="handleConfirmAction()"
+  (escapePressed)="closeConfirmModal()"
+  (ctrlSPressed)="handleConfirmAction()"
+>
+  <!-- Modal Body -->
+  <div class="space-y-4">
+    <div class="flex items-start gap-3">
+      <app-icon [name]="'alert-triangle'" [size]="24" class="text-yellow-500 shrink-0 mt-1" />
+      <p class="text-sm text-gray-700 dark:text-gray-400">
+        {{ confirmModalMessage() }}
+      </p>
+    </div>
+  </div>
+
+  <!-- Modal Footer -->
+  <div footer class="flex items-center justify-end gap-2">
+    <app-button
+      [label]="'Cancel'"
+      [variant]="'white'"
+      [size]="'md'"
+      (clicked)="closeConfirmModal()"
+      [customClass]="'text-sm'"
+    />
+    <app-button
+      [label]="
+        confirmModalAction() === 'remove'
+          ? 'Remove'
+          : confirmModalAction() === 'remove-order'
+            ? 'Remove'
+            : 'Reset'
+      "
+      [variant]="'danger'"
+      [size]="'md'"
+      (clicked)="handleConfirmAction()"
+      [customClass]="'text-sm text-gray-100'"
+    />
+  </div>
+</app-modal>

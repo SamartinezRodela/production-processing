@@ -1,0 +1,46 @@
+@if (isOpen()) {
+  <!-- Backdrop con blur -->
+  <div
+    class="fixed inset-0 bg-opacity-10 z-50 flex items-center justify-center p-4 animate-fade-in backdrop-blur-sm"
+    (click)="onBackdropClick($event)"
+  >
+    <!-- Modal Container -->
+    <div
+      tabindex="0"
+      class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl animate-scale-in max-h-[90vh] overflow-y-auto"
+      [ngClass]="{
+        'w-full max-w-sm': size() === 'sm',
+        'w-full max-w-md': size() === 'md',
+        'w-full max-w-2xl': size() === 'lg',
+      }"
+      (click)="$event.stopPropagation()"
+    >
+      <!-- Modal Header -->
+      <div
+        class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 sticky top-0 z-10 rounded-t-xl"
+      >
+        <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100">{{ title() }}</h2>
+        <app-button
+          [variant]="'ghost'"
+          [icon]="'close'"
+          [iconPosition]="'only'"
+          [iconSize]="18"
+          (clicked)="close()"
+          [customClass]="'p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded'"
+        />
+      </div>
+
+      <!-- Modal Body -->
+      <div class="px-6 py-4">
+        <ng-content />
+      </div>
+
+      <!-- Modal Footer -->
+      <div
+        class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 rounded-b-xl sticky bottom-0"
+      >
+        <ng-content select="[footer]" />
+      </div>
+    </div>
+  </div>
+}

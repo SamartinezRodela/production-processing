@@ -1,0 +1,55 @@
+# Node modules
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+**/dist/
+release/
+**/release/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+nest-files-py-embedded/
+nest-files-py-embedded-mac/
+
+# Logs
+*.log
+npm-debug.log*
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+temp-mac-package/
+*.zip
+proyecto-para-mac.zip
+
+# Environment
+.env
+.env.local
+
+# Git submodules
+nest-ui-be/.git
+nest-ui-fe/.git
+nest-electron/.git
+
+# Large build folders
+NEST-UI-V2-MAC-BUILD/

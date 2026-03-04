@@ -1,0 +1,19 @@
+{
+  "name": "nest-app",
+  "version": "1.0.0",
+  "scripts": {
+    "angular:dev": "cd nest-ui-fe && npm start",
+    "electron:build": "cd nest-electron && npm run build",
+    "electron:watch": "cd nest-electron && npm run watch",
+    "electron:start": "cd nest-electron && npm start",
+    "dev": "concurrently \"npm run angular:dev\" \"npm run electron:watch\"",
+    "start:dev": "npm run electron:build && cross-env NODE_ENV=development npm run electron:start",
+    "build:all": "npm run build:angular && npm run build:electron",
+    "build:angular": "cd nest-ui-fe && npm run build",
+    "build:electron": "cd nest-electron && npm run build"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "cross-env": "^7.0.3"
+  }
+}

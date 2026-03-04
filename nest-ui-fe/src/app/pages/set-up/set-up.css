@@ -1,0 +1,105 @@
+/* Usar los mismos estilos base que home.css */
+@import '../home/home.css';
+
+/* Estilos específicos para Settings */
+
+/* Efecto blur cuando el modal está abierto */
+.main-content {
+  transition:
+    filter 0.3s ease,
+    transform 0.3s ease;
+}
+
+.main-content.modal-blur {
+  filter: blur(3px) brightness(0.95);
+  transform: scale(0.98);
+  pointer-events: none;
+}
+
+/* Radio buttons personalizados */
+input[type='radio'] {
+  cursor: pointer;
+  accent-color: #3b82f6;
+}
+
+input[type='radio']:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Checkboxes personalizados */
+input[type='checkbox'] {
+  cursor: pointer;
+  accent-color: #3b82f6;
+}
+
+input[type='checkbox']:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Input text */
+input[type='text'] {
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+}
+
+input[type='text']:focus {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Secciones de settings */
+.mb-8 {
+  padding-bottom: 2rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.mb-8:last-of-type {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+/* Hover effect en opciones */
+label.group:hover {
+  background-color: #f9fafb;
+  border-radius: 0.375rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  margin-left: -0.5rem;
+  margin-right: -0.5rem;
+}
+
+/* Animación de entrada */
+.bg-white {
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Botones con iconos */
+button app-icon {
+  transition: transform 0.2s ease;
+}
+
+button:hover:not(:disabled) app-icon {
+  transform: scale(1.1);
+}
+
+/* Disabled state */
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button:disabled:hover {
+  background-color: inherit;
+}

@@ -1,0 +1,165 @@
+<div
+  class="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4"
+>
+  <div class="w-full max-w-md">
+    <!-- Login Card -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 relative">
+      <!-- Dark Mode Toggle (esquina superior derecha del card) -->
+      <button
+        type="button"
+        (click)="themeService.toggleTheme()"
+        [title]="themeService.isDarkMode() ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
+        class="absolute top-4 right-4 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+      >
+        <app-icon
+          [name]="themeService.isDarkMode() ? 'sun' : 'moon'"
+          [size]="20"
+          class="text-gray-700 dark:text-gray-400"
+        />
+      </button>
+
+      <!-- Logo/Header -->
+      <div class="text-center mb-8">
+        <div
+          class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 dark:bg-blue-500 rounded-full mb-4"
+        >
+          <app-icon [name]="'lock'" [size]="32" class="text-white" />
+        </div>
+        <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100">Welcome Back</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+          Sign in to continue to Production Processing
+        </p>
+      </div>
+
+      <!-- Error Message -->
+      @if (errorMessage()) {
+        <div
+          class="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2"
+        >
+          <app-icon [name]="'alert'" [size]="20" class="text-red-500 dark:text-red-400 shrink-0" />
+          <p class="text-sm text-red-700 dark:text-red-400">{{ errorMessage() }}</p>
+        </div>
+      }
+
+      <!-- Login Form -->
+      <form (ngSubmit)="onLogin()" class="space-y-4">
+        <!-- Username Field -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Username
+          </label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <app-icon [name]="'user'" [size]="18" class="text-gray-400 dark:text-gray-500" />
+            </div>
+            <input
+              type="text"
+              [(ngModel)]="username"
+              name="username"
+              [disabled]="isLoading()"
+              class="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              placeholder="Enter your username"
+              autocomplete="username"
+            />
+          </div>
+        </div>
+
+        <!-- Password Field -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Password
+          </label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <app-icon [name]="'lock'" [size]="18" class="text-gray-400 dark:text-gray-500" />
+            </div>
+            <input
+              [type]="showPassword() ? 'text' : 'password'"
+              [(ngModel)]="password"
+              name="password"
+              [disabled]="isLoading()"
+              class="w-full pl-10 pr-12 py-2.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              placeholder="Enter your password"
+              autocomplete="current-password"
+            />
+            <button
+              type="button"
+              (click)="togglePasswordVisibility()"
+              [disabled]="isLoading()"
+              class="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-blue-600 dark:hover:text-blue-400 disabled:cursor-not-allowed"
+            >
+              <app-icon
+                [name]="showPassword() ? 'eye-off' : 'eye'"
+                [size]="18"
+                class="text-gray-400 dark:text-gray-500"
+              />
+            </button>
+          </div>
+        </div>
+
+        <!-- Remember Me & Forgot Password -->
+        <!-- <div class="flex items-center justify-between text-sm">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <span class="text-gray-600">Remember me</span>
+          </label>
+          <a href="#" class="text-blue-600 hover:text-blue-700 font-medium"> Forgot password? </a>
+        </div> -->
+
+        <!-- Login Button -->
+        <app-button
+          [label]="isLoading() ? 'Signing in...' : 'Sign In'"
+          [variant]="'primary'"
+          [size]="'lg'"
+          [disabled]="isLoading()"
+          [customClass]="'w-full text-sm text-gray-300 dark:text-gray-100 mt-6'"
+          type="submit"
+        />
+      </form>
+
+      <!-- Divider -->
+      <!-- <div class="relative my-6">
+        <div class="absolute inset-0 flex items-center">
+          <div class="w-full border-t border-gray-200"></div>
+        </div>
+        <div class="relative flex justify-center text-xs">
+          <span class="px-2 bg-white text-gray-500">Or continue with</span>
+        </div>
+      </div> -->
+
+      <!-- Social Login Buttons (Opcional)
+      <div class="grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          class="flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          <app-icon [name]="'github'" [size]="18" />
+          <span class="text-sm text-gray-700">GitHub</span>
+        </button>
+        <button
+          type="button"
+          class="flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          <app-icon [name]="'mail'" [size]="18" />
+          <span class="text-sm text-gray-700">Google</span>
+        </button>
+      </div>
+
+      <!-- Sign Up Link 
+      <p class="text-center text-sm text-gray-600 mt-6">
+        Don't have an account?
+        <a href="#" class="text-blue-600 hover:text-blue-700 font-medium"> Sign up </a>
+      </p>
+    </div>
+    -->
+
+      <!-- Footer -->
+      <p class="text-center text-xs text-gray-500 dark:text-gray-400 mt-6">
+        © 2026 Production Processing. All rights reserved.
+      </p>
+    </div>
+  </div>
+</div>

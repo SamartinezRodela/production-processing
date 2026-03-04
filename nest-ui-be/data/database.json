@@ -1,0 +1,45 @@
+{
+  "version": "1.0.0",
+  "lastModified": "2026-03-04T14:54:24.390Z",
+  "facilities": [
+    {
+      "id": "1",
+      "name": "Reynosa",
+      "createdAt": "2026-03-03T18:18:34.666Z",
+      "updatedAt": "2026-03-03T18:18:34.666Z"
+    },
+    {
+      "id": "2",
+      "name": "Merida",
+      "createdAt": "2026-03-03T18:18:34.666Z",
+      "updatedAt": "2026-03-03T18:18:34.666Z"
+    },
+    {
+      "id": "3",
+      "name": "San Luis",
+      "createdAt": "2026-03-03T18:18:34.666Z",
+      "updatedAt": "2026-03-03T18:18:34.666Z"
+    }
+  ],
+  "orders": [
+    {
+      "id": "1",
+      "name": "Laser",
+      "status": "active",
+      "createdAt": "2026-03-03T19:23:39.346Z",
+      "updatedAt": "2026-03-04T14:54:18.198Z"
+    },
+    {
+      "id": "2",
+      "name": "No Laser",
+      "status": "active",
+      "createdAt": "2026-03-03T18:18:34.666Z",
+      "updatedAt": "2026-03-04T14:54:24.390Z"
+    }
+  ],
+  "settings": {
+    "selectedFacilityId": "1",
+    "basePath": "C:\\Production\\Files",
+    "os": "windows"
+  }
+}

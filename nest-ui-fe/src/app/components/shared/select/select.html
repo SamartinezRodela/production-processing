@@ -1,0 +1,300 @@
+<div [ngClass]="customClass() || 'w-full'">
+  @if (label()) {
+    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+      {{ label() }}
+      @if (required()) {
+        <span class="text-red-500">*</span>
+      }
+    </label>
+  }
+
+  <!-- Select Simple Personalizado -->
+  @if (!multiple()) {
+    <div class="relative">
+      <button
+        type="button"
+        [disabled]="disabled()"
+        (click)="toggleDropdown()"
+        [ngClass]="{
+          'w-full border rounded-lg bg-white dark:bg-gray-700 text-left focus:outline-none focus:ring-2 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed flex items-center justify-between transition-all': true,
+          'border-gray-300 dark:border-gray-600 focus:ring-blue-500 hover:border-gray-400 dark:hover:border-gray-500':
+            !isOpen(),
+          'border-blue-500 dark:border-blue-400 ring-2 ring-blue-500 dark:ring-blue-400': isOpen(),
+          'pl-10 pr-10 py-2.5': icon() && iconPosition() === 'left',
+          'pl-3 pr-10 py-2.5': !icon() || iconPosition() === 'right',
+        }"
+        [class]="selectClass()"
+      >
+        @if (icon() && iconPosition() === 'left') {
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <app-icon
+              [name]="icon()"
+              [size]="iconSize()"
+              class="text-gray-400 dark:text-gray-500"
+            />
+          </div>
+        }
+
+        <span
+          class="block truncate text-sm"
+          [class.text-gray-400]="!value()"
+          [class.dark:text-gray-500]="!value()"
+          [class.text-gray-900]="value()"
+          [class.dark:text-gray-100]="value()"
+        >
+          {{ selectedLabel() }}
+        </span>
+
+        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+          <svg
+            class="w-5 h-5 text-gray-400 dark:text-gray-500 transition-transform duration-200"
+            [class.rotate-180]="isOpen()"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 9l-7 7-7-7"
+            />
+          </svg>
+        </div>
+      </button>
+
+      @if (isOpen()) {
+        <div
+          class="absolute z-50 w-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl overflow-hidden"
+        >
+          @if (searchable()) {
+            <div class="p-2 border-b border-gray-200 dark:border-gray-700">
+              <div class="relative">
+                <input
+                  type="text"
+                  [(ngModel)]="searchQuery"
+                  placeholder="Buscar..."
+                  class="w-full pl-10 pr-8 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  (click)="$event.stopPropagation()"
+                />
+                <app-icon
+                  [name]="'search'"
+                  [size]="16"
+                  class="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"
+                />
+                @if (searchQuery()) {
+                  <button
+                    type="button"
+                    (click)="clearSearch(); $event.stopPropagation()"
+                    class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    <app-icon [name]="'close'" [size]="16" />
+                  </button>
+                }
+              </div>
+            </div>
+          }
+
+          <div class="max-h-60 overflow-y-auto">
+            @if (filteredOptions().length === 0) {
+              <div class="px-4 py-8 text-center">
+                <app-icon
+                  [name]="'inbox'"
+                  [size]="32"
+                  class="mx-auto mb-2 text-gray-300 dark:text-gray-600"
+                />
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                  {{
+                    searchQuery() ? 'No se encontraron resultados' : 'No hay opciones disponibles'
+                  }}
+                </p>
+              </div>
+            } @else {
+              @for (option of filteredOptions(); track option.value) {
+                <button
+                  type="button"
+                  (click)="selectOption(option.value)"
+                  class="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                  [class.bg-blue-50]="isSelected(option.value)"
+                  [class.dark:bg-gray-700]="isSelected(option.value)"
+                >
+                  <span
+                    class="text-sm"
+                    [class.text-gray-900]="!isSelected(option.value)"
+                    [class.dark:text-gray-100]="!isSelected(option.value)"
+                    [class.text-blue-700]="isSelected(option.value)"
+                    [class.dark:text-blue-400]="isSelected(option.value)"
+                    [class.font-medium]="isSelected(option.value)"
+                    >{{ option.label }}</span
+                  >
+                  @if (isSelected(option.value)) {
+                    <app-icon
+                      [name]="'check'"
+                      [size]="16"
+                      class="text-blue-600 dark:text-blue-400"
+                    />
+                  }
+                </button>
+              }
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Multi Select -->
+  @if (multiple()) {
+    <div class="relative">
+      <button
+        type="button"
+        [disabled]="disabled()"
+        (click)="toggleDropdown()"
+        [ngClass]="{
+          'w-full border rounded-lg bg-white dark:bg-gray-700 text-left focus:outline-none focus:ring-2 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed flex items-center justify-between transition-all px-3 py-2.5': true,
+          'border-gray-300 dark:border-gray-600 focus:ring-blue-500 hover:border-gray-400 dark:hover:border-gray-500':
+            !isOpen(),
+          'border-blue-500 dark:border-blue-400 ring-2 ring-blue-500 dark:ring-blue-400': isOpen(),
+        }"
+        [class]="selectClass()"
+      >
+        <div class="flex items-center gap-2 flex-1 min-w-0">
+          @if (icon() && iconPosition() === 'left') {
+            <app-icon
+              [name]="icon()"
+              [size]="iconSize()"
+              class="text-gray-400 dark:text-gray-500 shrink-0"
+            />
+          }
+          <span class="block truncate text-sm">
+            @if (multiValue().length === 0) {
+              <span class="text-gray-400 dark:text-gray-500">{{ placeholder() }}</span>
+            } @else {
+              <span class="text-gray-900 dark:text-gray-100 font-medium"
+                >{{ multiValue().length }} seleccionado(s)</span
+              >
+            }
+          </span>
+        </div>
+        <svg
+          class="w-5 h-5 text-gray-400 dark:text-gray-500 transition-transform duration-200 shrink-0 ml-2"
+          [class.rotate-180]="isOpen()"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M19 9l-7 7-7-7"
+          />
+        </svg>
+      </button>
+
+      @if (isOpen()) {
+        <div
+          class="absolute z-50 w-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl overflow-hidden"
+        >
+          @if (searchable()) {
+            <div class="p-2 border-b border-gray-200 dark:border-gray-700">
+              <div class="relative">
+                <input
+                  type="text"
+                  [(ngModel)]="searchQuery"
+                  placeholder="Buscar..."
+                  class="w-full pl-8 pr-8 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  (click)="$event.stopPropagation()"
+                />
+                <app-icon
+                  [name]="'search'"
+                  [size]="16"
+                  class="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"
+                />
+                @if (searchQuery()) {
+                  <button
+                    type="button"
+                    (click)="clearSearch(); $event.stopPropagation()"
+                    class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    <app-icon [name]="'x'" [size]="16" />
+                  </button>
+                }
+              </div>
+            </div>
+          }
+
+          <div class="max-h-60 overflow-y-auto">
+            @if (filteredOptions().length === 0) {
+              <div class="px-4 py-8 text-center">
+                <app-icon
+                  [name]="'inbox'"
+                  [size]="32"
+                  class="mx-auto mb-2 text-gray-300 dark:text-gray-600"
+                />
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                  {{
+                    searchQuery() ? 'No se encontraron resultados' : 'No hay opciones disponibles'
+                  }}
+                </p>
+              </div>
+            } @else {
+              @for (option of filteredOptions(); track option.value) {
+                <label
+                  class="flex items-center px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-gray-700 cursor-pointer transition-colors border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                  [class.bg-blue-50]="isSelected(option.value)"
+                  [class.dark:bg-gray-700]="isSelected(option.value)"
+                >
+                  <input
+                    type="checkbox"
+                    [checked]="isSelected(option.value)"
+                    (change)="toggleOption(option.value)"
+                    class="w-4 h-4 text-blue-600 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
+                  />
+                  <span
+                    class="ml-3 text-sm flex-1"
+                    [class.text-gray-900]="!isSelected(option.value)"
+                    [class.dark:text-gray-100]="!isSelected(option.value)"
+                    [class.text-blue-700]="isSelected(option.value)"
+                    [class.dark:text-blue-400]="isSelected(option.value)"
+                    [class.font-medium]="isSelected(option.value)"
+                    >{{ option.label }}</span
+                  >
+                  @if (isSelected(option.value)) {
+                    <app-icon
+                      [name]="'check'"
+                      [size]="16"
+                      class="text-blue-600 dark:text-blue-400"
+                    />
+                  }
+                </label>
+              }
+            }
+          </div>
+        </div>
+      }
+
+      @if (multiValue().length > 0) {
+        <div class="flex flex-wrap gap-2 mt-2.5">
+          @for (selectedValue of multiValue(); track selectedValue) {
+            <span
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 transition-all hover:bg-blue-200 dark:hover:bg-blue-900/50"
+            >
+              {{ getOptionLabel(selectedValue) }}
+              @if (!disabled()) {
+                <button
+                  type="button"
+                  (click)="toggleOption(selectedValue)"
+                  class="inline-flex items-center justify-center w-4 h-4 rounded-full hover:bg-blue-300 dark:hover:bg-blue-700 focus:outline-none transition-colors"
+                  title="Eliminar"
+                >
+                  <app-icon [name]="'x'" [size]="12" class="text-blue-700 dark:text-blue-300" />
+                </button>
+              }
+            </span>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>

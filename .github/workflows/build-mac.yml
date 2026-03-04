@@ -1,0 +1,98 @@
+name: Build Mac Installer
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # Permite ejecutar manualmente desde GitHub
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: |
+            nest-ui-fe/package-lock.json
+            nest-ui-be/package-lock.json
+            nest-electron/package-lock.json
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Prepare Python Embedded for Mac
+        run: |
+          echo "🐍 Creando Python embebido para Mac..."
+          mkdir -p nest-files-py-embedded-mac
+          cd nest-files-py-embedded-mac
+          python3 -m venv python-runtime
+          source python-runtime/bin/activate
+          pip install pypdf pillow reportlab openpyxl requests pandas numpy
+          if [ -d "../nest-files-py" ]; then
+            cp ../nest-files-py/*.py . 2>/dev/null || true
+          fi
+          deactivate
+          cd ..
+          echo "✅ Python embebido listo"
+
+      - name: Install Frontend dependencies
+        working-directory: nest-ui-fe
+        run: npm ci
+
+      - name: Build Frontend
+        working-directory: nest-ui-fe
+        run: npm run build
+
+      - name: Install Backend dependencies
+        working-directory: nest-ui-be
+        run: npm ci
+
+      - name: Build Backend
+        working-directory: nest-ui-be
+        run: npm run build
+
+      - name: Install Electron dependencies
+        working-directory: nest-electron
+        run: npm ci
+
+      - name: Build Electron
+        working-directory: nest-electron
+        run: npm run build
+
+      - name: Create Mac Installer (DMG)
+        working-directory: nest-electron
+        run: npm run dist:mac
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload DMG Installer
+        uses: actions/upload-artifact@v3
+        with:
+          name: Production-Processing-Mac-Installer
+          path: nest-electron/release/*.dmg
+          retention-days: 30
+
+      - name: Get DMG filename
+        id: dmg-name
+        run: |
+          DMG_FILE=$(ls nest-electron/release/*.dmg | head -n 1)
+          echo "dmg_path=$DMG_FILE" >> $GITHUB_OUTPUT
+          echo "dmg_name=$(basename $DMG_FILE)" >> $GITHUB_OUTPUT
+
+      - name: Display Download Instructions
+        run: |
+          echo "✅ Compilación exitosa!"
+          echo "📦 Instalador DMG creado"
+          echo ""
+          echo "Para descargar:"
+          echo "1. Ve a la pestaña 'Actions' en GitHub"
+          echo "2. Selecciona este workflow"
+          echo "3. Descarga 'Production-Processing-Mac-Installer'"

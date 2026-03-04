@@ -1,0 +1,128 @@
+{
+  "name": "nest-electron",
+  "version": "1.0.0",
+  "description": "Production Processing Application",
+  "author": "Atlthic Sewing",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "start": "electron .",
+    "dev": "npm run build && electron .",
+    "start:dev": "npm run build && electron .",
+    "start:debug": "npm run build && electron .",
+    "start:prod": "npm run build && electron .",
+    "pack": "npm run build && electron-builder --dir",
+    "dist": "npm run build && electron-builder",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:linux": "npm run build && electron-builder --linux"
+  },
+  "build": {
+    "appId": "com.yourcompany.nest-ui",
+    "productName": "Production Processing",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../nest-ui-fe/dist/nest-ui-fe/browser",
+        "to": "frontend",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "../nest-ui-be/dist",
+        "to": "backend/dist",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "../nest-ui-be/node_modules",
+        "to": "backend/node_modules",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "../nest-ui-be/package.json",
+        "to": "backend/package.json"
+      },
+      {
+        "from": "../nest-files-py-embedded",
+        "to": "python",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "../nest-files-py-embedded-mac",
+        "to": "python",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "signAndEditExecutable": false,
+      "extraResources": [
+        {
+          "from": "../nest-files-py-embedded",
+          "to": "python",
+          "filter": [
+            "**/*"
+          ]
+        }
+      ]
+    },
+    "mac": {
+      "target": "dmg",
+      "extraResources": [
+        {
+          "from": "../nest-files-py-embedded-mac",
+          "to": "python",
+          "filter": [
+            "**/*"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  },
+  "dependencies": {
+    "electron-store": "^8.1.0"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^26.8.1",
+    "typescript": "^5.3.0",
+    "@types/node": "^20.0.0"
+  }
+}

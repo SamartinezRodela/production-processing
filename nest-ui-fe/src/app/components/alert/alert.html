@@ -1,0 +1,28 @@
+<div class="fixed top-4 right-4 z-50 space-y-3 max-w-md w-full">
+  @for (alert of alertService.alerts(); track alert.id) {
+    <div
+      class="alert-item border-l-4 rounded-lg shadow-lg p-4 flex items-start gap-3 animate-slide-in"
+      [ngClass]="getAlertClasses(alert.type)"
+    >
+      <div class="flex-shrink-0 mt-0.5">
+        <app-icon
+          [name]="getIconName(alert.type)"
+          [size]="24"
+          [class]="getIconClasses(alert.type)"
+        />
+      </div>
+
+      <div class="flex-1 min-w-0">
+        <h4 class="font-semibold text-sm mb-1">{{ alert.title }}</h4>
+        <p class="text-sm opacity-90">{{ alert.message }}</p>
+      </div>
+
+      <button
+        (click)="alertService.close(alert.id)"
+        class="flex-shrink-0 opacity-70 hover:opacity-100 transition-opacity"
+      >
+        <app-icon [name]="'close'" [size]="20" />
+      </button>
+    </div>
+  }
+</div>

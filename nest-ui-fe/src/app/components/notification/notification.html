@@ -1,0 +1,62 @@
+<div class="fixed top-4 right-4 z-9999 space-y-3 max-w-md pointer-events-none">
+  @for (notification of notificationService.getNotifications(); track notification.id) {
+    <div
+      [class]="getNotificationClass(notification.type)"
+      class="pointer-events-auto min-w-[320px] max-w-md p-4 rounded-xl shadow-2xl backdrop-blur-sm flex items-start gap-3 animate-slide-in border transition-all duration-300 hover:scale-[1.02]"
+    >
+      <!-- Icon Container -->
+      <div
+        [class]="getIconContainerClass(notification.type)"
+        class="shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
+      >
+        <app-icon
+          [name]="getIcon(notification.type)"
+          [size]="18"
+          [class]="getIconColorClass(notification.type)"
+        />
+      </div>
+
+      <!-- Message -->
+      <div class="flex-1 min-w-0">
+        @if (notification.title) {
+          <p class="text-sm font-semibold mb-1">{{ notification.title }}</p>
+        }
+        <p class="text-sm font-medium leading-relaxed wrap-break-word">
+          {{ notification.message }}
+          @if (notification.count && notification.count > 1) {
+            <span
+              class="ml-2 px-2 py-0.5 bg-black/10 dark:bg-white/10 rounded-full text-xs font-bold"
+            >
+              {{ notification.count }}
+            </span>
+          }
+        </p>
+      </div>
+
+      <!-- Close Button -->
+      <button
+        (click)="notificationService.remove(notification.id)"
+        class="shrink-0 p-1 rounded-lg transition-all duration-200 hover:bg-black/5 dark:hover:bg-white/10 group"
+        [attr.aria-label]="'Close notification'"
+      >
+        <app-icon
+          name="close"
+          [size]="16"
+          class="text-gray-400 group-hover:text-gray-600 dark:text-gray-500 dark:group-hover:text-gray-300 transition-colors"
+        />
+      </button>
+
+      <!-- Progress Bar -->
+      @if (notification.duration && notification.duration > 0) {
+        <div
+          class="absolute bottom-0 left-0 right-0 h-1 bg-black/10 dark:bg-white/10 rounded-b-xl overflow-hidden"
+        >
+          <div
+            class="h-full bg-current opacity-30 animate-progress"
+            [style.animation-duration.ms]="notification.duration"
+          ></div>
+        </div>
+      }
+    </div>
+  }
+</div>
