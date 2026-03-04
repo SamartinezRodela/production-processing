@@ -30,33 +30,27 @@ jobs:
 
       - name: Prepare Python Embedded for Mac
         run: |
-          echo "🐍 Creando Python embebido relocatable para Mac..."
+          echo "🐍 Descargando Python standalone portable para Mac..."
           mkdir -p nest-files-py-embedded-mac
           cd nest-files-py-embedded-mac
 
-          # Crear venv
-          python3 -m venv python-runtime
-          source python-runtime/bin/activate
+          # Descargar Python standalone de indygreg (portable, sin dependencias del sistema)
+          PYTHON_VERSION="3.11.9"
+          PYTHON_BUILD="20240713"
+          PYTHON_URL="https://github.com/indygreg/python-build-standalone/releases/download/${PYTHON_BUILD}/cpython-${PYTHON_VERSION}+${PYTHON_BUILD}-aarch64-apple-darwin-install_only.tar.gz"
 
-          # Instalar dependencias
-          pip install pypdf pillow reportlab openpyxl requests pandas numpy
+          echo "Descargando Python portable..."
+          curl -L -o python.tar.gz "$PYTHON_URL"
 
-          # Hacer el venv relocatable (eliminar referencias absolutas)
-          cd python-runtime/bin
+          echo "Extrayendo Python..."
+          tar -xzf python.tar.gz
+          rm python.tar.gz
 
-          # Reemplazar shebang en python3 para usar ruta relativa
-          # Crear un wrapper script que use ruta relativa
-          mv python3 python3.orig
-          cat > python3 <<'EOFPYTHON'
-          #!/bin/bash
-          SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-          export PYTHONHOME="$SCRIPT_DIR/.."
-          exec "$SCRIPT_DIR/python3.orig" "$@"
-          EOFPYTHON
-          chmod +x python3
+          # Renombrar carpeta a python-runtime
+          mv python python-runtime
 
-          cd ../..
-          deactivate
+          echo "Instalando dependencias..."
+          python-runtime/bin/pip3 install pypdf pillow reportlab openpyxl requests pandas numpy
 
           # Copiar scripts Python
           if [ -d "../nest-files-py" ]; then
@@ -64,7 +58,7 @@ jobs:
           fi
 
           cd ..
-          echo "✅ Python embebido relocatable listo"
+          echo "✅ Python standalone portable listo"
 
       - name: Verify Python embedded exists
         run: |
