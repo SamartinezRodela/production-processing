@@ -33,36 +33,36 @@ jobs:
           echo "🐍 Creando Python embebido relocatable para Mac..."
           mkdir -p nest-files-py-embedded-mac
           cd nest-files-py-embedded-mac
-          
+
           # Crear venv
           python3 -m venv python-runtime
           source python-runtime/bin/activate
-          
+
           # Instalar dependencias
           pip install pypdf pillow reportlab openpyxl requests pandas numpy
-          
+
           # Hacer el venv relocatable (eliminar referencias absolutas)
           cd python-runtime/bin
-          
+
           # Reemplazar shebang en python3 para usar ruta relativa
           # Crear un wrapper script que use ruta relativa
           mv python3 python3.orig
-          cat > python3 << 'EOF'
-#!/bin/bash
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-export PYTHONHOME="$SCRIPT_DIR/.."
-exec "$SCRIPT_DIR/python3.orig" "$@"
-EOF
+          cat > python3 <<'EOFPYTHON'
+          #!/bin/bash
+          SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+          export PYTHONHOME="$SCRIPT_DIR/.."
+          exec "$SCRIPT_DIR/python3.orig" "$@"
+          EOFPYTHON
           chmod +x python3
-          
+
           cd ../..
           deactivate
-          
+
           # Copiar scripts Python
           if [ -d "../nest-files-py" ]; then
             cp ../nest-files-py/*.py . 2>/dev/null || true
           fi
-          
+
           cd ..
           echo "✅ Python embebido relocatable listo"
 
