@@ -20,7 +20,7 @@
     "dist": "npm run build && electron-builder",
     "dist:win": "npm run build && electron-builder --win",
     "dist:mac": "npm run build && electron-builder --mac",
-    "dist:mac-simple": "npm run build && electron-packager . 'Production Processing' --platform=darwin --arch=arm64,x64 --out=release --overwrite --icon=build/icon.icns",
+    "dist:mac-simple": "npm run build && electron-packager . 'Production Processing' --platform=darwin --arch=arm64 --out=release --overwrite --icon=build/icon.icns",
     "dist:linux": "npm run build && electron-builder --linux"
   },
   "build": {
