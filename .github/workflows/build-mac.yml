@@ -83,10 +83,18 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
-      - name: Upload DMG Installer
+      - name: Upload Mac Installer (ZIP)
         uses: actions/upload-artifact@v4
         with:
-          name: Production-Processing-Mac-Installer
+          name: Production-Processing-Mac-ZIP
+          path: nest-electron/release/*.zip
+          retention-days: 30
+
+      - name: Upload Mac Installer (DMG)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Production-Processing-Mac-DMG
           path: nest-electron/release/*.dmg
           retention-days: 30
 
@@ -100,9 +108,11 @@ jobs:
       - name: Display Download Instructions
         run: |
           echo "✅ Compilación exitosa!"
-          echo "📦 Instalador DMG creado"
+          echo "📦 Instaladores creados"
           echo ""
           echo "Para descargar:"
           echo "1. Ve a la pestaña 'Actions' en GitHub"
           echo "2. Selecciona este workflow"
-          echo "3. Descarga 'Production-Processing-Mac-Installer'"
+          echo "3. Descarga 'Production-Processing-Mac-ZIP' o 'Production-Processing-Mac-DMG'"
+          echo ""
+          echo "Nota: Si el DMG falla, usa el ZIP"

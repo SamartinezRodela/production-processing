@@ -96,7 +96,10 @@
       ]
     },
     "mac": {
-      "target": "dmg",
+      "target": [
+        "zip",
+        "dmg"
+      ],
       "identity": null,
       "extraResources": [
         {
