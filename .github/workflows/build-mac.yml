@@ -112,11 +112,19 @@ jobs:
 
       - name: Compress Mac App
         run: |
+          echo "📦 Comprimiendo app..."
           APP_PATH=$(find nest-electron/release -name "Production Processing-darwin-*" -type d | head -n 1)
-          cd "$(dirname "$APP_PATH")"
-          zip -r "Production-Processing-Mac.zip" "$(basename "$APP_PATH")"
-          mv "Production-Processing-Mac.zip" ../../
-          cd ../..
+          echo "App encontrada en: $APP_PATH"
+
+          if [ -z "$APP_PATH" ]; then
+            echo "❌ No se encontró la app"
+            exit 1
+          fi
+
+          cd nest-electron/release
+          FOLDER_NAME=$(basename "$APP_PATH")
+          zip -r "Production-Processing-Mac.zip" "$FOLDER_NAME"
+          ls -lh Production-Processing-Mac.zip
           echo "✅ App comprimida exitosamente"
 
       - name: Upload Mac App (ZIP)
@@ -125,6 +133,7 @@ jobs:
           name: Production-Processing-Mac-App
           path: nest-electron/release/Production-Processing-Mac.zip
           retention-days: 30
+          if-no-files-found: error
 
       - name: Display Download Instructions
         run: |
