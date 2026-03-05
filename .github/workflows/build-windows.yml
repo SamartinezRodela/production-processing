@@ -46,6 +46,19 @@ jobs:
           .\python.exe -m pip install reportlab --no-warn-script-location
 
           cd ..
+
+          # Copiar scripts Python personalizados
+          Write-Host "Copiando scripts Python personalizados..."
+          if (Test-Path "nest-files-py") {
+            Copy-Item -Path "nest-files-py\*.py" -Destination "nest-files-py-embedded\" -Force
+            Write-Host "Scripts copiados exitosamente"
+          } else {
+            Write-Host "Advertencia: carpeta nest-files-py no encontrada"
+          }
+
+          # Crear carpeta executables
+          New-Item -ItemType Directory -Path "nest-files-py-embedded\executables" -Force | Out-Null
+          Write-Host "Carpeta executables creada"
         shell: pwsh
 
       - name: Setup Node.js

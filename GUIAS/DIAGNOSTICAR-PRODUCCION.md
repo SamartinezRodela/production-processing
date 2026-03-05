@@ -1,327 +1,231 @@
-# 🔍 Diagnóstico de Problemas en Producción
+# Guía: Diagnosticar Problemas en Producción
 
-## Error Actual
+## Error 500 en endpoints Python
 
-```
-Error invoking remote method 'python:generar-pdf': [object Object]
-Error invoking remote method 'python:saludar': [object Object]
-```
+Si recibes un error 500 al llamar endpoints como `/python/saludar`, sigue estos pasos:
 
-Este error indica que hay un problema en la comunicación entre Electron y el backend.
+### 1. Verificar estructura de archivos
 
----
-
-## 🛠️ Pasos para Diagnosticar
-
-### Paso 1: Recompilar con Logging Mejorado
-
-```powershell
-# 1. Recompilar Electron con el nuevo logging
-cd nest-electron
-npm run build
-
-# 2. Crear nuevo instalador
-cd ..
-.\package-app.ps1
-```
-
-### Paso 2: Instalar y Abrir Logs
-
-1. Instala el nuevo `.exe`
-2. Abre la aplicación
-3. En el menú superior, ve a: **Ayuda → Ver Logs del Backend**
-4. Se abrirá el archivo `backend.log`
-
-### Paso 3: Revisar los Logs
-
-Busca estos mensajes en `backend.log`:
-
-#### ✅ Si el backend inicia correctamente:
+La app empaquetada debe tener esta estructura:
 
 ```
-[STDOUT] 2024-02-20T... - [Nest] Starting Nest application...
-[STDOUT] 2024-02-20T... - [NestApplication] Nest application successfully started
+Production Processing.exe (o .app en Mac)
+└── resources/
+    ├── app.asar
+    ├── backend/
+    │   ├── dist/
+    │   ├── node_modules/
+    │   └── package.json
+    ├── frontend/
+    │   └── (archivos Angular)
+    └── python/
+        ├── python.exe (Windows) o python-runtime/ (Mac)
+        ├── saludar.py
+        ├── generar_pdf.py
+        ├── generar_pdf_path.py
+        ├── test_imports.py
+        └── executables/
 ```
 
-#### ❌ Si hay error de módulos:
+### 2. Verificar logs del backend
 
-```
-[STDERR] Error: Cannot find module '@nestjs/core'
-```
+**En desarrollo:**
 
-**Solución:** Falta copiar node_modules correctamente
-
-#### ❌ Si hay error de Python:
-
-```
-[STDERR] Python no está instalado o no está en el PATH
+```bash
+cd nest-ui-be
+npm run start:dev
 ```
 
-**Solución:** Instalar Python en la máquina
+**En producción (Windows portable):**
 
-#### ❌ Si hay error de rutas:
+1. Abre la app
+2. Presiona `Ctrl + Shift + I` para abrir DevTools
+3. Ve a la pestaña "Console"
+4. Busca errores relacionados con Python
 
-```
-[STDERR] ENOENT: no such file or directory
-```
+### 3. Probar endpoint de debug
 
-**Solución:** Verificar rutas en package.json
-
----
-
-## 🔧 Soluciones Comunes
-
-### Problema 1: Backend no inicia
-
-**Verificar que el backend esté empaquetado:**
-
-```powershell
-# Verificar que existe
-Test-Path "nest-electron/release/win-unpacked/resources/backend/dist/main.js"
-```
-
-Si no existe, el problema está en `package.json`. Verifica:
-
-```json
-"extraResources": [
-  {
-    "from": "../nest-ui-be/dist",
-    "to": "backend/dist",  // ← Debe ser backend/dist
-    "filter": ["**/*"]
-  }
-]
-```
-
-**Corrección en main.ts:**
-
-```typescript
-const backendPath = path.join(
-  process.resourcesPath,
-  "backend",
-  "dist",
-  "main.js",
-);
-// NO: "backend", "main.js"
-```
-
-### Problema 2: Python no encontrado
-
-**Verificar Python:**
-
-```powershell
-py --version
-```
-
-Si no está instalado:
-
-1. Descargar de https://www.python.org/downloads/
-2. Durante instalación, marcar "Add Python to PATH"
-3. Reiniciar la aplicación
-
-### Problema 3: Scripts Python no encontrados
-
-**Verificar que los scripts estén empaquetados:**
-
-```powershell
-# Verificar carpeta python
-Test-Path "nest-electron/release/win-unpacked/resources/python"
-```
-
-Debe contener:
-
-- `saludar.py`
-- `generar_pdf.py`
-- Otros scripts `.py`
-
-### Problema 4: Dependencias de Python faltantes
-
-Si el error es:
+Abre en el navegador:
 
 ```
-ModuleNotFoundError: No module named 'reportlab'
+http://localhost:3000/python/debug-paths
 ```
 
-**Solución:**
-
-```powershell
-pip install reportlab
-```
-
----
-
-## 🧪 Pruebas Manuales
-
-### Probar Backend Manualmente
-
-1. Navega a la carpeta de instalación:
-
-```powershell
-cd "C:\Users\TuUsuario\AppData\Local\Programs\Production Processing\resources\backend"
-```
-
-2. Ejecuta el backend:
-
-```powershell
-node dist/main.js
-```
-
-3. Deberías ver:
-
-```
-[Nest] Starting Nest application...
-[Nest] Nest application successfully started
-```
-
-4. Prueba un endpoint:
-
-```powershell
-Invoke-RestMethod -Uri "http://localhost:3000/python/debug-paths" -Method Get
-```
-
-### Probar Scripts Python Manualmente
-
-1. Navega a la carpeta python:
-
-```powershell
-cd "C:\Users\TuUsuario\AppData\Local\Programs\Production Processing\resources\python"
-```
-
-2. Ejecuta un script:
-
-```powershell
-py saludar.py "Alex"
-```
-
-3. Deberías ver:
+Debe mostrar:
 
 ```json
 {
-  "success": true,
-  "mensaje": "Hola Alex! Bienvenido",
-  ...
+  "scriptsPath": "C:\\...\\resources\\python",
+  "executablesPath": "C:\\...\\resources\\python\\executables",
+  "pythonExecutable": "C:\\...\\resources\\python\\python.exe",
+  "resourcesPath": "C:\\...\\resources",
+  "isProduction": true
 }
 ```
 
----
+### 4. Errores comunes
 
-## 📋 Checklist de Verificación
+#### Error: "Python embebido no encontrado"
 
-Antes de crear el instalador, verifica:
+**Causa:** La carpeta `python` no se copió al empaquetar
 
-- [ ] Backend compila sin errores: `cd nest-ui-be && npm run build`
-- [ ] Frontend compila sin errores: `cd nest-ui-fe && npm run build`
-- [ ] Electron compila sin errores: `cd nest-electron && npm run build`
-- [ ] Scripts Python existen en `nest-files-py/`
-- [ ] `package.json` tiene rutas correctas en `extraResources`
-- [ ] Python está instalado en la máquina de prueba
-- [ ] Dependencias de Python instaladas (`pip install reportlab`)
+**Solución:**
 
----
+1. Verifica que `nest-files-py-embedded/` existe antes de compilar
+2. Revisa `nest-electron/package.json` → `build.extraResources`
+3. Recompila con GitHub Actions
 
-## 🔍 Verificar Estructura del Instalador
+#### Error: "Script no encontrado"
 
-Después de crear el instalador, verifica la estructura:
+**Causa:** Los scripts `.py` no se copiaron a la carpeta embebida
+
+**Solución:**
+
+1. Verifica que `nest-files-py/*.py` existen
+2. El workflow debe copiar los scripts:
+   ```powershell
+   Copy-Item -Path "nest-files-py\*.py" -Destination "nest-files-py-embedded\" -Force
+   ```
+3. Recompila con GitHub Actions
+
+#### Error: "No module named 'reportlab'"
+
+**Causa:** Las dependencias Python no se instalaron
+
+**Solución:**
+
+1. Verifica que el workflow instala reportlab:
+   ```powershell
+   .\python.exe -m pip install reportlab
+   ```
+2. Verifica que `python313._pth` tiene `import site` descomentado
+3. Recompila con GitHub Actions
+
+### 5. Verificar instalación de reportlab
+
+**En desarrollo:**
+
+```bash
+cd nest-files-py-embedded
+.\python.exe -m pip list
+```
+
+Debe mostrar:
+
+```
+reportlab    x.x.x
+pillow       x.x.x
+```
+
+**En producción:**
+Abre PowerShell en la carpeta de la app:
 
 ```powershell
-cd nest-electron/release/win-unpacked/resources
-ls
+cd "C:\...\Production Processing\resources\python"
+.\python.exe -m pip list
 ```
 
-Debe tener:
+### 6. Probar Python directamente
 
-```
-resources/
-├── backend/
-│   ├── dist/
-│   │   └── main.js
-│   ├── node_modules/
-│   └── package.json
-├── frontend/
-│   ├── index.html
-│   └── ...
-└── python/
-    ├── saludar.py
-    ├── generar_pdf.py
-    └── ...
+**En desarrollo:**
+
+```bash
+cd nest-files-py-embedded
+.\python.exe saludar.py "Juan"
 ```
 
----
+Debe retornar:
 
-## 🚨 Error Común: Ruta Incorrecta del Backend
-
-Si el log dice:
-
-```
-Error: Cannot find module 'C:\...\resources\backend\main.js'
+```json
+{ "success": true, "mensaje": "!Hola Juan! Bienvenido", "timestamp": "..." }
 ```
 
-El problema es que `main.js` está en `backend/dist/main.js`, no en `backend/main.js`.
-
-**Solución:** Ya lo corregimos en `main.ts`:
-
-```typescript
-const backendPath = path.join(
-  process.resourcesPath,
-  "backend",
-  "dist",
-  "main.js",
-);
-```
-
----
-
-## 📞 Obtener Información de Debug
-
-Agrega este código temporal en el frontend para ver qué está pasando:
-
-```typescript
-// En home.ts
-async debugInfo() {
-  try {
-    const response = await fetch('http://localhost:3000/python/debug-paths');
-    const data = await response.json();
-    console.log('Debug Info:', data);
-    alert(JSON.stringify(data, null, 2));
-  } catch (error) {
-    console.error('Backend no responde:', error);
-    alert('Backend no está corriendo o no responde');
-  }
-}
-```
-
-Llama a esta función desde un botón para ver si el backend está corriendo.
-
----
-
-## ✅ Solución Paso a Paso
-
-1. **Recompilar todo:**
+**En producción:**
 
 ```powershell
-.\build-all.ps1
+cd "C:\...\Production Processing\resources\python"
+.\python.exe saludar.py "Juan"
 ```
 
-2. **Crear instalador:**
+### 7. Checklist antes de distribuir
+
+- [ ] `nest-files-py-embedded/` existe y contiene Python
+- [ ] Scripts `.py` están en `nest-files-py-embedded/`
+- [ ] `reportlab` está instalado en Python embebido
+- [ ] `python313._pth` tiene `import site` descomentado
+- [ ] Carpeta `executables/` existe
+- [ ] Backend compilado (`nest-ui-be/dist/`)
+- [ ] Frontend compilado (`nest-ui-fe/dist/`)
+- [ ] Electron compilado (`nest-electron/dist/`)
+
+### 8. Recompilar correctamente
+
+**Opción 1: GitHub Actions (RECOMENDADO)**
+
+```bash
+git add .
+git commit -m "Fix: Agregar scripts Python al build"
+git push
+```
+
+Espera a que el workflow termine y descarga el artefacto.
+
+**Opción 2: Local (solo si tienes permisos admin)**
 
 ```powershell
-.\package-app.ps1
+# 1. Limpiar
+cd nest-electron
+Remove-Item -Recurse -Force release
+
+# 2. Compilar todo
+cd ../nest-ui-be
+npm run build
+
+cd ../nest-ui-fe
+npm run build
+
+cd ../nest-electron
+npm run dist:win
 ```
 
-3. **Instalar la aplicación**
+### 9. Validar el build
 
-4. **Abrir logs:**
-   - Menú → Ayuda → Ver Logs del Backend
+Después de compilar, verifica:
 
-5. **Revisar errores en el log**
+```powershell
+# Verificar que Python existe
+Test-Path "nest-electron\release\win-unpacked\resources\python\python.exe"
 
-6. **Aplicar solución según el error**
+# Verificar que scripts existen
+Test-Path "nest-electron\release\win-unpacked\resources\python\saludar.py"
 
-7. **Repetir hasta que funcione**
+# Verificar que backend existe
+Test-Path "nest-electron\release\win-unpacked\resources\backend\dist"
 
----
+# Verificar que frontend existe
+Test-Path "nest-electron\release\win-unpacked\resources\frontend"
+```
 
-## 🎯 Próximos Pasos
+Todos deben retornar `True`.
 
-Una vez que identifiques el error en los logs, vuelve aquí y busca la solución correspondiente.
+## Solución rápida
 
-Si el error no está listado, comparte el contenido de `backend.log` para ayudarte mejor.
+Si el error persiste, el problema más común es que **los scripts Python no se copiaron**.
+
+Actualiza `.github/workflows/build-windows.yml` para incluir:
+
+```yaml
+- name: Setup Python Embedded
+  run: |
+    # ... (descargar e instalar Python)
+
+    # IMPORTANTE: Copiar scripts
+    if (Test-Path "nest-files-py") {
+      Copy-Item -Path "nest-files-py\*.py" -Destination "nest-files-py-embedded\" -Force
+    }
+
+    # Crear carpeta executables
+    New-Item -ItemType Directory -Path "nest-files-py-embedded\executables" -Force
+```
+
+Luego recompila con GitHub Actions.
