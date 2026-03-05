@@ -142,8 +142,8 @@ jobs:
           Remove-Item -Recurse -Force "win-unpacked\resources\*.md" -ErrorAction SilentlyContinue
           Remove-Item -Recurse -Force "win-unpacked\resources\LICENSE*" -ErrorAction SilentlyContinue
 
-          # Comprimir con 7-Zip
-          7z a -t7z -mx=9 -mfb=64 -md=32m -ms=on "Production-Processing-Portable.7z" "win-unpacked\"
+          # Comprimir con 7-Zip (compresión balanceada)
+          7z a -t7z -mx=7 -mfb=64 -md=16m -ms=on "Production-Processing-Portable.7z" "win-unpacked\"
 
           $size = (Get-Item "Production-Processing-Portable.7z").Length / 1MB
           Write-Host "✅ Tamaño: $([math]::Round($size, 2)) MB"

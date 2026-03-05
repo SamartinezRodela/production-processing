@@ -124,9 +124,9 @@ jobs:
           Remove-Item -Recurse -Force "win-unpacked\resources\LICENSE*" -ErrorAction SilentlyContinue
           Remove-Item -Recurse -Force "win-unpacked\resources\CHANGELOG*" -ErrorAction SilentlyContinue
 
-          # Comprimir con 7-Zip (máxima compresión)
-          Write-Host "📦 Comprimiendo con 7-Zip (nivel máximo)..."
-          7z a -t7z -mx=9 -mfb=64 -md=32m -ms=on "Production-Processing-Portable.7z" "win-unpacked\"
+          # Comprimir con 7-Zip (compresión balanceada - rápida descompresión)
+          Write-Host "📦 Comprimiendo con 7-Zip (nivel balanceado)..."
+          7z a -t7z -mx=7 -mfb=64 -md=16m -ms=on "Production-Processing-Portable.7z" "win-unpacked\"
 
           # Mostrar información del archivo
           if (Test-Path "Production-Processing-Portable.7z") {
