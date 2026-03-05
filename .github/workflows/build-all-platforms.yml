@@ -131,6 +131,31 @@ jobs:
           name: windows-installer
           path: nest-electron/release/*.exe
 
+      - name: Create Compressed Portable (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd nest-electron/release
+
+          Write-Host "🗜️ Creando versión portable comprimida..."
+
+          # Limpiar archivos innecesarios
+          Remove-Item -Recurse -Force "win-unpacked\resources\*.md" -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force "win-unpacked\resources\LICENSE*" -ErrorAction SilentlyContinue
+
+          # Comprimir con 7-Zip
+          7z a -t7z -mx=9 -mfb=64 -md=32m -ms=on "Production-Processing-Portable.7z" "win-unpacked\"
+
+          $size = (Get-Item "Production-Processing-Portable.7z").Length / 1MB
+          Write-Host "✅ Tamaño: $([math]::Round($size, 2)) MB"
+        shell: pwsh
+
+      - name: Upload Portable Compressed (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-portable-compressed
+          path: nest-electron/release/Production-Processing-Portable.7z
+
       - name: Upload Artifacts (Mac)
         if: matrix.os == 'macos-latest'
         uses: actions/upload-artifact@v4

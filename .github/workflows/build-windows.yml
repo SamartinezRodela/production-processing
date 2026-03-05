@@ -112,6 +112,40 @@ jobs:
           path: nest-electron/release/win-unpacked/
           retention-days: 30
 
+      - name: Create Compressed Portable (7z - Maximum Compression)
+        run: |
+          cd nest-electron/release
+
+          Write-Host "🗜️ Creando versión portable comprimida con 7-Zip..."
+
+          # Limpiar archivos innecesarios antes de comprimir
+          Write-Host "🧹 Limpiando archivos innecesarios..."
+          Remove-Item -Recurse -Force "win-unpacked\resources\*.md" -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force "win-unpacked\resources\LICENSE*" -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force "win-unpacked\resources\CHANGELOG*" -ErrorAction SilentlyContinue
+
+          # Comprimir con 7-Zip (máxima compresión)
+          Write-Host "📦 Comprimiendo con 7-Zip (nivel máximo)..."
+          7z a -t7z -mx=9 -mfb=64 -md=32m -ms=on "Production-Processing-Portable.7z" "win-unpacked\"
+
+          # Mostrar información del archivo
+          if (Test-Path "Production-Processing-Portable.7z") {
+            $size = (Get-Item "Production-Processing-Portable.7z").Length / 1MB
+            Write-Host "✅ Compresión completada"
+            Write-Host "📊 Tamaño final: $([math]::Round($size, 2)) MB"
+          } else {
+            Write-Host "❌ Error: No se pudo crear el archivo 7z"
+            exit 1
+          }
+        shell: pwsh
+
+      - name: Upload Portable Compressed (7z)
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-portable-compressed
+          path: nest-electron/release/Production-Processing-Portable.7z
+          retention-days: 30
+
       # Si es un tag (release), crear GitHub Release
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/v')
