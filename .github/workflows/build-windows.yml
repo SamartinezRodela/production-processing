@@ -25,13 +25,25 @@ jobs:
           # Extraer
           Expand-Archive -Path "python-embed.zip" -DestinationPath "nest-files-py-embedded" -Force
 
-          # Instalar pip
+          # Configurar Python embebido para usar pip
           cd nest-files-py-embedded
-          Invoke-WebRequest -Uri "https://bootstrap.pypa.io/get-pip.py" -OutFile "get-pip.py"
-          .\python.exe get-pip.py
 
-          # Instalar dependencias
-          .\python.exe -m pip install reportlab
+          # Descargar get-pip.py
+          Invoke-WebRequest -Uri "https://bootstrap.pypa.io/get-pip.py" -OutFile "get-pip.py"
+
+          # Habilitar site-packages editando python313._pth
+          $pthFile = "python313._pth"
+          if (Test-Path $pthFile) {
+            $content = Get-Content $pthFile
+            $content = $content -replace "#import site", "import site"
+            $content | Set-Content $pthFile
+          }
+
+          # Instalar pip
+          .\python.exe get-pip.py --no-warn-script-location
+
+          # Instalar reportlab
+          .\python.exe -m pip install reportlab --no-warn-script-location
 
           cd ..
         shell: pwsh
