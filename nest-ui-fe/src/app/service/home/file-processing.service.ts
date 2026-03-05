@@ -2,11 +2,11 @@
 import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { APP_CONFIG } from '../../config/app.constants';
-import { ProcessingState, ProcessingResult } from '../../models/processing.types';
-import { NotificationService } from '../notification.service';
-import { FileService } from '../file.service';
-import { ApiUrlService } from '../api-url.service';
+import { APP_CONFIG } from '@config/app.constants';
+import { ProcessingState, ProcessingResult } from '@models/processing.types';
+import { NotificationService } from '@services/notification.service';
+import { FileService } from '@services/file.service';
+import { ApiUrlService } from '@services/api-url.service';
 
 @Injectable({
   providedIn: 'root',

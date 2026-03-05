@@ -2,33 +2,34 @@
 import { Component, signal, OnDestroy, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Button } from '../../components/shared/button/button';
-import { Icon } from '../../components/shared/icon/icon';
-import { Select, SelectOption } from '../../components/shared/select/select';
+import { Button } from '@shared/button/button';
+import { Icon } from '@shared/icon/icon';
+import { Select, SelectOption } from '@shared/select/select';
+import { Badge } from '@shared/badge/badge';
 import { Router } from '@angular/router';
-import { ElectronService } from '../../service/electron.service';
-import { ThemeService } from '../../service/theme.service';
+import { ElectronService } from '@services/electron.service';
+import { ThemeService } from '@services/theme.service';
 import { inject } from '@angular/core';
-import { FileService } from '../../service/file.service';
-import { NotificationService } from '../../service/notification.service';
-import { FolderWatcherService } from '../../service/folder-watcher.service';
+import { FileService } from '@services/file.service';
+import { NotificationService } from '@services/notification.service';
+import { FolderWatcherService } from '@services/folder-watcher.service';
 
 // Nuevos servicios
-import { FileDropService } from '../../service/home/file-drop.service';
-import { FileProcessingService } from '../../service/home/file-processing.service';
-import { ErrorLogService } from '../../service/home/error-log.service';
-import { PdfGenerationService } from '../../service/home/pdf-generation.service';
-import { FileUtilsService } from '../../service/home/file-utils.service';
-import { SettingsService } from '../../service/set-up/settings.service';
-import { AuthService } from '../../service/auth.service';
+import { FileDropService } from '@services/home/file-drop.service';
+import { FileProcessingService } from '@services/home/file-processing.service';
+import { ErrorLogService } from '@services/home/error-log.service';
+import { PdfGenerationService } from '@services/home/pdf-generation.service';
+import { FileUtilsService } from '@services/home/file-utils.service';
+import { SettingsService } from '@services/set-up/settings.service';
+import { AuthService } from '@services/auth.service';
 
 import { DEFAULT_FACILITIES, DEFAULT_ORDERS } from '../constants/facilities.constants';
-import { ProcessingResult } from '../../models/processing.types';
-import { OrderManagementService } from '../../service/order-management.service';
+import { ProcessingResult } from '@models/processing.types';
+import { OrderManagementService } from '@services/order-management.service';
 
 @Component({
   selector: 'app-home',
-  imports: [CommonModule, Button, Icon, Select, FormsModule],
+  imports: [CommonModule, Button, Icon, Select, Badge, FormsModule],
   templateUrl: './home.html',
   styleUrl: './home.css',
 })

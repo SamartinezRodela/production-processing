@@ -1,24 +1,25 @@
 import { Component, inject } from '@angular/core';
-import { Button } from '../../components/shared/button/button';
-import { Icon } from '../../components/shared/icon/icon';
-import { Select } from '../../components/shared/select/select';
-import { Modal } from '../../components/shared/modal/modal';
-import { Input } from '../../components/shared/input/input';
+import { Button } from '@shared/button/button';
+import { Icon } from '@shared/icon/icon';
+import { Select } from '@shared/select/select';
+import { Modal } from '@shared/modal/modal';
+import { Input } from '@shared/input/input';
+import { Badge } from '@shared/badge/badge';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { ElectronService } from '../../service/electron.service';
-import { ThemeService } from '../../service/theme.service';
-import { NotificationService } from '../../service/notification.service';
-import { KeyboardShortcutsDirective } from '../../directives/keyboard-shortcuts.directive';
+import { ElectronService } from '@services/electron.service';
+import { ThemeService } from '@services/theme.service';
+import { NotificationService } from '@services/notification.service';
+import { KeyboardShortcutsDirective } from '@directives/keyboard-shortcuts.directive';
 
 // Nuevos servicios
-import { SettingsService } from '../../service/set-up/settings.service';
-import { FacilityManagementService } from '../../service/set-up/facility-management.service';
-import { ModalStateService } from '../../service/set-up/modal-state.service';
-import { AuthService } from '../../service/auth.service';
+import { SettingsService } from '@services/set-up/settings.service';
+import { FacilityManagementService } from '@services/set-up/facility-management.service';
+import { ModalStateService } from '@services/set-up/modal-state.service';
+import { AuthService } from '@services/auth.service';
 
-import { OrderManagementService } from '../../service/order-management.service';
+import { OrderManagementService } from '@services/order-management.service';
 
 @Component({
   selector: 'app-set-up',
@@ -27,6 +28,7 @@ import { OrderManagementService } from '../../service/order-management.service';
     Button,
     Icon,
     Select,
+    Badge,
     FormsModule,
     Modal,
     Input,

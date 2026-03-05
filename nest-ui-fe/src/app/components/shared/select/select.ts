@@ -1,7 +1,15 @@
-import { Component, input, model, signal, HostListener, computed } from '@angular/core';
+import {
+  Component,
+  input,
+  model,
+  signal,
+  HostListener,
+  computed,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { Icon } from '../icon/icon';
+import { Icon } from '@shared/icon/icon';
 
 export interface SelectOption {
   value: string | number;
@@ -13,6 +21,7 @@ export interface SelectOption {
   imports: [FormsModule, CommonModule, Icon],
   templateUrl: './select.html',
   styleUrl: './select.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Select {
   label = input<string>('');

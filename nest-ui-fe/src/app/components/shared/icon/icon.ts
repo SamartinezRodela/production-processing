@@ -1,4 +1,4 @@
-import { Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import {
   LucideAngularModule,
   Home,
@@ -49,6 +49,8 @@ import {
   Bell,
   ChevronRight,
   RefreshCcw,
+  Laptop,
+  Monitor,
 } from 'lucide-angular';
 
 @Component({
@@ -56,6 +58,7 @@ import {
   imports: [LucideAngularModule],
   templateUrl: './icon.html',
   styleUrl: './icon.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Icon {
   name = input.required<string>();
@@ -111,6 +114,8 @@ export class Icon {
     bell: Bell,
     'chevron-right': ChevronRight,
     'refresh-cw': RefreshCcw,
+    laptop: Laptop,
+    monitor: Monitor,
   };
 
   getIcon() {

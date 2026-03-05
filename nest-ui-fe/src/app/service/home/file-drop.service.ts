@@ -1,7 +1,7 @@
 import { Injectable, signal } from '@angular/core';
-import { FileService } from '../file.service';
-import { NotificationService } from '../notification.service';
-import { APP_CONFIG } from '../../config/app.constants';
+import { FileService } from '@services/file.service';
+import { NotificationService } from '@services/notification.service';
+import { APP_CONFIG } from '@config/app.constants';
 
 export interface FolderReadingPorgress {
   current: number;

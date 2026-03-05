@@ -1,7 +1,7 @@
 import { inject } from '@angular/core';
 import { Router, CanActivateFn } from '@angular/router';
-import { AuthService } from '../service/auth.service';
-import { ROUTES } from '../config/app.constants';
+import { AuthService } from '@services/auth.service';
+import { ROUTES } from '@config/app.constants';
 
 /**
  * Guard que protege rutas para usuarios NO autenticados (login, register)

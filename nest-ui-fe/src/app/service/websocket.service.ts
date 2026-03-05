@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { io, Socket } from 'socket.io-client';
 import { Observable, Subject } from 'rxjs';
-import { ApiUrlService } from './api-url.service';
+import { ApiUrlService } from '@services/api-url.service';
 
 @Injectable({
   providedIn: 'root',

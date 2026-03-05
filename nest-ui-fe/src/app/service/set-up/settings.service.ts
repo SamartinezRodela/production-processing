@@ -1,7 +1,7 @@
 // nest-ui-fe/src/app/service/settings.service.ts
 import { Injectable, signal } from '@angular/core';
-import { Facility } from '../../pages/constants/facilities.constants';
-import { environment } from '../../../environments/environment';
+import { Facility } from '@pages/constants/facilities.constants';
+import { environment } from '@environments/environment';
 
 export interface AppSettings {
   basePath: string;

@@ -1,7 +1,7 @@
 // src/app/service/storage.service.ts
 import { Injectable } from '@angular/core';
-import { STORAGE_KEYS } from '../config/app.constants';
-import { AppSettings } from '../models/processing.types';
+import { STORAGE_KEYS } from '@config/app.constants';
+import { AppSettings } from '@models/processing.types';
 
 @Injectable({
   providedIn: 'root',

@@ -3,7 +3,27 @@
   <div
     class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-3 flex items-center justify-between"
   >
-    <h1 class="text-lg font-semibold text-gray-800 dark:text-gray-100">Production Processing</h1>
+    <div class="flex items-center gap-3">
+      <h1 class="text-lg font-semibold text-gray-800 dark:text-gray-100">Production Processing</h1>
+
+      <!-- Badge de estado de procesamiento -->
+      @if (isProcessing()) {
+        <app-badge
+          [label]="'Processing'"
+          [variant]="'warning'"
+          [icon]="'loader'"
+          [dot]="true"
+          [size]="'sm'"
+        />
+      } @else if (selectedFiles().length > 0) {
+        <app-badge
+          [label]="selectedFiles().length + ' files ready'"
+          [variant]="'primary'"
+          [size]="'sm'"
+        />
+      }
+    </div>
+
     <div class="flex items-center gap-2">
       <!-- Dark Mode Toggle -->
       <button
@@ -59,6 +79,10 @@
               (valueChange)="onFacilityChange($event)"
             />
           </div>
+          <!-- Badge de facility seleccionado -->
+          @if (selectedFacility()) {
+            <app-badge [label]="selectedFacility()" [variant]="'info'" [size]="'sm'" />
+          }
         </div>
 
         <div class="flex items-center gap-3">
@@ -75,6 +99,10 @@
               (valueChange)="onOrderChange($event)"
             />
           </div>
+          <!-- Badge de order seleccionado -->
+          @if (selectedOrder()) {
+            <app-badge [label]="selectedOrder()" [variant]="'secondary'" [size]="'sm'" />
+          }
         </div>
       </div>
 
@@ -293,8 +321,14 @@
             <div class="flex items-center gap-2">
               <div class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
               <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-                {{ selectedFiles().length }} file(s) ready to process
+                Files ready to process
               </span>
+              <!-- Badge con contador de archivos -->
+              <app-badge
+                [label]="selectedFiles().length.toString()"
+                [variant]="'primary'"
+                [size]="'md'"
+              />
             </div>
             <button
               type="button"
@@ -365,9 +399,12 @@
                     {{ file.name }}
                   </p>
                   <div class="flex items-center gap-2 mt-1">
-                    <span class="text-xs text-gray-500 dark:text-gray-400">
-                      {{ formatFileSize(file.size) }}
-                    </span>
+                    <!-- Badge de tamaño de archivo -->
+                    <app-badge
+                      [label]="formatFileSize(file.size)"
+                      [variant]="'gray'"
+                      [size]="'sm'"
+                    />
                     <span class="text-xs text-gray-400 dark:text-gray-500">•</span>
                     <span class="text-xs text-gray-500 dark:text-gray-400">
                       {{ file.type || 'Unknown type' }}
@@ -523,7 +560,13 @@
       <div
         class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between"
       >
-        <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-100">Error Log</h3>
+        <div class="flex items-center gap-2">
+          <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-100">Error Log</h3>
+          <!-- Badge con contador de errores -->
+          @if (errorLog().length > 0) {
+            <app-badge [label]="errorLog().length.toString()" [variant]="'danger'" [size]="'sm'" />
+          }
+        </div>
         @if (errorLog().length > 0) {
           <app-button
             [label]="'Clear All'"

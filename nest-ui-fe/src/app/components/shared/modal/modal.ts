@@ -1,12 +1,20 @@
-import { Component, input, output, effect, ElementRef } from '@angular/core';
+import {
+  Component,
+  input,
+  output,
+  effect,
+  ElementRef,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Button } from '../button/button';
+import { Button } from '@shared/button/button';
 
 @Component({
   selector: 'app-modal',
   imports: [CommonModule, Button],
   templateUrl: './modal.html',
   styleUrl: './modal.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Modal {
   isOpen = input<boolean>(false);

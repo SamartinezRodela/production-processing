@@ -2,14 +2,12 @@ import { Component, signal, inject } from '@angular/core';
 
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { Button } from '../../components/shared/button/button';
-import { Icon } from '../../components/shared/icon/icon';
-import { Input } from '../../components/shared/input/input';
+import { Button } from '@shared/button/button';
+import { Icon } from '@shared/icon/icon';
 import { FormsModule } from '@angular/forms';
-import { CaptionsOff } from 'lucide-angular';
-import { ThemeService } from '../../service/theme.service';
-import { AuthService } from '../../service/auth.service';
-import { ROUTES } from '../../config/app.constants';
+import { ThemeService } from '@services/theme.service';
+import { AuthService } from '@services/auth.service';
+import { ROUTES } from '@config/app.constants';
 
 @Component({
   selector: 'app-login',

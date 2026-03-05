@@ -1,7 +1,7 @@
 import { Injectable, signal, computed } from '@angular/core';
-import { DEFAULT_FACILITIES, Facility } from '../../pages/constants/facilities.constants';
-import { FacilitiesApiService } from '../facilities-api.service';
-import { WebSocketService } from '../websocket.service';
+import { DEFAULT_FACILITIES, Facility } from '@pages/constants/facilities.constants';
+import { FacilitiesApiService } from '@services/facilities-api.service';
+import { WebSocketService } from '@services/websocket.service';
 
 @Injectable({
   providedIn: 'root',

@@ -2,7 +2,7 @@ import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 
-import { errorInterceptor } from './interceptors/error.interceptor';
+import { errorInterceptor } from '@interceptors/error.interceptor';
 
 import { routes } from './app.routes';
 

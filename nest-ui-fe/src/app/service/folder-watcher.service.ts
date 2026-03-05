@@ -1,5 +1,5 @@
 import { Injectable, signal } from '@angular/core';
-import { ElectronService } from './electron.service';
+import { ElectronService } from '@services/electron.service';
 
 export interface FolderItem {
   name: string;

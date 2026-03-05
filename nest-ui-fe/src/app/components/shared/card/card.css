@@ -1,0 +1,114 @@
+/* Card base */
+.card {
+  background-color: rgb(255 255 255);
+  border-radius: 0.5rem;
+  border-width: 1px;
+  border-color: rgb(229 231 235);
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+.dark .card {
+  background-color: rgb(31 41 55);
+  border-color: rgb(55 65 81);
+}
+
+/* Variantes */
+.card-default {
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+.card-interactive {
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+.card-interactive:hover {
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.1),
+    0 2px 4px -2px rgb(0 0 0 / 0.1);
+  border-color: rgb(147 197 253);
+}
+
+.dark .card-interactive:hover {
+  border-color: rgb(37 99 235);
+}
+
+.card-bordered {
+  border-width: 2px;
+}
+
+.card-elevated {
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.1),
+    0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+/* Padding */
+.card-padding-none {
+  padding: 0;
+}
+
+.card-padding-sm {
+  padding: 0.5rem;
+}
+
+.card-padding-md {
+  padding: 1rem;
+}
+
+.card-padding-lg {
+  padding: 1.5rem;
+}
+
+/* Header */
+.card-header {
+  margin-bottom: 0.75rem;
+}
+
+.card-title {
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  font-weight: 600;
+  color: rgb(17 24 39);
+}
+
+.dark .card-title {
+  color: rgb(255 255 255);
+}
+
+.card-subtitle {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: rgb(107 114 128);
+  margin-top: 0.25rem;
+}
+
+.dark .card-subtitle {
+  color: rgb(156 163 175);
+}
+
+/* Content */
+.card-content {
+  color: rgb(55 65 81);
+}
+
+.dark .card-content {
+  color: rgb(209 213 219);
+}
+
+/* Footer */
+.card-footer:empty {
+  display: none;
+}
+
+.card-footer:not(:empty) {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top-width: 1px;
+  border-color: rgb(229 231 235);
+}
+
+.dark .card-footer:not(:empty) {
+  border-color: rgb(55 65 81);
+}

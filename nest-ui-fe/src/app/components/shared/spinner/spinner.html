@@ -1,0 +1,7 @@
+<div [class]="'spinner-container ' + (centered() ? 'spinner-centered' : '') + ' ' + customClass()">
+  <div [class]="'spinner ' + 'spinner-' + size() + ' ' + 'spinner-' + color()"></div>
+
+  @if (text()) {
+    <p class="spinner-text">{{ text() }}</p>
+  }
+</div>

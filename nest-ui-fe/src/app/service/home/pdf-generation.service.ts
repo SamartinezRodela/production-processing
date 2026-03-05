@@ -1,7 +1,7 @@
 // nest-ui-fe/src/app/service/pdf-generation.service.ts
 import { Injectable, signal } from '@angular/core';
-import { ElectronService } from '../electron.service';
-import { NotificationService } from '../notification.service';
+import { ElectronService } from '@services/electron.service';
+import { NotificationService } from '@services/notification.service';
 
 @Injectable({
   providedIn: 'root',

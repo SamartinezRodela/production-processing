@@ -1,4 +1,4 @@
-import { environment } from '../../environments/environment';
+import { environment } from '@environments/environment';
 
 export const APP_CONFIG = {
   // ✅ CAMBIO: Ya no hardcodeamos API_URL, se obtiene dinámicamente via ApiUrlService

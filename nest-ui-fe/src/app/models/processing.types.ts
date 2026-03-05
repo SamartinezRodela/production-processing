@@ -1,4 +1,4 @@
-import { FileError } from '../service/home/error-log.service';
+import { FileError } from '@services/home/error-log.service';
 
 export type ProcessingState = 'idle' | 'loading' | 'processing' | 'complete' | 'error';
 export type FacilityType = 'Facility A' | 'Facility B' | 'Facility C' | 'Facility D';

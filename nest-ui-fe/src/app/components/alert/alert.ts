@@ -1,7 +1,7 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { AlertService } from '../../service/alert.service';
-import { Icon } from '../shared/icon/icon';
+import { AlertService } from '@services/alert.service';
+import { Icon } from '@shared/icon/icon';
 
 @Component({
   selector: 'app-alert-container',
@@ -9,6 +9,7 @@ import { Icon } from '../shared/icon/icon';
   imports: [CommonModule, Icon],
   templateUrl: './alert.html',
   styleUrl: './alert.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AlertContainer {
   // ← CAMBIO: Alert → AlertContainer

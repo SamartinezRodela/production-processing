@@ -1,0 +1,36 @@
+<div
+  [class]="
+    'card ' +
+    'card-' +
+    variant() +
+    ' ' +
+    'card-padding-' +
+    padding() +
+    ' ' +
+    (clickable() ? 'cursor-pointer hover:shadow-lg' : '') +
+    ' ' +
+    customClass()
+  "
+>
+  <!-- Header (si hay título o subtítulo) -->
+  @if (title() || subtitle()) {
+    <div class="card-header">
+      @if (title()) {
+        <h3 class="card-title">{{ title() }}</h3>
+      }
+      @if (subtitle()) {
+        <p class="card-subtitle">{{ subtitle() }}</p>
+      }
+    </div>
+  }
+
+  <!-- Contenido principal -->
+  <div class="card-content">
+    <ng-content />
+  </div>
+
+  <!-- Footer opcional (usando content projection) -->
+  <div class="card-footer">
+    <ng-content select="[footer]" />
+  </div>
+</div>

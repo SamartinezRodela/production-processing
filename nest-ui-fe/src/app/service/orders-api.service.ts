@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { ApiUrlService } from './api-url.service';
-import { Order } from '../models/database.types';
+import { ApiUrlService } from '@services/api-url.service';
+import { Order } from '@models/database.types';
 
 interface ApiResponse<T> {
   success: boolean;

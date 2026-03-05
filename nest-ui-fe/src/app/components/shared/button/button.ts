@@ -1,12 +1,13 @@
-import { Component, input, output } from '@angular/core';
+import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Icon } from '../icon/icon';
+import { Icon } from '@shared/icon/icon';
 
 @Component({
   selector: 'app-button',
   imports: [CommonModule, Icon],
   templateUrl: './button.html',
   styleUrl: './button.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Button {
   label = input<string>('Button');

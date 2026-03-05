@@ -1,13 +1,14 @@
-import { Component, input, model, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, model, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { Icon } from '../../shared/icon/icon';
+import { Icon } from '@shared/icon/icon';
 
 @Component({
   selector: 'app-input',
   imports: [FormsModule, CommonModule, Icon],
   templateUrl: './input.html',
   styleUrl: './input.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Input {
   label = input<string>('');

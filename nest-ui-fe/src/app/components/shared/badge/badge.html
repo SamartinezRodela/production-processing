@@ -1,0 +1,30 @@
+<span [class]="'badge ' + 'badge-' + variant() + ' ' + 'badge-' + size() + ' ' + customClass()">
+  <!-- Dot indicator -->
+  @if (dot()) {
+    <span class="badge-dot"></span>
+  }
+
+  <!-- Icon left -->
+  @if (icon() && iconPosition() === 'left') {
+    <app-icon [name]="icon()" [size]="size() === 'sm' ? 12 : size() === 'md' ? 14 : 16" />
+  }
+
+  <!-- Label -->
+  @if (label()) {
+    <span class="badge-label">{{ label() }}</span>
+  } @else {
+    <ng-content />
+  }
+
+  <!-- Icon right -->
+  @if (icon() && iconPosition() === 'right') {
+    <app-icon [name]="icon()" [size]="size() === 'sm' ? 12 : size() === 'md' ? 14 : 16" />
+  }
+
+  <!-- Remove button -->
+  @if (removable()) {
+    <button type="button" class="badge-remove" (click)="onRemoved()" aria-label="Remove">
+      <app-icon [name]="'x'" [size]="size() === 'sm' ? 12 : size() === 'md' ? 14 : 16" />
+    </button>
+  }
+</span>

@@ -2,9 +2,9 @@
 import { Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { STORAGE_KEYS, ROUTES } from '../config/app.constants';
+import { STORAGE_KEYS, ROUTES } from '@config/app.constants';
 import { firstValueFrom } from 'rxjs';
-import { ApiUrlService } from './api-url.service';
+import { ApiUrlService } from '@services/api-url.service';
 
 export interface LoginCredentials {
   username: string;

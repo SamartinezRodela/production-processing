@@ -1,7 +1,7 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { NotificationService } from '../../service/notification.service';
-import { Icon } from '../shared/icon/icon';
+import { NotificationService } from '@services/notification.service';
+import { Icon } from '@shared/icon/icon';
 
 @Component({
   selector: 'app-notifications',
@@ -9,6 +9,7 @@ import { Icon } from '../shared/icon/icon';
   imports: [CommonModule, Icon],
   templateUrl: './notification.html',
   styleUrl: './notification.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Notification {
   notificationService = inject(NotificationService);

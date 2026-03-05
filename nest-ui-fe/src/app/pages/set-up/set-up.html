@@ -37,9 +37,16 @@
       <div
         class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
       >
-        <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-4">
-          Operating System
-        </h2>
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100">Operating System</h2>
+          <!-- Badge del OS seleccionado -->
+          <app-badge
+            [label]="operatingSystem() === 'macos' ? 'macOS' : 'Windows'"
+            [variant]="'info'"
+            [icon]="operatingSystem() === 'macos' ? 'laptop' : 'monitor'"
+            [size]="'sm'"
+          />
+        </div>
         <div class="flex items-center gap-6">
           <label class="flex items-center gap-2 cursor-pointer">
             <input
@@ -96,7 +103,15 @@
       <div
         class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
       >
-        <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-4">Facilities</h2>
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100">Facilities</h2>
+          <!-- Badge con contador de facilities -->
+          <app-badge
+            [label]="facilities().length + ' facilities'"
+            [variant]="'primary'"
+            [size]="'sm'"
+          />
+        </div>
 
         <div class="mb-4">
           <app-select
@@ -150,17 +165,12 @@
             <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">Current Facilities:</p>
             <div class="flex flex-wrap gap-2">
               @for (facility of facilities(); track facility.id) {
-                <span
-                  class="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-full border border-gray-200 dark:border-gray-600"
-                  [class.bg-blue-50]="facility.id === selectedFacility()"
-                  [class.dark:bg-blue-900]="facility.id === selectedFacility()"
-                  [class.border-blue-300]="facility.id === selectedFacility()"
-                  [class.dark:border-blue-600]="facility.id === selectedFacility()"
-                  [class.text-blue-700]="facility.id === selectedFacility()"
-                  [class.dark:text-blue-300]="facility.id === selectedFacility()"
-                >
-                  {{ facility.name }}
-                </span>
+                <!-- Reemplazar span con app-badge -->
+                <app-badge
+                  [label]="facility.name"
+                  [variant]="facility.id === selectedFacility() ? 'primary' : 'secondary'"
+                  [size]="'sm'"
+                />
               }
             </div>
           </div>
@@ -171,9 +181,13 @@
       <div
         class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
       >
-        <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-4">
-          Process Types (Orders)
-        </h2>
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-4">
+            Process Types (Orders)
+          </h2>
+          <!-- Badge con contador de facilities -->
+          <app-badge [label]="orders().length + ' orders'" [variant]="'primary'" [size]="'sm'" />
+        </div>
         <div class="mb-4">
           <app-select
             label="Selected Order:"
@@ -224,7 +238,12 @@
             <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">Current Orders:</p>
             <div class="flex flex-wrap gap-2">
               @for (order of orders(); track order.id) {
-                <span
+                <app-badge
+                  [label]="order.name"
+                  [variant]="order.id === selectedOrder() ? 'primary' : 'secondary'"
+                  [size]="'sm'"
+                />
+                <!-- <span
                   class="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-full border border-gray-200 dark:border-gray-600"
                   [class.bg-blue-50]="order.id === selectedOrder()"
                   [class.dark:bg-blue-900]="order.id === selectedOrder()"
@@ -234,7 +253,7 @@
                   [class.dark:text-blue-300]="order.id === selectedOrder()"
                 >
                   {{ order.name }}
-                </span>
+                </span> -->
               }
             </div>
           </div>

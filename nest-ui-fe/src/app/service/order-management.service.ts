@@ -1,7 +1,7 @@
 import { Injectable, signal, computed } from '@angular/core';
-import { Order } from '../models/database.types';
-import { OrdersApiService } from '../service/orders-api.service';
-import { WebSocketService } from './websocket.service';
+import { Order } from '@models/database.types';
+import { OrdersApiService } from '@services/orders-api.service';
+import { WebSocketService } from '@services/websocket.service';
 
 @Injectable({
   providedIn: 'root',
