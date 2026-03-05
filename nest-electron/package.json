@@ -65,14 +65,8 @@
         "from": "../nest-files-py-embedded",
         "to": "python",
         "filter": [
-          "**/*"
-        ]
-      },
-      {
-        "from": "../nest-files-py-embedded-mac",
-        "to": "python",
-        "filter": [
-          "**/*"
+          "**/*",
+          "!get-pip.py"
         ]
       }
     ],
@@ -91,13 +85,14 @@
           "from": "../nest-files-py-embedded",
           "to": "python",
           "filter": [
-            "**/*"
+            "**/*",
+            "!get-pip.py"
           ]
         }
       ]
     },
     "mac": {
-      "target": "dir",
+      "target": "dmg",
       "identity": null,
       "extraResources": [
         {
@@ -113,10 +108,10 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
-    },
-    "mac": {
-      "target": "dmg"
+      "createStartMenuShortcut": true,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico"
     },
     "linux": {
       "target": "AppImage"

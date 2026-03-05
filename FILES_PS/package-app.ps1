@@ -3,12 +3,48 @@
 
 Write-Host "[PACKAGE] Iniciando empaquetado de produccion..." -ForegroundColor Cyan
 
+# Cerrar procesos que puedan estar usando archivos
+Write-Host "[CLEANUP] Cerrando procesos relacionados..." -ForegroundColor Yellow
+Get-Process | Where-Object {$_.ProcessName -like "*electron*" -or $_.ProcessName -like "*node*" -or $_.ProcessName -like "*python*"} | Stop-Process -Force -ErrorAction SilentlyContinue
+
+# Esperar un momento para que se liberen los archivos
+Start-Sleep -Seconds 2
+
 # Limpiar builds anteriores
 Write-Host "[CLEAN] Limpiando builds anteriores..." -ForegroundColor Yellow
 Remove-Item -Path "nest-ui-be/dist" -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item -Path "nest-ui-fe/dist" -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item -Path "nest-electron/dist" -Recurse -Force -ErrorAction SilentlyContinue
-Remove-Item -Path "nest-electron/release" -Recurse -Force -ErrorAction SilentlyContinue
+
+# Limpiar release con reintentos
+$maxRetries = 3
+$retryCount = 0
+$releaseRemoved = $false
+
+while (-not $releaseRemoved -and $retryCount -lt $maxRetries) {
+    try {
+        if (Test-Path "nest-electron/release") {
+            Remove-Item -Path "nest-electron/release" -Recurse -Force -ErrorAction Stop
+            $releaseRemoved = $true
+            Write-Host "[CLEAN] Carpeta release eliminada" -ForegroundColor Green
+        } else {
+            $releaseRemoved = $true
+        }
+    } catch {
+        $retryCount++
+        Write-Host "[CLEAN] Reintento $retryCount de $maxRetries..." -ForegroundColor Yellow
+        Start-Sleep -Seconds 3
+        
+        # Intentar cerrar procesos de nuevo
+        Get-Process | Where-Object {$_.ProcessName -like "*electron*"} | Stop-Process -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 2
+    }
+}
+
+if (-not $releaseRemoved) {
+    Write-Host "[WARNING] No se pudo eliminar completamente la carpeta release" -ForegroundColor Yellow
+    Write-Host "[INFO] Continuando de todas formas..." -ForegroundColor Yellow
+}
 
 # Compilar Backend
 Write-Host "[BUILD] Compilando Backend..." -ForegroundColor Cyan

@@ -1,0 +1,45 @@
+{
+  "name": "nest-electron",
+  "version": "1.0.0-no-python",
+  "description": "Production Processing Application (Sin Python)",
+  "author": "Atlthic Sewing",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc",
+    "dist:win:no-python": "npm run build && electron-builder --win --config package-no-python.json"
+  },
+  "build": {
+    "appId": "com.yourcompany.nest-ui",
+    "productName": "Production Processing (No Python)",
+    "directories": {
+      "output": "release-no-python",
+      "buildResources": "build"
+    },
+    "files": ["dist/**/*", "node_modules/**/*", "package.json"],
+    "extraResources": [
+      {
+        "from": "../nest-ui-fe/dist/nest-ui-fe/browser",
+        "to": "frontend"
+      },
+      {
+        "from": "../nest-ui-be/dist",
+        "to": "backend/dist"
+      },
+      {
+        "from": "../nest-ui-be/node_modules",
+        "to": "backend/node_modules"
+      },
+      {
+        "from": "../nest-ui-be/package.json",
+        "to": "backend/package.json"
+      }
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

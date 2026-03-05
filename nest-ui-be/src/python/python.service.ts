@@ -201,6 +201,111 @@ export class PythonService {
     return this.executeScript('generar_pdf_path.py', [datosJson]);
   }
   /**
+   * Ejecuta un archivo ejecutable .exe y retorna el resultado como JSON
+   *
+   * @param exeName - Nombre del archivo ejecutable (ej: 'mi_programa.exe')
+   * @param args - Array de argumentos para pasar al ejecutable
+   * @returns Promise con el resultado parseado como JSON
+   */
+  async executeExecutable(exeName: string, args: string[] = []): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const executablesPath = path.join(this.scriptsPath, 'executables');
+      const exePath = path.join(executablesPath, exeName);
+
+      this.logger.log(`Executables path: ${executablesPath}`);
+      this.logger.log(`Ejecutable completo: ${exePath}`);
+      this.logger.log(`Ejecutando: ${exePath} con args: ${args.join(' ')}`);
+
+      const exeProcess = spawn(exePath, args);
+
+      let dataString = '';
+      let errorString = '';
+
+      exeProcess.stdout.on('data', (data) => {
+        dataString += data.toString();
+      });
+
+      exeProcess.stderr.on('data', (data) => {
+        errorString += data.toString();
+        this.logger.warn(`Executable stderr: ${data}`);
+      });
+
+      exeProcess.on('close', (code) => {
+        if (code !== 0) {
+          this.logger.error(`Ejecutable salió con código ${code}`);
+          this.logger.error(`Error: ${errorString}`);
+
+          const hint =
+            code === 9009 || errorString.includes('not found')
+              ? '💡 Ejecutable no encontrado. Verifica que el archivo .exe esté en la carpeta executables.'
+              : 'Error ejecutando el ejecutable';
+
+          this.logger.error(hint);
+
+          reject({
+            error: 'Executable failed',
+            code,
+            stderr: errorString,
+            stdout: dataString,
+            hint,
+          });
+          return;
+        }
+
+        try {
+          const result = JSON.parse(dataString);
+          this.logger.log('Ejecutable ejecutado exitosamente');
+          resolve(result);
+        } catch (error) {
+          this.logger.error('Error parseando JSON del ejecutable');
+          reject({
+            error: 'Failed to parse executable output',
+            output: dataString,
+            parseError: error.message,
+          });
+        }
+      });
+
+      exeProcess.on('error', (error) => {
+        this.logger.error(`Error ejecutando ejecutable: ${error.message}`);
+        this.logger.error(
+          '💡 Verifica que el archivo .exe esté en la carpeta executables y tenga permisos de ejecución',
+        );
+        reject({
+          error: 'Failed to start executable process',
+          message: error.message,
+          hint: 'Verifica que el ejecutable esté correctamente configurado',
+        });
+      });
+    });
+  }
+
+  /**
+   * Ejecuta un archivo (detecta automáticamente si es .py o .exe)
+   *
+   * @param fileName - Nombre del archivo con extensión (ej: 'script.py' o 'programa.exe')
+   * @param args - Array de argumentos para pasar al archivo
+   * @returns Promise con el resultado parseado como JSON
+   */
+  async executeFile(fileName: string, args: string[] = []): Promise<any> {
+    const extension = path.extname(fileName).toLowerCase();
+
+    this.logger.log(`Detectando tipo de archivo: ${fileName} (${extension})`);
+
+    if (extension === '.py') {
+      this.logger.log('Ejecutando como script Python');
+      return this.executeScript(fileName, args);
+    } else if (extension === '.exe') {
+      this.logger.log('Ejecutando como ejecutable');
+      return this.executeExecutable(fileName, args);
+    } else {
+      const error = `Tipo de archivo no soportado: ${extension}. Solo se permiten .py y .exe`;
+      this.logger.error(error);
+      throw new Error(error);
+    }
+  }
+
+  /**
    * Obtiene información de debug sobre las rutas
    */
   getDebugInfo(): any {
@@ -208,6 +313,7 @@ export class PythonService {
       process.env.RESOURCES_PATH || (process as any).resourcesPath;
     return {
       scriptsPath: this.scriptsPath,
+      executablesPath: path.join(this.scriptsPath, 'executables'),
       pythonExecutable: this.getPythonExecutable(),
       resourcesPath: resourcesPath || 'No definido (modo desarrollo)',
       resourcesPathEnv: process.env.RESOURCES_PATH || 'No definido',

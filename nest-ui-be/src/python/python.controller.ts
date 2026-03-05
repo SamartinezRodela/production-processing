@@ -122,4 +122,98 @@ export class PythonController {
       );
     }
   }
+
+  /**
+   * Endpoint unificado para ejecutar archivos .py o .exe
+   * Detecta automáticamente el tipo de archivo por su extensión
+   */
+  @Post('execute-file')
+  async executeFile(@Body() body: { fileName: string; args?: string[] }) {
+    try {
+      if (!body.fileName) {
+        throw new HttpException(
+          'El nombre del archivo es requerido',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      // Validar extensión
+      const validExtensions = ['.py', '.exe'];
+      const extension = body.fileName.substring(body.fileName.lastIndexOf('.'));
+
+      if (!validExtensions.includes(extension.toLowerCase())) {
+        throw new HttpException(
+          `Extensión no válida. Solo se permiten: ${validExtensions.join(', ')}`,
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const resultado = await this.pythonService.executeFile(
+        body.fileName,
+        body.args || [],
+      );
+
+      return {
+        success: true,
+        fileName: body.fileName,
+        fileType: extension,
+        result: resultado,
+      };
+    } catch (error) {
+      console.error('Error en execute-file controller:', error);
+      throw new HttpException(
+        {
+          message: 'Error al ejecutar archivo',
+          fileName: body.fileName,
+          error: error.message || error,
+          details: error,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Endpoint específico para ejecutar archivos .exe
+   */
+  @Post('execute-exe')
+  async executeExe(@Body() body: { exeName: string; args?: string[] }) {
+    try {
+      if (!body.exeName) {
+        throw new HttpException(
+          'El nombre del ejecutable es requerido',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      if (!body.exeName.toLowerCase().endsWith('.exe')) {
+        throw new HttpException(
+          'El archivo debe tener extensión .exe',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const resultado = await this.pythonService.executeExecutable(
+        body.exeName,
+        body.args || [],
+      );
+
+      return {
+        success: true,
+        exeName: body.exeName,
+        result: resultado,
+      };
+    } catch (error) {
+      console.error('Error en execute-exe controller:', error);
+      throw new HttpException(
+        {
+          message: 'Error al ejecutar ejecutable',
+          exeName: body.exeName,
+          error: error.message || error,
+          details: error,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 }
