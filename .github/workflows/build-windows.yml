@@ -84,7 +84,7 @@ jobs:
           }
 
           # Esperar a que Python libere todos los archivos
-          Start-Sleep -Seconds 2
+          Start-Sleep -Seconds 5
 
           Write-Host ""
           Write-Host "[OK] Scripts Python compilados a .pyc" -ForegroundColor Green
@@ -113,12 +113,20 @@ jobs:
         run: |
           Write-Host "Liberando archivos Python embebidos..." -ForegroundColor Cyan
 
-          # Esperar un momento para que Windows libere los archivos
-          Start-Sleep -Seconds 2
+          # Terminar cualquier proceso de Python que pueda estar corriendo
+          Get-Process python* -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+          Write-Host "Procesos Python terminados (si existían)" -ForegroundColor Yellow
 
-          # Forzar garbage collection
+          # Esperar más tiempo para que Windows libere los archivos
+          Start-Sleep -Seconds 5
+
+          # Forzar garbage collection múltiple
           [System.GC]::Collect()
           [System.GC]::WaitForPendingFinalizers()
+          [System.GC]::Collect()
+
+          # Esperar adicional
+          Start-Sleep -Seconds 3
 
           Write-Host "[OK] Archivos liberados" -ForegroundColor Green
         shell: pwsh
@@ -160,9 +168,10 @@ jobs:
           [System.GC]::Collect()
           [System.GC]::WaitForPendingFinalizers()
           [System.GC]::Collect()
+          [System.GC]::WaitForPendingFinalizers()
 
-          # Esperar para asegurar que Windows libere los archivos
-          Start-Sleep -Seconds 3
+          # Esperar más tiempo para asegurar que Windows libere los archivos
+          Start-Sleep -Seconds 8
 
           # Verificar que los archivos Python existen y son accesibles
           $pythonDir = "nest-files-py-embedded"
@@ -173,6 +182,10 @@ jobs:
             Write-Host "[ERROR] Directorio Python no encontrado" -ForegroundColor Red
             exit 1
           }
+
+          # Espera final antes de Electron
+          Write-Host "Esperando antes de iniciar Electron Builder..." -ForegroundColor Cyan
+          Start-Sleep -Seconds 5
         shell: pwsh
 
       - name: Build Electron App (Windows)

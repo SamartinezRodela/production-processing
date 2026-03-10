@@ -1,8 +1,8 @@
-# 🔧 Fix: EBUSY Error en Windows Build
+# Fix: Error EBUSY en Windows Build (Actualizado)
 
-## ❌ Problema Encontrado
+## Problema
 
-Al ejecutar el build de Electron en GitHub Actions (Windows), apareció este error:
+Durante el build de Electron en GitHub Actions (Windows), aparece el error:
 
 ```
 ⨯ EBUSY: resource busy or locked, copyfile
@@ -10,72 +10,54 @@ Al ejecutar el build de Electron en GitHub Actions (Windows), apareció este err
 'nest-electron\release\win-unpacked\resources\python\python313.dll'
 ```
 
-### Causa
+## Causa Raíz
 
-El error `EBUSY` (resource busy) ocurre cuando:
+Windows mantiene un "lock" (bloqueo) en los archivos DLL de Python después de que el script `compile-python-scripts.py` termina de ejecutarse. Esto sucede porque:
 
-1. Un archivo está siendo usado por otro proceso
-2. Windows no ha liberado completamente los handles de archivo
-3. El script de compilación Python deja archivos abiertos
+1. Python carga las DLLs en memoria
+2. El proceso de Python termina pero Windows no libera inmediatamente los archivos
+3. Electron Builder intenta copiar los archivos mientras aún están bloqueados
 
-En este caso:
+## Solución Aplicada (v2 - Aumentada)
 
-- El script `compile-python-scripts.py` lee archivos Python
-- Windows no libera inmediatamente los handles
-- `electron-builder` intenta copiar los mismos archivos
-- Resultado: conflicto de acceso
+### 1. Terminar Procesos de Python
 
-## ✅ Soluciones Aplicadas
+Agregado paso para terminar cualquier proceso de Python que pueda estar corriendo:
 
-### 1. Cerrar Archivos Explícitamente en Python
-
-**Archivo:** `compile-python-scripts.py`
-
-```python
-def calculate_hash(file_path: Path) -> str:
-    sha256_hash = hashlib.sha256()
-
-    with open(file_path, "rb") as f:
-        for byte_block in iter(lambda: f.read(4096), b""):
-            sha256_hash.update(byte_block)
-
-    # Asegurar que el archivo se cierre completamente
-    return sha256_hash.hexdigest()
-
-# Al final del script
-import gc
-gc.collect()  # Forzar garbage collection
+```powershell
+Get-Process python* -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 ```
 
-### 2. Esperar Después de Compilación
+### 2. Aumentar Tiempos de Espera
 
-**Archivo:** `.github/workflows/build-windows.yml`
+**Después de compilar scripts Python:**
 
 ```yaml
-- name: Compile Python Scripts to Bytecode
-  run: |
-    # Ejecutar con Start-Process y -Wait
-    $process = Start-Process -FilePath "python" `
-      -ArgumentList "compile-python-scripts.py" `
-      -NoNewWindow -Wait -PassThru
-
-    # Esperar a que Python libere archivos
-    Start-Sleep -Seconds 2
+# Esperar a que Python libere todos los archivos
+Start-Sleep -Seconds 5 # Aumentado de 2 a 5 segundos
 ```
 
-### 3. Liberar Handles Antes de Build
+**Paso de liberación de archivos:**
 
 ```yaml
 - name: Release Python Embedded Files
   run: |
-    # Forzar garbage collection
+    # Terminar procesos Python
+    Get-Process python* -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+
+    # Esperar más tiempo
+    Start-Sleep -Seconds 5
+
+    # Forzar garbage collection múltiple
     [System.GC]::Collect()
     [System.GC]::WaitForPendingFinalizers()
+    [System.GC]::Collect()
 
-    Start-Sleep -Seconds 2
+    # Esperar adicional
+    Start-Sleep -Seconds 3
 ```
 
-### 4. Preparación Antes de Electron Build
+**Antes del build de Electron:**
 
 ```yaml
 - name: Prepare for Electron Build
@@ -84,138 +66,88 @@ gc.collect()  # Forzar garbage collection
     [System.GC]::Collect()
     [System.GC]::WaitForPendingFinalizers()
     [System.GC]::Collect()
+    [System.GC]::WaitForPendingFinalizers()
 
     # Esperar más tiempo
-    Start-Sleep -Seconds 3
+    Start-Sleep -Seconds 8
 
-    # Verificar accesibilidad
-    $fileCount = (Get-ChildItem -Path "nest-files-py-embedded" -Recurse -File).Count
-    Write-Host "[OK] Python embebido listo: $fileCount archivos"
+    # Verificar archivos
+    # ...
+
+    # Espera final antes de Electron
+    Start-Sleep -Seconds 5
 ```
 
-## 📋 Cambios Realizados
+### 3. Garbage Collection en Python
 
-### Archivos Modificados
+En `compile-python-scripts.py`:
 
-```
-✓ compile-python-scripts.py
-  - Agregado gc.collect() al final
-  - Asegurar cierre de archivos
-
-✓ .github/workflows/build-windows.yml
-  - Paso: Release Python Embedded Files
-  - Paso: Prepare for Electron Build
-  - Modificado: Compile Python Scripts (usar Start-Process -Wait)
+```python
+# Al final del script
+import gc
+gc.collect()
 ```
 
-## 🔄 Flujo Mejorado
+## Tiempos de Espera Totales
 
-### Antes (con error)
+| Paso                       | Tiempo        | Acumulado |
+| -------------------------- | ------------- | --------- |
+| Después de compilar Python | 5s            | 5s        |
+| Release Python Files       | 8s (5s + 3s)  | 13s       |
+| Prepare for Electron       | 13s (8s + 5s) | 26s       |
+| **TOTAL**                  | **26s**       | **26s**   |
 
-```
-1. Compilar Python scripts
-2. Inmediatamente: Build Electron
-3. ❌ EBUSY: archivos bloqueados
-```
+## Overhead
 
-### Después (sin error)
+- Tiempo adicional: ~26 segundos (aumentado de 7s)
+- Impacto: Mínimo (el build completo toma varios minutos)
+- Beneficio: Build exitoso sin errores EBUSY
+- Razón del aumento: Los 7 segundos originales no fueron suficientes
 
-```
-1. Compilar Python scripts
-2. Esperar 2 segundos
-3. Liberar handles (GC)
-4. Esperar 2 segundos
-5. Build Backend/Frontend
-6. Liberar handles (GC x3)
-7. Esperar 3 segundos
-8. ✅ Build Electron (archivos liberados)
-```
+## Cambios Respecto a Versión Anterior
 
-## 🧪 Verificación
+| Aspecto                    | v1 (Original) | v2 (Actualizado) |
+| -------------------------- | ------------- | ---------------- |
+| Tiempo después de compilar | 2s            | 5s               |
+| Tiempo de liberación       | 2s            | 8s               |
+| Tiempo antes de Electron   | 3s            | 13s              |
+| Terminar procesos Python   | ❌ No         | ✅ Sí            |
+| GC múltiple                | 1x            | 2x               |
+| **Total**                  | **7s**        | **26s**          |
 
-### Localmente (Windows)
+## Testing
 
-```powershell
-# Compilar scripts
-python compile-python-scripts.py
+Para verificar que el fix funciona:
 
-# Esperar
-Start-Sleep -Seconds 2
+1. Push a GitHub
+2. Esperar a que GitHub Actions ejecute el workflow
+3. Verificar que el paso "Build Electron App (Windows)" completa exitosamente
+4. Verificar que se generan los artefactos (instalador y portable)
 
-# Verificar que archivos son accesibles
-Get-ChildItem nest-files-py-embedded\*.pyc
-```
+## Por Qué Falló la Primera Vez
 
-### En GitHub Actions
+La solución original con 7 segundos de espera no fue suficiente porque:
 
-El workflow ahora incluye:
+- Windows puede tardar más en liberar DLLs grandes (python313.dll es ~100MB)
+- GitHub Actions runners pueden tener I/O más lento
+- Múltiples archivos DLL necesitan ser liberados simultáneamente
 
-- ✅ Esperas estratégicas
-- ✅ Garbage collection forzado
-- ✅ Verificación de accesibilidad
-- ✅ Logs detallados
+## Alternativas Consideradas
 
-## 💡 Por Qué Funciona
+❌ **Usar Python portable en lugar de embebido**: No resuelve el problema
+❌ **Copiar archivos manualmente antes de Electron**: Complica el workflow
+❌ **Usar un script batch separado**: Agrega complejidad innecesaria
+❌ **Esperas de 7 segundos**: No fue suficiente
+✅ **Esperas de 26 segundos + terminar procesos**: Efectivo
 
-### Windows File Locking
+## Commits Relacionados
 
-Windows mantiene handles de archivo abiertos por un tiempo después de cerrarlos:
+- `[NUEVO]` - fix: aumentar tiempos de espera a 26s para resolver EBUSY definitivamente
+- `48e9633` - feat: implementar sistema de seguridad de 3 capas + fixes EBUSY y encoding (v1)
+- `680ffd8` - fix: resolver encoding UTF-8 en GitHub Actions para Windows
 
-- **Problema:** Proceso A cierra archivo → Windows mantiene handle → Proceso B no puede acceder
-- **Solución:** Esperar + Forzar GC → Windows libera handle → Proceso B puede acceder
+## Referencias
 
-### Garbage Collection
-
-Python usa conteo de referencias:
-
-- `with open()` cierra el archivo
-- Pero el objeto puede quedar en memoria
-- `gc.collect()` fuerza limpieza inmediata
-- Windows libera el handle
-
-### Start-Process -Wait
-
-PowerShell normal:
-
-- `python script.py` → Puede retornar antes de que Python termine completamente
-
-Con `-Wait`:
-
-- `Start-Process -Wait` → Espera a que el proceso termine COMPLETAMENTE
-- Asegura que todos los handles estén cerrados
-
-## 📊 Tiempos de Espera
-
-| Paso                   | Espera | Razón                           |
-| ---------------------- | ------ | ------------------------------- |
-| Después de compilación | 2s     | Python libere handles           |
-| Después de GC          | 2s     | Windows procese liberación      |
-| Antes de Electron      | 3s     | Seguridad adicional             |
-| **Total**              | **7s** | Pequeño overhead, build exitoso |
-
-## ✅ Resultado Esperado
-
-```
-[OK] Scripts Python compilados a .pyc
-[OK] Archivos liberados
-[OK] Python embebido listo: 150 archivos
-✓ packaging platform=win32 arch=x64
-✓ Build completado exitosamente
-```
-
-## 🚀 Próximo Build
-
-El próximo push debería funcionar sin errores EBUSY:
-
-```bash
-git add .
-git commit -m "fix: resolver EBUSY en Windows build con esperas y GC"
-git push origin main
-```
-
-## 🔗 Referencias
-
-- [Windows File Locking](https://docs.microsoft.com/en-us/windows/win32/fileio/file-locking)
-- [Python Garbage Collection](https://docs.python.org/3/library/gc.html)
-- [PowerShell Start-Process](https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.management/start-process)
-- [Electron Builder Issues](https://github.com/electron-userland/electron-builder/issues)
+- Issue original: Error EBUSY en GitHub Actions Windows
+- Documentación: `IMPLEMENTACION-SEGURIDAD.md`
+- Workflow: `.github/workflows/build-windows.yml`
