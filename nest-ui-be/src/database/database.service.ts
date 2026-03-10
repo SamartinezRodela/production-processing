@@ -87,12 +87,29 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   private initializeDatabase(): void {
     // Determinar la ruta del archivo database.json
     this.dbPath = this.getDatabasePath();
-    this.logger.log(`Database path: ${this.dbPath}`);
+
+    this.logger.log('='.repeat(60));
+    this.logger.log('📂 INICIALIZANDO BASE DE DATOS');
+    this.logger.log('='.repeat(60));
+    this.logger.log(`Ruta de base de datos: ${this.dbPath}`);
+    this.logger.log(`Archivo existe: ${fs.existsSync(this.dbPath)}`);
+
+    const isProduction =
+      process.env.NODE_ENV === 'production' ||
+      (process as any).resourcesPath !== undefined;
+
+    this.logger.log(`Modo: ${isProduction ? 'PRODUCCIÓN' : 'DESARROLLO'}`);
+    this.logger.log(`NODE_ENV: ${process.env.NODE_ENV || 'no definido'}`);
+    this.logger.log(
+      `resourcesPath: ${(process as any).resourcesPath || 'no definido'}`,
+    );
+    this.logger.log('='.repeat(60));
 
     // Cargar o crear la base de datos
     if (fs.existsSync(this.dbPath)) {
       this.loadDatabase();
     } else {
+      this.logger.warn('⚠️  Base de datos no encontrada, creando nueva...');
       this.createDefaultDatabase();
     }
   }
@@ -248,14 +265,21 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   private saveDatabase(): void {
     try {
       this.database.lastModified = new Date().toISOString();
+
+      this.logger.log(`💾 Guardando base de datos en: ${this.dbPath}`);
+
       fs.writeFileSync(
         this.dbPath,
         JSON.stringify(this.database, null, 2),
         'utf8',
       );
-      this.logger.log('Database saved');
+
+      this.logger.log('✅ Base de datos guardada exitosamente');
+      this.logger.log(`   Ruta: ${this.dbPath}`);
+      this.logger.log(`   Tamaño: ${fs.statSync(this.dbPath).size} bytes`);
     } catch (error) {
-      this.logger.error('Error saving database:', error);
+      this.logger.error(`❌ Error guardando base de datos: ${error.message}`);
+      this.logger.error(`   Ruta intentada: ${this.dbPath}`);
       throw error;
     }
   }
@@ -512,5 +536,27 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     fs.copyFileSync(this.dbPath, backupPath);
     this.logger.log(`✅ Backup created: ${backupPath}`);
     return backupPath;
+  }
+
+  /**
+   * Obtiene información de diagnóstico de la base de datos
+   */
+  getDatabaseInfo(): any {
+    const isProduction =
+      process.env.NODE_ENV === 'production' ||
+      (process as any).resourcesPath !== undefined;
+
+    return {
+      dbPath: this.dbPath,
+      exists: fs.existsSync(this.dbPath),
+      size: fs.existsSync(this.dbPath) ? fs.statSync(this.dbPath).size : 0,
+      lastModified: this.database.lastModified,
+      isProduction: isProduction,
+      nodeEnv: process.env.NODE_ENV || 'no definido',
+      resourcesPath: (process as any).resourcesPath || 'no definido',
+      appData: process.env.APPDATA || 'no definido',
+      facilitiesCount: this.database.facilities.length,
+      ordersCount: this.database.orders.length,
+    };
   }
 }
