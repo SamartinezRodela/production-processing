@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, model, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, model, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { Icon } from '@shared/icon/icon';
@@ -25,6 +25,9 @@ export class Input {
   iconPosition = input<'left' | 'right'>('left');
   iconSize = input<number>(20);
 
+  // Output para el evento blur
+  blur = output<void>();
+
   // Signal para controlar visibilidad de contraseña
   showPassword = signal(false);
 
@@ -39,5 +42,10 @@ export class Input {
   // Toggle para mostrar/ocultar contraseña
   togglePasswordVisibility() {
     this.showPassword.set(!this.showPassword());
+  }
+
+  // Método para emitir el evento blur
+  onBlur() {
+    this.blur.emit();
   }
 }

@@ -717,3 +717,82 @@ button:disabled {
 .animate-pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+
+/* Animación de slide down para sección colapsable */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    max-height: 200px;
+    transform: translateY(0);
+  }
+}
+
+.animate-slideDown {
+  animation: slideDown 0.3s ease-out forwards;
+}
+
+/* Estilos para inputs de path - mejor visualización de rutas largas */
+.font-mono {
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  letter-spacing: -0.02em;
+}
+
+/* Permitir scroll horizontal en inputs de path */
+input[type='text'].font-mono {
+  overflow-x: auto;
+  white-space: nowrap;
+  text-overflow: clip;
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+  direction: rtl; /* Mostrar el final de la ruta por defecto */
+  text-align: left;
+}
+
+/* Cuando el input tiene foco, mostrar desde el inicio */
+input[type='text'].font-mono:focus {
+  direction: ltr;
+}
+
+input[type='text'].font-mono::-webkit-scrollbar {
+  height: 4px;
+}
+
+input[type='text'].font-mono::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+input[type='text'].font-mono::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 2px;
+}
+
+input[type='text'].font-mono::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* Mejorar legibilidad en dark mode */
+.dark input[type='text'].font-mono {
+  scrollbar-color: #4b5563 transparent;
+}
+
+.dark input[type='text'].font-mono::-webkit-scrollbar-thumb {
+  background: #4b5563;
+}
+
+.dark input[type='text'].font-mono::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* Tooltip para mostrar ruta completa */
+.group:hover .group-hover\:opacity-100 {
+  opacity: 1;
+}
+
+.group:hover .group-hover\:visible {
+  visibility: visible;
+}

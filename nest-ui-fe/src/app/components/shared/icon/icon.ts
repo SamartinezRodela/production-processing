@@ -51,6 +51,8 @@ import {
   RefreshCcw,
   Laptop,
   Monitor,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-angular';
 
 @Component({
@@ -116,6 +118,8 @@ export class Icon {
     'refresh-cw': RefreshCcw,
     laptop: Laptop,
     monitor: Monitor,
+    'chevron-down': ChevronDown,
+    'chevron-up': ChevronUp,
   };
 
   getIcon() {

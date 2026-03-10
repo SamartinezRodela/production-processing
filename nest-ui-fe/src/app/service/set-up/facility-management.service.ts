@@ -32,7 +32,7 @@ export class FacilityManagementService {
     await this.websocketService.connect();
 
     this.websocketService.onDatabaseChanged().subscribe(() => {
-      console.log('🔄 Reloading facilities due to database change');
+      console.log('Reloading facilities due to database change');
       this.loadFacilities();
     });
   }

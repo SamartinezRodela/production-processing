@@ -60,6 +60,48 @@ jobs:
           cd ..
           echo "✅ Python standalone portable listo"
 
+      - name: 🔒 Compile Python Scripts to Bytecode (Mac)
+        run: |
+          echo "============================================================"
+          echo "🔒 COMPILANDO SCRIPTS PYTHON A BYTECODE (.pyc) - MAC"
+          echo "============================================================"
+          echo ""
+
+          # Verificar que el script de compilación existe
+          if [ ! -f "compile-python-scripts.py" ]; then
+            echo "❌ Error: compile-python-scripts.py no encontrado"
+            exit 1
+          fi
+
+          # Ejecutar compilación con el directorio de Mac
+          python3 compile-python-scripts.py nest-files-py-embedded-mac
+
+          if [ $? -ne 0 ]; then
+            echo "❌ Error compilando scripts Python"
+            exit 1
+          fi
+
+          echo ""
+          echo "✅ Scripts Python compilados a .pyc (Mac)"
+          echo ""
+
+          # Verificar que los archivos .pyc fueron creados
+          echo "📦 Archivos .pyc generados:"
+          find nest-files-py-embedded-mac -name "*.pyc" -type f | while read file; do
+            echo "   ✓ $(basename $file)"
+          done
+          echo ""
+
+          # Mostrar hashes generados
+          if [ -f "python-hashes.json" ]; then
+            echo "🔑 Hashes SHA-256 generados:"
+            cat python-hashes.json
+            echo ""
+          fi
+
+          echo "🔒 Seguridad habilitada: Verificación de integridad activa"
+          echo ""
+
       - name: Verify Python embedded exists
         run: |
           if [ -d "nest-files-py-embedded-mac" ]; then

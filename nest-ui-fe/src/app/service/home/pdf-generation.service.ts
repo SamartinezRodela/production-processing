@@ -59,9 +59,9 @@ export class PdfGenerationService {
     }
   }
 
-  async generatePDFWithPath(datos: any, basePath: string): Promise<void> {
+  async generatePDFWithPath(datos: any, outputPath: string): Promise<void> {
     try {
-      const datosConRuta = { ...datos, ruta_salida: basePath };
+      const datosConRuta = { ...datos, ruta_salida: outputPath };
       const result = await this.electronService.pythonGenerarPathPDF(datosConRuta);
 
       if (result.success) {

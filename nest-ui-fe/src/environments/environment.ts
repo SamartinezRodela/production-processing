@@ -7,6 +7,12 @@ export const environment = {
     macos: '/Users/Production/Base_Files',
   },
 
+  //Rutas base segun OS
+  outpaths: {
+    windows: 'C:\\Projects\\NEST-UI-V2\\Base_Files',
+    macos: '/Users/Production/Base_Files',
+  },
+
   //Configuraciones de la app
   app: {
     name: 'NEST UI',

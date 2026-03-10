@@ -19,6 +19,7 @@ __pycache__/
 *.egg-info/
 nest-files-py-embedded/
 nest-files-py-embedded-mac/
+python-hashes.json
 
 # Logs
 *.log

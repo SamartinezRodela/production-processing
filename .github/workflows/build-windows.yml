@@ -62,6 +62,50 @@ jobs:
           Write-Host "Carpeta executables creada"
         shell: pwsh
 
+      - name: 🔒 Compile Python Scripts to Bytecode
+        run: |
+          Write-Host "============================================================" -ForegroundColor Cyan
+          Write-Host "🔒 COMPILANDO SCRIPTS PYTHON A BYTECODE (.pyc)" -ForegroundColor Cyan
+          Write-Host "============================================================" -ForegroundColor Cyan
+          Write-Host ""
+
+          # Verificar que el script de compilación existe
+          if (-not (Test-Path "compile-python-scripts.py")) {
+            Write-Host "❌ Error: compile-python-scripts.py no encontrado" -ForegroundColor Red
+            exit 1
+          }
+
+          # Ejecutar compilación
+          python compile-python-scripts.py
+
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "❌ Error compilando scripts Python" -ForegroundColor Red
+            exit 1
+          }
+
+          Write-Host ""
+          Write-Host "✅ Scripts Python compilados a .pyc" -ForegroundColor Green
+          Write-Host ""
+
+          # Verificar que los archivos .pyc fueron creados
+          $pycFiles = Get-ChildItem -Path "nest-files-py-embedded" -Filter "*.pyc"
+          Write-Host "📦 Archivos .pyc generados:" -ForegroundColor Cyan
+          foreach ($file in $pycFiles) {
+            Write-Host "   ✓ $($file.Name)" -ForegroundColor White
+          }
+          Write-Host ""
+
+          # Mostrar hashes generados
+          if (Test-Path "python-hashes.json") {
+            Write-Host "🔑 Hashes SHA-256 generados:" -ForegroundColor Cyan
+            Get-Content "python-hashes.json" | Write-Host
+            Write-Host ""
+          }
+
+          Write-Host "🔒 Seguridad habilitada: Verificación de integridad activa" -ForegroundColor Green
+          Write-Host ""
+        shell: pwsh
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:

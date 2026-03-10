@@ -9,7 +9,7 @@ import {
 import * as fs from 'fs';
 import * as path from 'path';
 import * as chokidar from 'chokidar';
-import { Database } from './entities/database.entity';
+import { Database, DatabaseSettings } from './entities/database.entity';
 import { Facility } from './entities/facility.entity';
 import { Order } from './entities/order.entity';
 import { DatabaseGateway } from './database.gateway';
@@ -149,6 +149,16 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   private createDefaultDatabase(): void {
     const now = new Date().toISOString();
 
+    const defaultSettingsValues: DatabaseSettings = {
+      selectedFacilityId: '1',
+      basePath: 'C:\\Production\\Files',
+      outputPath: 'C:\\Production\\Output',
+      os: 'windows',
+      theme: 'light',
+      autoSave: false,
+      notifications: true,
+    };
+
     this.database = {
       version: '1.0.0',
       lastModified: now,
@@ -188,11 +198,8 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
           updatedAt: now,
         },
       ],
-      settings: {
-        selectedFacilityId: '1',
-        basePath: 'C:\\Production\\Files',
-        os: 'windows',
-      },
+      defaultSettings: defaultSettingsValues, // ✅ NUEVO
+      settings: { ...defaultSettingsValues }, // ✅ Copia de defaults
     };
 
     this.saveDatabase();
@@ -398,10 +405,26 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
+   * Obtiene los default settings
+   */
+  getDefaultSettings() {
+    return this.database.defaultSettings;
+  }
+
+  /**
    * Actualiza los settings
    */
   updateSettings(updates: Partial<typeof this.database.settings>) {
     this.database.settings = { ...this.database.settings, ...updates };
+    this.saveDatabase();
+    return this.database.settings;
+  }
+
+  /**
+   * Resetea los settings a los valores por defecto
+   */
+  resetSettingsToDefault() {
+    this.database.settings = { ...this.database.defaultSettings };
     this.saveDatabase();
     return this.database.settings;
   }

@@ -6,6 +6,7 @@ import { Button } from '@shared/button/button';
 import { Icon } from '@shared/icon/icon';
 import { Select, SelectOption } from '@shared/select/select';
 import { Badge } from '@shared/badge/badge';
+import { Input } from '@shared/input/input';
 import { Router } from '@angular/router';
 import { ElectronService } from '@services/electron.service';
 import { ThemeService } from '@services/theme.service';
@@ -29,7 +30,7 @@ import { OrderManagementService } from '@services/order-management.service';
 
 @Component({
   selector: 'app-home',
-  imports: [CommonModule, Button, Icon, Select, Badge, FormsModule],
+  imports: [CommonModule, Button, Icon, Select, Badge, Input, FormsModule],
   templateUrl: './home.html',
   styleUrl: './home.css',
 })
@@ -59,6 +60,9 @@ export class Home implements OnDestroy {
   ProcessType = signal<string>('1');
   private dragLeaveTimeout: any = null;
   private dragWatchdogTimeout: any = null; // Timeout de seguridad
+  showPathWarning = signal(false);
+  pathWarningDismissed = signal(false);
+  isPathEditorExpanded = signal(false);
 
   // Statistics
   statsResult = signal<any>(null);
@@ -175,6 +179,52 @@ export class Home implements OnDestroy {
     this.initializeFolderWatcher();
     this.preventDefaultDragBehavior();
     this.setupKeyboardListeners();
+    this.loadSettingsAndCheckPaths();
+  }
+
+  private async loadSettingsAndCheckPaths(): Promise<void> {
+    // Cargar settings desde el backend
+    await this.settingsService.loadSettingsFromBackend();
+
+    // Verificar configuración de paths
+    this.checkPathConfiguration();
+  }
+
+  private async checkPathConfiguration(): Promise<void> {
+    try {
+      // Obtener los default settings desde el backend
+      const apiUrl = await this.settingsService['apiUrlService'].getApiUrl();
+      const response = await fetch(`${apiUrl}/settings/default`);
+      const defaultSettings = await response.json();
+
+      const basePath = this.settingsService.getBasePath();
+      const outputPath = this.settingsService.getOutputPath();
+
+      // Verificar si los paths actuales son iguales a los defaults
+      const isDefaultBasePath = basePath === defaultSettings.basePath;
+      const isDefaultOutputPath = outputPath === defaultSettings.outputPath;
+
+      if ((isDefaultBasePath || isDefaultOutputPath) && !this.pathWarningDismissed()) {
+        this.showPathWarning.set(true);
+        // Auto-expandir el editor si los paths son defaults
+        this.isPathEditorExpanded.set(true);
+      } else {
+        this.showPathWarning.set(false);
+      }
+    } catch (error) {
+      console.error('Error checking path configuration:', error);
+    }
+  }
+
+  togglePathEditor(): void {
+    this.isPathEditorExpanded.set(!this.isPathEditorExpanded());
+  }
+
+  dismissPathWarning(): void {
+    this.showPathWarning.set(false);
+    this.pathWarningDismissed.set(true);
+    // Guardar en localStorage para no mostrar de nuevo en esta sesión
+    localStorage.setItem('pathWarningDismissed', 'true');
   }
 
   private async initializeFolderWatcher(): Promise<void> {
@@ -182,9 +232,18 @@ export class Home implements OnDestroy {
       console.warn('Folder watcher only works in Electron');
       return;
     }
-    const basePath = this.settingsService.getBasePath();
-    if (basePath) {
-      await this.folderWatcher.startWatching(basePath);
+    const outputPath = this.settingsService.getOutputPath();
+    if (outputPath) {
+      // Validar que el path existe antes de iniciar el watcher
+      const result = await this.electronService.readFolder(outputPath);
+      if (result.success) {
+        await this.folderWatcher.startWatching(outputPath);
+      } else {
+        console.warn(
+          'Output path does not exist, skipping folder watcher initialization:',
+          outputPath,
+        );
+      }
     }
   }
 
@@ -381,19 +440,56 @@ export class Home implements OnDestroy {
 
   // File processing
   async loadFilesFromFolder(): Promise<void> {
-    const basePath = this.settingsService.getBasePath();
+    const outputPath = this.settingsService.getOutputPath();
 
-    if (!basePath) {
-      this.notificationService.warning('Please configure Base Path in Settings first');
+    if (!outputPath) {
+      this.notificationService.warning('Please configure Output Path in Settings first');
       this.router.navigate(['/Set-Up']);
       return;
     }
 
-    await this.fileProcessingService.loadFilesFromFolder(basePath);
+    await this.fileProcessingService.loadFilesFromFolder(outputPath);
   }
 
   async uploadFiles(): Promise<ProcessingResult> {
-    return await this.fileProcessingService.processFiles();
+    try {
+      // Obtener los default settings desde el backend
+      const apiUrl = await this.settingsService['apiUrlService'].getApiUrl();
+      const response = await fetch(`${apiUrl}/settings/default`);
+      const defaultSettings = await response.json();
+
+      // Validar paths antes de procesar
+      const basePath = this.settingsService.getBasePath();
+      const outputPath = this.settingsService.getOutputPath();
+
+      const isDefaultBasePath = basePath === defaultSettings.basePath;
+      const isDefaultOutputPath = outputPath === defaultSettings.outputPath;
+
+      if (isDefaultBasePath || isDefaultOutputPath) {
+        this.notificationService.warning(
+          'Please configure your Base Path and Output Path before processing files.',
+        );
+        this.router.navigate(['/Set-Up']);
+        return {
+          success: false,
+          processedCount: 0,
+          failedCount: 0,
+          errors: [],
+          timestamp: new Date(),
+        };
+      }
+
+      return await this.fileProcessingService.processFiles();
+    } catch (error) {
+      console.error('Error validating paths:', error);
+      return {
+        success: false,
+        processedCount: 0,
+        failedCount: 0,
+        errors: [],
+        timestamp: new Date(),
+      };
+    }
   }
 
   // PDF Generation
@@ -428,14 +524,36 @@ export class Home implements OnDestroy {
   }
 
   async prorbarGenerarPathPDF(): Promise<void> {
-    const basePath = this.settingsService.getBasePath();
-    const datos = {
-      titulo: 'Iforme de actividad de Alex',
-      contenido: 'Este es un informe generado por el sistema de Alex con python',
-      autor: 'Sistem de nest ui testing',
-      nombre_archivo: 'Informe de actividades.pdf',
-    };
-    await this.pdfService.generatePDFWithPath(datos, basePath);
+    try {
+      // Obtener los default settings desde el backend
+      const apiUrl = await this.settingsService['apiUrlService'].getApiUrl();
+      const response = await fetch(`${apiUrl}/settings/default`);
+      const defaultSettings = await response.json();
+
+      const outputPath = this.settingsService.getOutputPath();
+
+      // Validar si es el path por defecto
+      const isDefaultOutputPath = outputPath === defaultSettings.outputPath;
+
+      if (isDefaultOutputPath) {
+        this.notificationService.warning(
+          'Please configure your Output Path before generating PDFs.',
+        );
+        this.router.navigate(['/Set-Up']);
+        return;
+      }
+
+      const datos = {
+        titulo: 'Iforme de actividad de Alex',
+        contenido: 'Este es un informe generado por el sistema de Alex con python',
+        autor: 'Sistem de nest ui testing',
+        nombre_archivo: 'Informe de actividades.pdf',
+      };
+      await this.pdfService.generatePDFWithPath(datos, outputPath);
+    } catch (error) {
+      console.error('Error validating output path:', error);
+      this.notificationService.error('Error validating output path');
+    }
   }
 
   async probarSaludar(): Promise<void> {
@@ -507,6 +625,178 @@ export class Home implements OnDestroy {
 
   formatFileSize(bytes: number): string {
     return this.fileUtils.formatFileSize(bytes);
+  }
+
+  // Path management (delegated to SettingsService)
+  get basePath() {
+    return this.settingsService.basePath;
+  }
+
+  get outputPath() {
+    return this.settingsService.outputPath;
+  }
+
+  async browsePath(): Promise<void> {
+    try {
+      console.log('🔍 Opening folder selector for Base Path...');
+      const result = await this.electronService.selectFolder();
+
+      if (!result.canceled && result.path) {
+        console.log('📁 Selected path:', result.path);
+        console.log('🔐 Validating Base Path (read permissions)...');
+
+        // Validar el path antes de guardarlo
+        const validation = await this.validatePath(result.path, 'read');
+
+        console.log('📊 Validation result:', validation);
+
+        if (!validation.valid) {
+          console.error('❌ Base Path validation failed:', validation.error);
+          this.notificationService.error(
+            `Invalid Base Path: ${validation.error}. Please select a folder with read permissions.`,
+          );
+          return;
+        }
+
+        console.log('✅ Base Path validation passed!');
+        this.settingsService.setBasePath(result.path);
+        await this.savePathSettings();
+        this.notificationService.success(`Base Path updated: ${result.path}`);
+
+        // Recargar folder watcher si es necesario
+        await this.initializeFolderWatcher();
+      } else {
+        console.log('❌ Folder selection cancelled');
+      }
+    } catch (error) {
+      console.error('💥 Error selecting folder:', error);
+      this.notificationService.error(`Error selecting folder: ${error}`);
+    }
+  }
+
+  async browseOutputPath(): Promise<void> {
+    try {
+      console.log('🔍 Opening folder selector for Output Path...');
+      const result = await this.electronService.selectFolder();
+
+      if (!result.canceled && result.path) {
+        console.log('📁 Selected path:', result.path);
+        console.log('🔐 Validating Output Path (write permissions)...');
+
+        // Validar el path antes de guardarlo
+        const validation = await this.validatePath(result.path, 'write');
+
+        console.log('📊 Validation result:', validation);
+
+        if (!validation.valid) {
+          console.error('❌ Output Path validation failed:', validation.error);
+          this.notificationService.error(
+            `Invalid Output Path: ${validation.error}. Please select a folder with write permissions.`,
+          );
+          return;
+        }
+
+        console.log('✅ Output Path validation passed!');
+        this.settingsService.setOutputPath(result.path);
+        await this.savePathSettings();
+        this.notificationService.success(`Output Path updated: ${result.path}`);
+
+        // Recargar folder watcher con el nuevo path
+        await this.initializeFolderWatcher();
+      } else {
+        console.log('❌ Folder selection cancelled');
+      }
+    } catch (error) {
+      console.error('💥 Error selecting folder:', error);
+      this.notificationService.error(`Error selecting folder: ${error}`);
+    }
+  }
+
+  async onBasePathBlur(): Promise<void> {
+    const path = this.settingsService.basePath().trim();
+
+    if (!path) {
+      return; // No validar si está vacío
+    }
+
+    console.log('🔍 Validating Base Path on blur:', path);
+
+    const validation = await this.validatePath(path, 'read');
+
+    if (!validation.valid) {
+      console.error('❌ Base Path validation failed:', validation.error);
+      this.notificationService.error(
+        `Invalid Base Path: ${validation.error}. Please select a folder with read permissions.`,
+      );
+    } else {
+      console.log('✅ Base Path validation passed!');
+      await this.savePathSettings();
+      this.notificationService.success('Base Path validated and saved');
+    }
+  }
+
+  async onOutputPathBlur(): Promise<void> {
+    const path = this.settingsService.outputPath().trim();
+
+    if (!path) {
+      return; // No validar si está vacío
+    }
+
+    console.log('🔍 Validating Output Path on blur:', path);
+
+    const validation = await this.validatePath(path, 'write');
+
+    if (!validation.valid) {
+      console.error('❌ Output Path validation failed:', validation.error);
+      this.notificationService.error(
+        `Invalid Output Path: ${validation.error}. Please select a folder with write permissions.`,
+      );
+    } else {
+      console.log('✅ Output Path validation passed!');
+      await this.savePathSettings();
+      this.notificationService.success('Output Path validated and saved');
+    }
+  }
+
+  private async validatePath(
+    path: string,
+    type: 'read' | 'write' | 'both',
+  ): Promise<{ valid: boolean; error?: string }> {
+    try {
+      console.log('🌐 Sending validation request to backend...');
+      const apiUrl = await this.settingsService['apiUrlService'].getApiUrl();
+      const result = await fetch(`${apiUrl}/settings/validate-path`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path, type }),
+      }).then((res) => res.json());
+
+      console.log('📥 Received validation response from backend:', result);
+      return result;
+    } catch (error) {
+      console.error('💥 Error validating path:', error);
+      return { valid: false, error: 'Failed to validate path' };
+    }
+  }
+
+  private async savePathSettings(): Promise<void> {
+    try {
+      const apiUrl = await this.settingsService['apiUrlService'].getApiUrl();
+      await fetch(`${apiUrl}/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          basePath: this.settingsService.basePath(),
+          outputPath: this.settingsService.outputPath(),
+          os: this.settingsService.operatingSystem(),
+        }),
+      });
+
+      // Actualizar el warning si es necesario
+      this.checkPathConfiguration();
+    } catch (error) {
+      console.error('Error saving path settings:', error);
+    }
   }
 
   // Form handlers

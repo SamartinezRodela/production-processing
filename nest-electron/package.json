@@ -26,6 +26,11 @@
   "build": {
     "appId": "com.yourcompany.nest-ui",
     "productName": "Production Processing",
+    "asar": true,
+    "asarUnpack": [
+      "**/*.node",
+      "resources/python/**/*"
+    ],
     "directories": {
       "output": "release",
       "buildResources": "build"

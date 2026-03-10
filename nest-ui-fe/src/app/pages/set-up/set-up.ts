@@ -12,6 +12,7 @@ import { ElectronService } from '@services/electron.service';
 import { ThemeService } from '@services/theme.service';
 import { NotificationService } from '@services/notification.service';
 import { KeyboardShortcutsDirective } from '@directives/keyboard-shortcuts.directive';
+import { firstValueFrom } from 'rxjs';
 
 // Nuevos servicios
 import { SettingsService } from '@services/set-up/settings.service';
@@ -58,6 +59,10 @@ export class SetUp {
 
   get basePath() {
     return this.settingsService.basePath;
+  }
+
+  get outputPath() {
+    return this.settingsService.outputPath;
   }
 
   get autoSave() {
@@ -122,6 +127,23 @@ export class SetUp {
 
   get orderOptions() {
     return this.orderService.orderOptions();
+  }
+
+  // Verificar si los paths son defaults
+  isDefaultBasePath(): boolean {
+    // Comparar contra los defaults del backend
+    // Nota: Esta es una verificación simplificada
+    // Los defaults reales se verifican en el backend
+    const path = this.basePath();
+    return path.includes('\\Production\\') || path.includes('/Production/');
+  }
+
+  isDefaultOutputPath(): boolean {
+    // Comparar contra los defaults del backend
+    // Nota: Esta es una verificación simplificada
+    // Los defaults reales se verifican en el backend
+    const path = this.outputPath();
+    return path.includes('\\Production\\') || path.includes('/Production/');
   }
 
   onOrderChange(orderId: string | number): void {
@@ -203,14 +225,20 @@ export class SetUp {
   }
 
   private async loadSettings(): Promise<void> {
-    const settings = this.settingsService.loadSettings();
+    // Cargar todo desde el backend (fuente única)
+    const backendSettings = await this.settingsService.loadSettingsFromBackend();
+
+    // Aplicar tema desde backend
+    if (backendSettings && backendSettings.theme) {
+      this.themeService.setTheme(backendSettings.theme);
+    }
 
     // Cargar facilities desde el backend
     await this.facilityService.loadFacilities();
 
-    // Si hay un facility seleccionado guardado, usarlo
-    if (settings && settings.selectedFacility) {
-      this.facilityService.setSelectedFacility(settings.selectedFacility);
+    // Usar selectedFacilityId del backend
+    if (backendSettings && backendSettings.selectedFacilityId) {
+      this.facilityService.setSelectedFacility(backendSettings.selectedFacilityId);
     }
   }
 
@@ -226,15 +254,143 @@ export class SetUp {
 
   async browsePath(): Promise<void> {
     try {
+      console.log('🔍 Opening folder selector for Base Path...');
       const result = await this.electronService.selectFolder();
 
       if (!result.canceled && result.path) {
+        console.log('📁 Selected path:', result.path);
+        console.log('🔐 Validating Base Path (read permissions)...');
+
+        // Validar el path antes de guardarlo
+        const validation = await this.validatePath(result.path, 'read');
+
+        console.log('📊 Validation result:', validation);
+
+        if (!validation.valid) {
+          console.error('❌ Base Path validation failed:', validation.error);
+          this.notificationService.error(
+            `Invalid Base Path: ${validation.error}. Please select a folder with read permissions.`,
+          );
+          return;
+        }
+
+        console.log('✅ Base Path validation passed!');
         this.settingsService.setBasePath(result.path);
-        this.notificationService.success(`Nueva ruta seleccionada: ${result.path}`);
+        this.notificationService.success(`Base Path selected: ${result.path}`);
+      } else {
+        console.log('❌ Folder selection cancelled');
       }
     } catch (error) {
-      console.error('Error al seleccionar carpeta:', error);
-      this.notificationService.error(`Error al seleccionar carpeta: ${error}`);
+      console.error('💥 Error selecting folder:', error);
+      this.notificationService.error(`Error selecting folder: ${error}`);
+    }
+  }
+
+  async browseOutputPath(): Promise<void> {
+    try {
+      console.log('🔍 Opening folder selector for Output Path...');
+      const result = await this.electronService.selectFolder();
+
+      if (!result.canceled && result.path) {
+        console.log('📁 Selected path:', result.path);
+        console.log('🔐 Validating Output Path (write permissions)...');
+
+        // Validar el path antes de guardarlo
+        const validation = await this.validatePath(result.path, 'write');
+
+        console.log('📊 Validation result:', validation);
+
+        if (!validation.valid) {
+          console.error('❌ Output Path validation failed:', validation.error);
+          this.notificationService.error(
+            `Invalid Output Path: ${validation.error}. Please select a folder with write permissions.`,
+          );
+          return;
+        }
+
+        console.log('✅ Output Path validation passed!');
+        this.settingsService.setOutputPath(result.path);
+        this.notificationService.success(`Output Path selected: ${result.path}`);
+      } else {
+        console.log('❌ Folder selection cancelled');
+      }
+    } catch (error) {
+      console.error('💥 Error selecting folder:', error);
+      this.notificationService.error(`Error selecting folder: ${error}`);
+    }
+  }
+
+  private async validatePath(
+    path: string,
+    type: 'read' | 'write' | 'both',
+  ): Promise<{ valid: boolean; error?: string }> {
+    try {
+      console.log('🌐 Sending validation request to backend...');
+      const apiUrl = await this.settingsService['apiUrlService'].getApiUrl();
+      const result = await firstValueFrom(
+        this.settingsService['http'].post<{
+          valid: boolean;
+          exists: boolean;
+          canRead: boolean;
+          canWrite: boolean;
+          error?: string;
+        }>(`${apiUrl}/settings/validate-path`, { path, type }),
+      );
+      console.log('📥 Received validation response from backend:', result);
+      return result;
+    } catch (error) {
+      console.error('💥 Error validating path:', error);
+      return { valid: false, error: 'Failed to validate path' };
+    }
+  }
+
+  // Validación cuando el usuario escribe/pega en Base Path
+  async onBasePathBlur(): Promise<void> {
+    const path = this.basePath().trim();
+
+    if (!path) {
+      return; // No validar si está vacío
+    }
+
+    console.log('🔍 Validating Base Path on blur:', path);
+
+    const validation = await this.validatePath(path, 'read');
+
+    if (!validation.valid) {
+      console.error('❌ Base Path validation failed:', validation.error);
+      this.notificationService.error(
+        `Invalid Base Path: ${validation.error}. Please select a folder with read permissions.`,
+      );
+      // Opcional: revertir al valor anterior
+      // this.settingsService.setBasePath(previousValue);
+    } else {
+      console.log('✅ Base Path validation passed!');
+      this.notificationService.success('Base Path validated successfully');
+    }
+  }
+
+  // Validación cuando el usuario escribe/pega en Output Path
+  async onOutputPathBlur(): Promise<void> {
+    const path = this.outputPath().trim();
+
+    if (!path) {
+      return; // No validar si está vacío
+    }
+
+    console.log('🔍 Validating Output Path on blur:', path);
+
+    const validation = await this.validatePath(path, 'write');
+
+    if (!validation.valid) {
+      console.error('❌ Output Path validation failed:', validation.error);
+      this.notificationService.error(
+        `Invalid Output Path: ${validation.error}. Please select a folder with write permissions.`,
+      );
+      // Opcional: revertir al valor anterior
+      // this.settingsService.setOutputPath(previousValue);
+    } else {
+      console.log('✅ Output Path validation passed!');
+      this.notificationService.success('Output Path validated successfully');
     }
   }
 
@@ -321,14 +477,28 @@ export class SetUp {
   }
 
   async confirmResetToDefaults(): Promise<void> {
-    this.settingsService.resetToDefault();
+    try {
+      // Resetear en el backend (copia defaultSettings a settings)
+      const apiUrl = await this.settingsService['apiUrlService'].getApiUrl();
+      await firstValueFrom(this.settingsService['http'].post(`${apiUrl}/settings/reset`, {}));
 
-    // Recargar facilities desde el backend (que ahora tendrá los defaults)
-    await this.facilityService.loadFacilities();
+      // Recargar settings desde el backend
+      const backendSettings = await this.settingsService.loadSettingsFromBackend();
 
-    this.themeService.setTheme('light');
-    this.closeConfirmModal();
-    this.notificationService.success('Settings reset to defaults');
+      // Aplicar tema desde backend
+      if (backendSettings && backendSettings.theme) {
+        this.themeService.setTheme(backendSettings.theme);
+      }
+
+      // Recargar facilities desde el backend
+      await this.facilityService.loadFacilities();
+
+      this.closeConfirmModal();
+      this.notificationService.success('Settings reset to defaults');
+    } catch (error) {
+      console.error('Error resetting settings:', error);
+      this.notificationService.error('Failed to reset settings');
+    }
   }
 
   closeConfirmModal(): void {
@@ -351,19 +521,60 @@ export class SetUp {
   }
 
   // Save Settings
-  save(): void {
-    const settings = {
-      os: this.operatingSystem(),
-      basePath: this.basePath(),
-      selectedFacility: this.selectedFacility(),
-      facilities: this.facilities(),
-      autoSave: this.autoSave(),
-      notifications: this.notifications(),
-      theme: this.themeService.getTheme(),
-    };
+  async save(): Promise<void> {
+    try {
+      const basePathValue = this.basePath().trim();
+      const outputPathValue = this.outputPath().trim();
 
-    this.settingsService.saveSettings(settings);
-    this.notificationService.success('Settings saved successfully!');
+      // Validar Base Path antes de guardar
+      if (basePathValue) {
+        console.log('🔍 Validating Base Path before save:', basePathValue);
+        const basePathValidation = await this.validatePath(basePathValue, 'read');
+
+        if (!basePathValidation.valid) {
+          console.error('❌ Base Path validation failed:', basePathValidation.error);
+          this.notificationService.error(
+            `Cannot save: Invalid Base Path. ${basePathValidation.error}`,
+          );
+          return;
+        }
+      }
+
+      // Validar Output Path antes de guardar
+      if (outputPathValue) {
+        console.log('🔍 Validating Output Path before save:', outputPathValue);
+        const outputPathValidation = await this.validatePath(outputPathValue, 'write');
+
+        if (!outputPathValidation.valid) {
+          console.error('❌ Output Path validation failed:', outputPathValidation.error);
+          this.notificationService.error(
+            `Cannot save: Invalid Output Path. ${outputPathValidation.error}`,
+          );
+          return;
+        }
+      }
+
+      console.log('✅ All paths validated, saving settings...');
+
+      // Guardar todo en el backend
+      const apiUrl = await this.settingsService['apiUrlService'].getApiUrl();
+      await firstValueFrom(
+        this.settingsService['http'].put(`${apiUrl}/settings`, {
+          basePath: basePathValue,
+          outputPath: outputPathValue,
+          os: this.operatingSystem(),
+          selectedFacilityId: this.selectedFacility(),
+          theme: this.themeService.getTheme(),
+          autoSave: this.autoSave(),
+          notifications: this.notifications(),
+        }),
+      );
+
+      this.notificationService.success('Settings saved successfully!');
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      this.notificationService.error('Failed to save settings');
+    }
   }
 
   logout(): void {

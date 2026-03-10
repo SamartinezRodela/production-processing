@@ -1,10 +1,28 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { spawn } from 'child_process';
 import * as path from 'path';
+import * as fs from 'fs';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class PythonService {
   private readonly logger = new Logger(PythonService.name);
+
+  /**
+   * 🔒 WHITELIST DE HASHES SHA-256
+   * Estos hashes verifican la integridad de los archivos .pyc
+   * Si un archivo es modificado, su hash no coincidirá y la ejecución será bloqueada
+   */
+  private readonly HASHES_WHITELIST: Record<string, string> = {
+    'saludar.pyc':
+      'ba1c475e5b3b3a9ce0dfbabff26a3cf719d9077b02adaeacdac562788b695403',
+    'generar_pdf.pyc':
+      'c3cef2da48d911967ac50dcda42fd720ad7569339337b9bd5f794b6eed967053',
+    'generar_pdf_path.pyc':
+      'cf579ea5fbd85bfe168f92beba9a26b963cd554e2e4692242a97aa51c6059791',
+    'test_imports.pyc':
+      '9082a4ef074c4843fb80f0e2cc36a3ff4485aeb913a7f9e7bd43007748be0507',
+  };
 
   /**
    * Obtiene la ruta del ejecutable Python según el entorno
@@ -58,6 +76,58 @@ export class PythonService {
   private readonly scriptsPath = this.getScriptsPath();
 
   /**
+   * 🔒 Verifica la integridad de un archivo .pyc
+   * Calcula el hash SHA-256 y lo compara con la whitelist
+   *
+   * @param fileName - Nombre del archivo .pyc a verificar
+   * @returns true si el archivo es válido, false si está modificado o no existe
+   */
+  private verifyFileIntegrity(fileName: string): boolean {
+    const filePath = path.join(this.scriptsPath, fileName);
+
+    // Verificar que el archivo existe
+    if (!fs.existsSync(filePath)) {
+      this.logger.error(`❌ INTEGRIDAD: Archivo no encontrado: ${fileName}`);
+      this.logger.error(`   Ruta esperada: ${filePath}`);
+      return false;
+    }
+
+    // Verificar que tenemos el hash en la whitelist
+    if (!this.HASHES_WHITELIST[fileName]) {
+      this.logger.warn(
+        `⚠️  INTEGRIDAD: Archivo no está en whitelist: ${fileName}`,
+      );
+      this.logger.warn(
+        `   Esto puede ser normal si es un archivo .py sin compilar`,
+      );
+      return true; // Permitir archivos no listados (para desarrollo)
+    }
+
+    // Calcular hash del archivo
+    try {
+      const fileBuffer = fs.readFileSync(filePath);
+      const hash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
+      const expectedHash = this.HASHES_WHITELIST[fileName];
+
+      if (hash !== expectedHash) {
+        this.logger.error(`❌ INTEGRIDAD COMPROMETIDA: ${fileName}`);
+        this.logger.error(`   Hash esperado: ${expectedHash}`);
+        this.logger.error(`   Hash actual:   ${hash}`);
+        this.logger.error(`   ⚠️  El archivo ha sido modificado o reemplazado`);
+        return false;
+      }
+
+      this.logger.log(`✅ INTEGRIDAD OK: ${fileName}`);
+      return true;
+    } catch (error) {
+      this.logger.error(
+        `❌ INTEGRIDAD: Error leyendo archivo ${fileName}: ${error.message}`,
+      );
+      return false;
+    }
+  }
+
+  /**
    * Obtiene la ruta de los scripts Python según el entorno
    * - Desarrollo: nest-files-py-embedded en la raíz del proyecto
    * - Producción: resources/python en la carpeta de instalación
@@ -86,14 +156,35 @@ export class PythonService {
   /**
    * Ejecuta un script Python y retorna el resultado como JSON
    *
-   * @param scriptName - Nombre del archivo Python (ej: 'mi_script.py')
+   * @param scriptName - Nombre del archivo Python (ej: 'mi_script.py' o 'mi_script.pyc')
    * @param args - Array de argumentos para pasar al script
    * @returns Promise con el resultado parseado como JSON
    */
   async executeScript(scriptName: string, args: string[] = []): Promise<any> {
     return new Promise((resolve, reject) => {
+      // 🔒 PASO 1: Convertir .py a .pyc si es necesario
+      let finalScriptName = scriptName;
+      if (scriptName.endsWith('.py')) {
+        finalScriptName = scriptName.replace('.py', '.pyc');
+        this.logger.log(`🔄 Convirtiendo ${scriptName} → ${finalScriptName}`);
+      }
+
+      // 🔒 PASO 2: Verificar integridad del archivo
+      if (!this.verifyFileIntegrity(finalScriptName)) {
+        const error = {
+          error: 'Integrity check failed',
+          message: 'El archivo ha sido modificado o no existe',
+          fileName: finalScriptName,
+          hint: '🔒 Error de integridad del sistema. Por favor reinstala la aplicación.',
+        };
+        this.logger.error(`🚫 EJECUCIÓN BLOQUEADA: ${finalScriptName}`);
+        reject(error);
+        return;
+      }
+
+      // 🔒 PASO 3: Ejecutar el script si pasó la verificación
       const pythonExe = this.getPythonExecutable();
-      const scriptPath = path.join(this.scriptsPath, scriptName);
+      const scriptPath = path.join(this.scriptsPath, finalScriptName);
 
       this.logger.log(`Scripts path: ${this.scriptsPath}`);
       this.logger.log(`Python executable: ${pythonExe}`);
@@ -320,6 +411,60 @@ export class PythonService {
       __dirname: __dirname,
       platform: process.platform,
       isProduction: !!resourcesPath,
+    };
+  }
+
+  /**
+   * 🔒 Verifica la integridad de todos los archivos en la whitelist
+   * Útil para diagnóstico y testing
+   */
+  verifyAllFiles(): any {
+    const results: Record<string, any> = {};
+
+    for (const fileName of Object.keys(this.HASHES_WHITELIST)) {
+      const filePath = path.join(this.scriptsPath, fileName);
+      const exists = fs.existsSync(filePath);
+
+      if (!exists) {
+        results[fileName] = {
+          status: 'missing',
+          exists: false,
+          path: filePath,
+        };
+        continue;
+      }
+
+      try {
+        const fileBuffer = fs.readFileSync(filePath);
+        const hash = crypto
+          .createHash('sha256')
+          .update(fileBuffer)
+          .digest('hex');
+        const expectedHash = this.HASHES_WHITELIST[fileName];
+        const valid = hash === expectedHash;
+
+        results[fileName] = {
+          status: valid ? 'valid' : 'modified',
+          exists: true,
+          valid: valid,
+          path: filePath,
+          expectedHash: expectedHash,
+          actualHash: hash,
+        };
+      } catch (error) {
+        results[fileName] = {
+          status: 'error',
+          exists: true,
+          error: error.message,
+          path: filePath,
+        };
+      }
+    }
+
+    return {
+      scriptsPath: this.scriptsPath,
+      totalFiles: Object.keys(this.HASHES_WHITELIST).length,
+      results: results,
     };
   }
 }

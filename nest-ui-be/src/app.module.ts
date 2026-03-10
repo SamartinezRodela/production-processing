@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { DatabaseModule } from './database/database.module';
 import { FacilitiesModule } from './facilities/facilities.module';
 import { OrdersModule } from './orders/orders.module';
+import { SettingsModule } from './settings/settings.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { OrdersModule } from './orders/orders.module';
     DatabaseModule,
     FacilitiesModule,
     OrdersModule,
+    SettingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

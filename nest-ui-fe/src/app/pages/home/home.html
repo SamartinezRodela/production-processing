@@ -60,6 +60,166 @@
   </div>
 
   <div class="p-8">
+    <!-- Warning Banner si los paths son defaults -->
+    @if (showPathWarning()) {
+      <div
+        class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6 flex items-start gap-3"
+      >
+        <app-icon
+          [name]="'alert-triangle'"
+          [size]="20"
+          class="text-yellow-600 dark:text-yellow-400 shrink-0 mt-0.5"
+        />
+        <div class="flex-1">
+          <h3 class="text-sm font-semibold text-yellow-900 dark:text-yellow-100 mb-1">
+            Configure Paths Required
+          </h3>
+          <p class="text-sm text-yellow-800 dark:text-yellow-200 mb-2">
+            Please configure your Base Path and Output Path in Settings before processing files. The
+            current paths are set to default values.
+          </p>
+          <app-button
+            [label]="'Go to Settings'"
+            [variant]="'white'"
+            [size]="'sm'"
+            [icon]="'settings'"
+            [iconPosition]="'left'"
+            [iconSize]="14"
+            (clicked)="goToSettingPage()"
+            [customClass]="
+              'text-xs bg-yellow-100 dark:bg-yellow-800 hover:bg-yellow-200 dark:hover:bg-yellow-700 border-yellow-300 dark:border-yellow-600'
+            "
+          />
+        </div>
+        <button
+          type="button"
+          (click)="dismissPathWarning()"
+          class="text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-200"
+        >
+          <app-icon [name]="'close'" [size]="16" />
+        </button>
+      </div>
+    }
+
+    <!-- Quick Path Configuration (Colapsable) -->
+    <div
+      class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg mb-4 overflow-hidden transition-all duration-300"
+    >
+      <!-- Header colapsable -->
+      <button
+        type="button"
+        (click)="togglePathEditor()"
+        class="w-full px-4 py-2.5 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+      >
+        <div class="flex items-center gap-2">
+          <app-icon [name]="'folder'" [size]="16" class="text-gray-500 dark:text-gray-400" />
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+            Quick Path Configuration
+          </span>
+          <!-- Badge indicador si son paths default -->
+          @if (showPathWarning()) {
+            <app-badge [label]="'Configure'" [variant]="'warning'" [size]="'sm'" />
+          }
+        </div>
+        <app-icon
+          [name]="isPathEditorExpanded() ? 'chevron-up' : 'chevron-down'"
+          [size]="16"
+          class="text-gray-400 transition-transform duration-300"
+        />
+      </button>
+
+      <!-- Contenido colapsable -->
+      @if (isPathEditorExpanded()) {
+        <div class="px-4 pb-4 pt-2 border-t border-gray-200 dark:border-gray-700 animate-slideDown">
+          <div class="space-y-3">
+            <!-- Base Path -->
+            <div class="flex items-start gap-2">
+              <app-icon
+                [name]="'folder'"
+                [size]="16"
+                class="text-gray-500 dark:text-gray-400 shrink-0 mt-2"
+                title="Base Path"
+              />
+              <div class="flex-1 min-w-0">
+                <label class="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">
+                  Base Path (Templates)
+                </label>
+                <div class="flex items-center gap-2">
+                  <div class="flex-1 relative group">
+                    <app-input
+                      [(value)]="basePath"
+                      [placeholder]="'C:\\Production\\Files'"
+                      [customClass]="'w-full'"
+                      [inputClass]="'text-xs py-2 px-3 font-mono pr-8'"
+                      (blur)="onBasePathBlur()"
+                    />
+                    <!-- Tooltip con ruta completa -->
+                    <div
+                      class="absolute left-0 right-0 top-full mt-1 px-3 py-2 bg-gray-800 dark:bg-gray-950 text-gray-100 dark:text-gray-200 text-xs rounded shadow-xl border border-gray-700 dark:border-gray-600 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none break-all"
+                      [title]="basePath()"
+                    >
+                      {{ basePath() }}
+                    </div>
+                  </div>
+                  <app-button
+                    [variant]="'white'"
+                    [icon]="'folder-open'"
+                    [iconPosition]="'only'"
+                    [iconSize]="16"
+                    (clicked)="browsePath()"
+                    [customClass]="'p-2 shrink-0'"
+                    title="Browse Base Path"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Output Path -->
+            <div class="flex items-start gap-2">
+              <app-icon
+                [name]="'folder'"
+                [size]="16"
+                class="text-green-500 dark:text-green-400 shrink-0 mt-2"
+                title="Output Path"
+              />
+              <div class="flex-1 min-w-0">
+                <label class="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">
+                  Output Path (Generated Files)
+                </label>
+                <div class="flex items-center gap-2">
+                  <div class="flex-1 relative group">
+                    <app-input
+                      [(value)]="outputPath"
+                      [placeholder]="'C:\\Production\\Output'"
+                      [customClass]="'w-full'"
+                      [inputClass]="'text-xs py-2 px-3 font-mono pr-8'"
+                      (blur)="onOutputPathBlur()"
+                    />
+                    <!-- Tooltip con ruta completa - aparece ARRIBA para evitar que se corte -->
+                    <div
+                      class="absolute left-0 right-0 bottom-full mb-1 px-3 py-2 bg-gray-800 dark:bg-gray-950 text-gray-100 dark:text-gray-200 text-xs rounded shadow-xl border border-gray-700 dark:border-gray-600 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none break-all"
+                      [title]="outputPath()"
+                    >
+                      {{ outputPath() }}
+                    </div>
+                  </div>
+                  <app-button
+                    [variant]="'white'"
+                    [icon]="'folder-open'"
+                    [iconPosition]="'only'"
+                    [iconSize]="16"
+                    (clicked)="browseOutputPath()"
+                    [customClass]="'p-2 shrink-0'"
+                    title="Browse Output Path"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+
     <!-- Filtros en línea con botón Generate PDFs (estilo desktop) -->
     <div
       class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-6 flex items-center justify-between gap-8"

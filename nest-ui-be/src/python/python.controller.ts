@@ -42,6 +42,11 @@ export class PythonController {
     return this.pythonService.getDebugInfo();
   }
 
+  @Get('verify-integrity')
+  async verifyIntegrity() {
+    return this.pythonService.verifyAllFiles();
+  }
+
   @Get('test-python')
   async testPython() {
     try {

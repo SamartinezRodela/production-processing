@@ -27,9 +27,9 @@ export class FileProcessingService {
     private apiUrlService: ApiUrlService,
   ) {}
 
-  async loadFilesFromFolder(basePath: string): Promise<void> {
-    if (!basePath) {
-      this.notificationService.warning('Please configure Base Path in Settings first');
+  async loadFilesFromFolder(outputPath: string): Promise<void> {
+    if (!outputPath) {
+      this.notificationService.warning('Please configure Output Path in Settings first');
       return;
     }
 
@@ -37,12 +37,12 @@ export class FileProcessingService {
       const apiUrl = await this.apiUrlService.getApiUrl();
 
       const verifyResult = await firstValueFrom(
-        this.http.post<any>(`${apiUrl}/pdf/verify-folder`, { path: basePath }),
+        this.http.post<any>(`${apiUrl}/pdf/verify-folder`, { path: outputPath }),
       );
 
       if (!verifyResult.success) {
         this.notificationService.error(
-          `Error: ${verifyResult.message}\n\nPlease check your Base Path in Settings.`,
+          `Error: ${verifyResult.message}\n\nPlease check your Output Path in Settings.`,
         );
         return;
       }
