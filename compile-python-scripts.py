@@ -10,6 +10,12 @@ import json
 import sys
 from pathlib import Path
 
+# Configurar encoding UTF-8 para Windows
+if sys.platform == 'win32':
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
 # Directorio con los scripts Python (puede ser pasado como argumento)
 if len(sys.argv) > 1:
     SCRIPTS_DIR = Path(sys.argv[1])
@@ -27,7 +33,7 @@ SCRIPTS_TO_COMPILE = [
 
 def compile_script(script_path: Path) -> Path:
     """Compila un script Python a bytecode"""
-    print(f"📦 Compilando: {script_path.name}")
+    print(f"[*] Compilando: {script_path.name}")
     
     # Compilar el archivo
     pyc_path = py_compile.compile(script_path, doraise=True)
@@ -43,7 +49,7 @@ def compile_script(script_path: Path) -> Path:
     # Mover el archivo
     pyc_file.rename(new_pyc_path)
     
-    print(f"   ✅ Generado: {new_pyc_path.name}")
+    print(f"    [OK] Generado: {new_pyc_path.name}")
     return new_pyc_path
 
 def calculate_hash(file_path: Path) -> str:
@@ -59,14 +65,14 @@ def calculate_hash(file_path: Path) -> str:
 
 def main():
     print("=" * 60)
-    print("🔒 COMPILADOR DE SCRIPTS PYTHON + GENERADOR DE HASHES")
+    print("COMPILADOR DE SCRIPTS PYTHON + GENERADOR DE HASHES")
     print("=" * 60)
     print()
-    print(f"📁 Directorio objetivo: {SCRIPTS_DIR}")
+    print(f"Directorio objetivo: {SCRIPTS_DIR}")
     print()
     
     if not SCRIPTS_DIR.exists():
-        print(f"❌ Error: Directorio {SCRIPTS_DIR} no encontrado")
+        print(f"[ERROR] Directorio {SCRIPTS_DIR} no encontrado")
         return
     
     hashes = {}
@@ -77,7 +83,7 @@ def main():
         script_path = SCRIPTS_DIR / script_name
         
         if not script_path.exists():
-            print(f"⚠️  Advertencia: {script_name} no encontrado, saltando...")
+            print(f"[WARNING] {script_name} no encontrado, saltando...")
             continue
         
         try:
@@ -89,11 +95,11 @@ def main():
             file_hash = calculate_hash(pyc_path)
             hashes[pyc_path.name] = file_hash
             
-            print(f"   🔑 Hash: {file_hash[:16]}...")
+            print(f"    [HASH] {file_hash[:16]}...")
             print()
             
         except Exception as e:
-            print(f"❌ Error compilando {script_name}: {e}")
+            print(f"[ERROR] Error compilando {script_name}: {e}")
             print()
     
     # Limpiar carpeta __pycache__ si existe
@@ -101,21 +107,21 @@ def main():
     if pycache_dir.exists():
         import shutil
         shutil.rmtree(pycache_dir)
-        print("🧹 Limpiado __pycache__")
+        print("[OK] Limpiado __pycache__")
         print()
     
     # Guardar hashes en archivo JSON
     hashes_file = Path("python-hashes.json")
-    with open(hashes_file, "w") as f:
+    with open(hashes_file, "w", encoding='utf-8') as f:
         json.dump(hashes, f, indent=2)
     
     print("=" * 60)
-    print("✅ COMPILACIÓN COMPLETADA")
+    print("COMPILACION COMPLETADA")
     print("=" * 60)
-    print(f"📁 Archivos compilados: {len(compiled_files)}")
-    print(f"💾 Hashes guardados en: {hashes_file}")
+    print(f"Archivos compilados: {len(compiled_files)}")
+    print(f"Hashes guardados en: {hashes_file}")
     print()
-    print("📋 HASHES GENERADOS:")
+    print("HASHES GENERADOS:")
     print("-" * 60)
     
     # Generar código TypeScript para copiar/pegar
@@ -126,10 +132,10 @@ def main():
     print("};")
     print()
     
-    print("🎯 Siguiente paso:")
-    print("   1. Copia el código TypeScript de arriba")
-    print("   2. Pégalo en nest-ui-be/src/python/python.service.ts")
-    print("   3. Implementa la verificación de integridad")
+    print("Siguiente paso:")
+    print("   1. Copia el codigo TypeScript de arriba")
+    print("   2. Pegalo en nest-ui-be/src/python/python.service.ts")
+    print("   3. Implementa la verificacion de integridad")
     print()
 
 if __name__ == "__main__":

@@ -59,16 +59,16 @@ jobs:
           New-Item -ItemType Directory -Path "nest-files-py-embedded\executables" -Force | Out-Null
         shell: pwsh
 
-      - name: 🔒 Compile Python Scripts (Windows)
+      - name: Compile Python Scripts (Windows)
         if: matrix.os == 'windows-latest'
         run: |
-          Write-Host "🔒 Compilando scripts Python a .pyc (Windows)..." -ForegroundColor Cyan
+          Write-Host "[SECURITY] Compilando scripts Python a .pyc (Windows)..." -ForegroundColor Cyan
           python compile-python-scripts.py
           if ($LASTEXITCODE -ne 0) {
-            Write-Host "❌ Error compilando scripts" -ForegroundColor Red
+            Write-Host "[ERROR] Error compilando scripts" -ForegroundColor Red
             exit 1
           }
-          Write-Host "✅ Scripts compilados" -ForegroundColor Green
+          Write-Host "[OK] Scripts compilados" -ForegroundColor Green
         shell: pwsh
 
       - name: Setup Python Embedded (Mac)
@@ -100,16 +100,16 @@ jobs:
 
           cd ..
 
-      - name: 🔒 Compile Python Scripts (Mac)
+      - name: Compile Python Scripts (Mac)
         if: matrix.os == 'macos-latest'
         run: |
-          echo "🔒 Compilando scripts Python a .pyc (Mac)..."
+          echo "[SECURITY] Compilando scripts Python a .pyc (Mac)..."
           python3 compile-python-scripts.py nest-files-py-embedded-mac
           if [ $? -ne 0 ]; then
-            echo "❌ Error compilando scripts"
+            echo "[ERROR] Error compilando scripts"
             exit 1
           fi
-          echo "✅ Scripts compilados"
+          echo "[OK] Scripts compilados"
 
       - name: Install dependencies
         run: |
