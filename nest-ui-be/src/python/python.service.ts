@@ -11,18 +11,53 @@ export class PythonService {
   /**
    * 🔒 WHITELIST DE HASHES SHA-256
    * Estos hashes verifican la integridad de los archivos .pyc
-   * Si un archivo es modificado, su hash no coincidirá y la ejecución será bloqueada
+   * Se cargan desde python-hashes.json generado durante el build
    */
-  private readonly HASHES_WHITELIST: Record<string, string> = {
-    'saludar.pyc':
-      'ba1c475e5b3b3a9ce0dfbabff26a3cf719d9077b02adaeacdac562788b695403',
-    'generar_pdf.pyc':
-      'c3cef2da48d911967ac50dcda42fd720ad7569339337b9bd5f794b6eed967053',
-    'generar_pdf_path.pyc':
-      'cf579ea5fbd85bfe168f92beba9a26b963cd554e2e4692242a97aa51c6059791',
-    'test_imports.pyc':
-      '9082a4ef074c4843fb80f0e2cc36a3ff4485aeb913a7f9e7bd43007748be0507',
-  };
+  private HASHES_WHITELIST: Record<string, string> = {};
+
+  constructor() {
+    this.loadHashesWhitelist();
+  }
+
+  /**
+   * Carga los hashes desde el archivo python-hashes.json
+   */
+  private loadHashesWhitelist(): void {
+    try {
+      // Intentar cargar desde la ubicación de producción
+      const resourcesPath =
+        process.env.RESOURCES_PATH || (process as any).resourcesPath;
+
+      let hashesPath: string;
+
+      if (resourcesPath) {
+        // Producción: cargar desde resources/backend
+        hashesPath = path.join(resourcesPath, 'backend', 'python-hashes.json');
+      } else {
+        // Desarrollo: cargar desde la raíz del proyecto
+        hashesPath = path.resolve(__dirname, '../../../python-hashes.json');
+      }
+
+      if (fs.existsSync(hashesPath)) {
+        const hashesData = fs.readFileSync(hashesPath, 'utf8');
+        this.HASHES_WHITELIST = JSON.parse(hashesData);
+        this.logger.log(`✅ Hashes cargados desde: ${hashesPath}`);
+        this.logger.log(
+          `   Archivos en whitelist: ${Object.keys(this.HASHES_WHITELIST).length}`,
+        );
+      } else {
+        this.logger.warn(
+          `⚠️  Archivo python-hashes.json no encontrado en: ${hashesPath}`,
+        );
+        this.logger.warn(
+          '   La verificación de integridad estará deshabilitada',
+        );
+      }
+    } catch (error) {
+      this.logger.error(`❌ Error cargando hashes: ${error.message}`);
+      this.logger.warn('   La verificación de integridad estará deshabilitada');
+    }
+  }
 
   /**
    * Obtiene la ruta del ejecutable Python según el entorno

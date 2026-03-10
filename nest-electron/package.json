@@ -66,6 +66,10 @@
         "to": "backend/package.json"
       },
       {
+        "from": "../python-hashes.json",
+        "to": "backend/python-hashes.json"
+      },
+      {
         "from": "../nest-ui-be/data",
         "to": "backend/data",
         "filter": [
