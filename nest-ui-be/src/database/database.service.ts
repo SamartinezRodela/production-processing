@@ -124,13 +124,31 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
 
     if (isProduction) {
       // En producción, usar la carpeta de datos de usuario
-      const userDataPath =
-        process.env.APPDATA || path.join(process.env.HOME || '~', '.config');
+      let userDataPath: string;
+
+      if (process.platform === 'darwin') {
+        // macOS: ~/Library/Application Support
+        userDataPath = path.join(
+          process.env.HOME || '~',
+          'Library',
+          'Application Support',
+        );
+      } else if (process.platform === 'win32') {
+        // Windows: %APPDATA%
+        userDataPath =
+          process.env.APPDATA ||
+          path.join(process.env.HOME || '~', 'AppData', 'Roaming');
+      } else {
+        // Linux: ~/.config
+        userDataPath = path.join(process.env.HOME || '~', '.config');
+      }
+
       const appFolder = path.join(userDataPath, 'Production Processing');
 
       // Crear carpeta si no existe
       if (!fs.existsSync(appFolder)) {
         fs.mkdirSync(appFolder, { recursive: true });
+        this.logger.log(`✅ Carpeta de datos creada: ${appFolder}`);
       }
 
       const userDbPath = path.join(appFolder, 'database.json');
