@@ -116,7 +116,14 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         fs.mkdirSync(appFolder, { recursive: true });
       }
 
-      return path.join(appFolder, 'database.json');
+      const userDbPath = path.join(appFolder, 'database.json');
+
+      // Si no existe la base de datos del usuario, copiar la plantilla
+      if (!fs.existsSync(userDbPath)) {
+        this.copyTemplateDatabase(userDbPath);
+      }
+
+      return userDbPath;
     } else {
       // En desarrollo, usar carpeta del proyecto
       const devPath = path.join(process.cwd(), 'data');
@@ -126,6 +133,35 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       }
 
       return path.join(devPath, 'database.json');
+    }
+  }
+
+  /**
+   * Copia la base de datos plantilla desde resources si existe
+   */
+  private copyTemplateDatabase(targetPath: string): void {
+    try {
+      const resourcesPath =
+        process.env.RESOURCES_PATH || (process as any).resourcesPath;
+
+      if (resourcesPath) {
+        const templatePath = path.join(
+          resourcesPath,
+          'backend',
+          'data',
+          'database.json',
+        );
+
+        if (fs.existsSync(templatePath)) {
+          fs.copyFileSync(templatePath, targetPath);
+          this.logger.log(`✅ Template database copied from: ${templatePath}`);
+          return;
+        }
+      }
+
+      this.logger.log('ℹ️ No template database found, will create default');
+    } catch (error) {
+      this.logger.warn(`⚠️ Could not copy template database: ${error.message}`);
     }
   }
 
