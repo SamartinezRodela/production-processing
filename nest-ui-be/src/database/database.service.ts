@@ -436,14 +436,32 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   /**
    * Obtiene los settings
    */
-  getSettings() {
+  getSettings(): DatabaseSettings {
+    // Si no existen settings, crearlos desde defaults
+    if (!this.database.settings) {
+      this.database.settings = this.getDefaultSettings();
+      this.saveDatabase();
+    }
     return this.database.settings;
   }
 
   /**
    * Obtiene los default settings
    */
-  getDefaultSettings() {
+  getDefaultSettings(): DatabaseSettings {
+    // Si no existen defaultSettings, crearlos
+    if (!this.database.defaultSettings) {
+      this.database.defaultSettings = {
+        selectedFacilityId: '1',
+        basePath: 'C:\\Production\\Files',
+        outputPath: 'C:\\Production\\Output',
+        os: 'windows',
+        theme: 'light',
+        autoSave: false,
+        notifications: true,
+      };
+      this.saveDatabase();
+    }
     return this.database.defaultSettings;
   }
 

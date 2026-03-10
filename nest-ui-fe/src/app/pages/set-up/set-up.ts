@@ -135,7 +135,7 @@ export class SetUp {
     // Nota: Esta es una verificación simplificada
     // Los defaults reales se verifican en el backend
     const path = this.basePath();
-    return path.includes('\\Production\\') || path.includes('/Production/');
+    return path ? path.includes('\\Production\\') || path.includes('/Production/') : false;
   }
 
   isDefaultOutputPath(): boolean {
@@ -143,7 +143,7 @@ export class SetUp {
     // Nota: Esta es una verificación simplificada
     // Los defaults reales se verifican en el backend
     const path = this.outputPath();
-    return path.includes('\\Production\\') || path.includes('/Production/');
+    return path ? path.includes('\\Production\\') || path.includes('/Production/') : false;
   }
 
   onOrderChange(orderId: string | number): void {
