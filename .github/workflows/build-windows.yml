@@ -201,65 +201,27 @@ jobs:
         run: |
           cd nest-electron/release
 
-          Write-Host "🗜️ Creando versión portable comprimida con 7-Zip..."
+          Write-Host "Creando version portable comprimida con 7-Zip..."
 
           # Limpiar archivos innecesarios antes de comprimir
-          Write-Host "🧹 Limpiando archivos innecesarios..."
+          Write-Host "Limpiando archivos innecesarios..."
           Remove-Item -Recurse -Force "win-unpacked\resources\*.md" -ErrorAction SilentlyContinue
           Remove-Item -Recurse -Force "win-unpacked\resources\LICENSE*" -ErrorAction SilentlyContinue
           Remove-Item -Recurse -Force "win-unpacked\resources\CHANGELOG*" -ErrorAction SilentlyContinue
 
           # Comprimir con 7-Zip (compresión balanceada - rápida descompresión)
-          Write-Host "📦 Comprimiendo con 7-Zip (nivel balanceado)..."
+          Write-Host "Comprimiendo con 7-Zip (nivel balanceado)..."
           7z a -t7z -mx=7 -mfb=64 -md=16m -ms=on "Production-Processing-Portable.7z" "win-unpacked\"
 
           # Mostrar información del archivo
           if (Test-Path "Production-Processing-Portable.7z") {
             $size = (Get-Item "Production-Processing-Portable.7z").Length / 1MB
-            Write-Host "✅ Compresión completada"
-            Write-Host "📊 Tamaño final: $([math]::Round($size, 2)) MB"
+            Write-Host "[OK] Compresion completada"
+            Write-Host "Tamaño final: $([math]::Round($size, 2)) MB"
           } else {
-            Write-Host "❌ Error: No se pudo crear el archivo 7z"
+            Write-Host "[ERROR] No se pudo crear el archivo 7z"
             exit 1
           }
-
-          # OPCIONAL: Crear auto-extractor (pseudo single-exe)
-          Write-Host ""
-          Write-Host "📦 Creando auto-extractor (pseudo single-exe)..."
-          
-          # Descargar 7z SFX module si no existe
-          if (-not (Test-Path "7zSD.sfx")) {
-            Write-Host "Descargando 7z SFX module..."
-            Invoke-WebRequest -Uri "https://www.7-zip.org/a/7z2301-extra.7z" -OutFile "7z-extra.7z"
-            7z e "7z-extra.7z" "7zSD.sfx" -y
-            Remove-Item "7z-extra.7z"
-          }
-
-          # Crear archivo de configuración para SFX
-          @"
-;!@Install@!UTF-8!
-Title="Production Processing - Portable"
-BeginPrompt="¿Desea extraer Production Processing?\n\nTamaño: $([math]::Round($size, 2)) MB"
-ExtractDialogText="Extrayendo Production Processing..."
-ExtractPathText="Carpeta de destino:"
-ExtractTitle="Production Processing - Extracción"
-GUIMode="2"
-RunProgram="win-unpacked\Production Processing.exe"
-;!@InstallEnd@!
-"@ | Out-File -FilePath "config.txt" -Encoding ASCII
-
-          # Crear auto-extractor
-          cmd /c copy /b "7zSD.sfx" + "config.txt" + "Production-Processing-Portable.7z" "Production-Processing-Portable-SFX.exe"
-
-          if (Test-Path "Production-Processing-Portable-SFX.exe") {
-            $sfxSize = (Get-Item "Production-Processing-Portable-SFX.exe").Length / 1MB
-            Write-Host "✅ Auto-extractor creado"
-            Write-Host "📊 Tamaño SFX: $([math]::Round($sfxSize, 2)) MB"
-          }
-
-          # Limpiar archivos temporales
-          Remove-Item "config.txt" -ErrorAction SilentlyContinue
-          Remove-Item "7zSD.sfx" -ErrorAction SilentlyContinue
         shell: pwsh
 
       - name: Upload Portable Compressed (7z)
@@ -268,14 +230,6 @@ RunProgram="win-unpacked\Production Processing.exe"
           name: windows-portable-compressed
           path: nest-electron/release/Production-Processing-Portable.7z
           retention-days: 30
-
-      - name: Upload Portable Self-Extractor (SFX)
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-portable-sfx
-          path: nest-electron/release/Production-Processing-Portable-SFX.exe
-          retention-days: 30
-          if-no-files-found: warn
 
       # Si es un tag (release), crear GitHub Release
       - name: Create Release
