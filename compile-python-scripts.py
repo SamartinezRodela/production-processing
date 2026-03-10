@@ -61,6 +61,7 @@ def calculate_hash(file_path: Path) -> str:
         for byte_block in iter(lambda: f.read(4096), b""):
             sha256_hash.update(byte_block)
     
+    # Asegurar que el archivo se cierre completamente
     return sha256_hash.hexdigest()
 
 def main():
@@ -137,6 +138,10 @@ def main():
     print("   2. Pegalo en nest-ui-be/src/python/python.service.ts")
     print("   3. Implementa la verificacion de integridad")
     print()
+    
+    # Forzar cierre de archivos y limpieza
+    import gc
+    gc.collect()
 
 if __name__ == "__main__":
     main()

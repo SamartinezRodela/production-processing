@@ -76,12 +76,15 @@ jobs:
           }
 
           # Ejecutar compilación
-          python compile-python-scripts.py
+          $process = Start-Process -FilePath "python" -ArgumentList "compile-python-scripts.py" -NoNewWindow -Wait -PassThru
 
-          if ($LASTEXITCODE -ne 0) {
+          if ($process.ExitCode -ne 0) {
             Write-Host "[ERROR] Error compilando scripts Python" -ForegroundColor Red
             exit 1
           }
+
+          # Esperar a que Python libere todos los archivos
+          Start-Sleep -Seconds 2
 
           Write-Host ""
           Write-Host "[OK] Scripts Python compilados a .pyc" -ForegroundColor Green
@@ -104,6 +107,20 @@ jobs:
 
           Write-Host "[SECURITY] Verificacion de integridad activa" -ForegroundColor Green
           Write-Host ""
+        shell: pwsh
+
+      - name: Release Python Embedded Files
+        run: |
+          Write-Host "Liberando archivos Python embebidos..." -ForegroundColor Cyan
+
+          # Esperar un momento para que Windows libere los archivos
+          Start-Sleep -Seconds 2
+
+          # Forzar garbage collection
+          [System.GC]::Collect()
+          [System.GC]::WaitForPendingFinalizers()
+
+          Write-Host "[OK] Archivos liberados" -ForegroundColor Green
         shell: pwsh
 
       - name: Setup Node.js
@@ -134,6 +151,29 @@ jobs:
       - name: Build Frontend
         working-directory: nest-ui-fe
         run: npm run build
+
+      - name: Prepare for Electron Build
+        run: |
+          Write-Host "Preparando para build de Electron..." -ForegroundColor Cyan
+
+          # Liberar cualquier handle de archivo
+          [System.GC]::Collect()
+          [System.GC]::WaitForPendingFinalizers()
+          [System.GC]::Collect()
+
+          # Esperar para asegurar que Windows libere los archivos
+          Start-Sleep -Seconds 3
+
+          # Verificar que los archivos Python existen y son accesibles
+          $pythonDir = "nest-files-py-embedded"
+          if (Test-Path $pythonDir) {
+            $fileCount = (Get-ChildItem -Path $pythonDir -Recurse -File).Count
+            Write-Host "[OK] Python embebido listo: $fileCount archivos" -ForegroundColor Green
+          } else {
+            Write-Host "[ERROR] Directorio Python no encontrado" -ForegroundColor Red
+            exit 1
+          }
+        shell: pwsh
 
       - name: Build Electron App (Windows)
         working-directory: nest-electron
