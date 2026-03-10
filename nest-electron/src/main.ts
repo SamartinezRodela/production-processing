@@ -301,16 +301,42 @@ ipcMain.handle("python:saludar", async (_event, nombre: string) => {
 
 ipcMain.handle("dialog:select-folder", async () => {
   try {
-    const result = await dialog.showOpenDialog(mainWindow!, {
+    const isMac = process.platform === "darwin";
+
+    const dialogOptions: any = {
       properties: ["openDirectory"],
       title: "Select Base Path Folder",
-    });
+    };
+
+    // En Mac, agregar opciones adicionales para permisos
+    if (isMac) {
+      dialogOptions.properties.push("createDirectory");
+      dialogOptions.message = "Select a folder to access files";
+      dialogOptions.buttonLabel = "Select Folder";
+    }
+
+    const result = await dialog.showOpenDialog(mainWindow!, dialogOptions);
 
     if (result.canceled) {
       return { canceled: true, path: null };
     }
 
-    return { canceled: false, path: result.filePaths[0] };
+    const selectedPath = result.filePaths[0];
+
+    // En Mac, verificar que tenemos acceso
+    if (isMac) {
+      try {
+        const fs = require("fs");
+        // Intentar leer la carpeta para verificar permisos
+        fs.readdirSync(selectedPath);
+        console.log(`[Mac] Acceso verificado a: ${selectedPath}`);
+      } catch (error: any) {
+        console.error(`[Mac] Sin acceso a: ${selectedPath}`, error);
+        throw new Error(`No access to selected folder: ${error.message}`);
+      }
+    }
+
+    return { canceled: false, path: selectedPath };
   } catch (error: any) {
     console.error("[IPC] Error en dialog:select-folder:", error);
     throw new Error(`Error selecting folder: ${error.message}`);

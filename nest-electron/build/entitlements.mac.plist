@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <!-- Permitir acceso a archivos seleccionados por el usuario -->
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
+    
+    <!-- Permitir acceso a carpetas de documentos -->
+    <key>com.apple.security.files.downloads.read-write</key>
+    <true/>
+    
+    <!-- Permitir acceso a carpetas del usuario -->
+    <key>com.apple.security.files.user-selected.read-only</key>
+    <true/>
+    
+    <!-- Permitir conexiones de red salientes (para backend) -->
+    <key>com.apple.security.network.client</key>
+    <true/>
+    
+    <!-- Permitir conexiones de red entrantes (para backend) -->
+    <key>com.apple.security.network.server</key>
+    <true/>
+    
+    <!-- Deshabilitar library validation para Python embebido -->
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+    
+    <!-- Permitir JIT para Python -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    
+    <!-- Permitir ejecutables sin firma (Python embebido) -->
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    
+    <!-- Permitir dyld environment variables -->
+    <key>com.apple.security.cs.allow-dyld-environment-variables</key>
+    <true/>
+  </dict>
+</plist>

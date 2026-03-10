@@ -113,6 +113,11 @@
     "mac": {
       "target": "dmg",
       "identity": null,
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "extendInfo": "build/Info.plist",
       "extraResources": [
         {
           "from": "../nest-files-py-embedded-mac",

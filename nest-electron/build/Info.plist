@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Descripción de por qué necesitamos acceso a archivos -->
+    <key>NSDocumentsFolderUsageDescription</key>
+    <string>Production Processing needs access to your documents folder to read and process files.</string>
+    
+    <key>NSDownloadsFolderUsageDescription</key>
+    <string>Production Processing needs access to your downloads folder to read and process files.</string>
+    
+    <key>NSDesktopFolderUsageDescription</key>
+    <string>Production Processing needs access to your desktop folder to read and process files.</string>
+    
+    <key>NSRemovableVolumesUsageDescription</key>
+    <string>Production Processing needs access to external drives to read and process files.</string>
+    
+    <key>NSFileProviderDomainUsageDescription</key>
+    <string>Production Processing needs access to cloud storage to read and process files.</string>
+    
+    <!-- Permitir acceso a carpetas seleccionadas por el usuario -->
+    <key>NSAppleEventsUsageDescription</key>
+    <string>Production Processing needs to access folders you select.</string>
+</dict>
+</plist>
