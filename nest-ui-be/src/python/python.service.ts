@@ -21,6 +21,7 @@ export class PythonService {
 
   /**
    * Carga los hashes desde el archivo python-hashes.json
+   * Si no existe, la verificación de integridad se deshabilitará
    */
   private loadHashesWhitelist(): void {
     try {
@@ -41,21 +42,21 @@ export class PythonService {
       if (fs.existsSync(hashesPath)) {
         const hashesData = fs.readFileSync(hashesPath, 'utf8');
         this.HASHES_WHITELIST = JSON.parse(hashesData);
-        this.logger.log(`✅ Hashes cargados desde: ${hashesPath}`);
+        this.logger.log(`✅ SEGURIDAD: Verificación de integridad ACTIVA`);
+        this.logger.log(`   Hashes cargados desde: ${hashesPath}`);
         this.logger.log(
-          `   Archivos en whitelist: ${Object.keys(this.HASHES_WHITELIST).length}`,
+          `   Archivos protegidos: ${Object.keys(this.HASHES_WHITELIST).length}`,
         );
       } else {
+        this.logger.warn(`⚠️  SEGURIDAD: python-hashes.json no encontrado`);
+        this.logger.warn(`   Ruta buscada: ${hashesPath}`);
         this.logger.warn(
-          `⚠️  Archivo python-hashes.json no encontrado en: ${hashesPath}`,
-        );
-        this.logger.warn(
-          '   La verificación de integridad estará deshabilitada',
+          `   Verificación de integridad DESHABILITADA (modo desarrollo)`,
         );
       }
     } catch (error) {
       this.logger.error(`❌ Error cargando hashes: ${error.message}`);
-      this.logger.warn('   La verificación de integridad estará deshabilitada');
+      this.logger.warn(`   Verificación de integridad DESHABILITADA`);
     }
   }
 
@@ -114,6 +115,10 @@ export class PythonService {
    * 🔒 Verifica la integridad de un archivo .pyc
    * Calcula el hash SHA-256 y lo compara con la whitelist
    *
+   * MODO DINÁMICO:
+   * - Si python-hashes.json existe: Verifica integridad estricta
+   * - Si NO existe: Permite ejecución sin verificación (modo desarrollo)
+   *
    * @param fileName - Nombre del archivo .pyc a verificar
    * @returns true si el archivo es válido, false si está modificado o no existe
    */
@@ -127,15 +132,26 @@ export class PythonService {
       return false;
     }
 
+    // Si no hay whitelist cargada, permitir ejecución (modo desarrollo)
+    if (Object.keys(this.HASHES_WHITELIST).length === 0) {
+      this.logger.warn(
+        `⚠️  MODO SIN VERIFICACIÓN: python-hashes.json no encontrado`,
+      );
+      this.logger.warn(
+        `   Permitiendo ejecución sin verificación de integridad`,
+      );
+      return true;
+    }
+
     // Verificar que tenemos el hash en la whitelist
     if (!this.HASHES_WHITELIST[fileName]) {
       this.logger.warn(
         `⚠️  INTEGRIDAD: Archivo no está en whitelist: ${fileName}`,
       );
       this.logger.warn(
-        `   Esto puede ser normal si es un archivo .py sin compilar`,
+        `   Permitiendo ejecución (archivo no listado en python-hashes.json)`,
       );
-      return true; // Permitir archivos no listados (para desarrollo)
+      return true; // Permitir archivos no listados
     }
 
     // Calcular hash del archivo

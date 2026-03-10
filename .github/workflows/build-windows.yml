@@ -75,8 +75,15 @@ jobs:
             exit 1
           }
 
-          # Ejecutar compilación
-          $process = Start-Process -FilePath "python" -ArgumentList "compile-python-scripts.py" -NoNewWindow -Wait -PassThru
+          # Usar el Python embebido (3.13) para compilar
+          Write-Host "Usando Python embebido 3.13 para compilar..." -ForegroundColor Yellow
+          $pythonExe = "nest-files-py-embedded\python.exe"
+
+          # Verificar versión de Python
+          & $pythonExe --version
+
+          # Ejecutar compilación con Python embebido
+          $process = Start-Process -FilePath $pythonExe -ArgumentList "compile-python-scripts.py" -NoNewWindow -Wait -PassThru
 
           if ($process.ExitCode -ne 0) {
             Write-Host "[ERROR] Error compilando scripts Python" -ForegroundColor Red

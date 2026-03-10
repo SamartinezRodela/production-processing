@@ -73,8 +73,15 @@ jobs:
             exit 1
           fi
 
-          # Ejecutar compilación con el directorio de Mac
-          python3 compile-python-scripts.py nest-files-py-embedded-mac
+          # Usar el Python embebido (3.11) para compilar
+          echo "Usando Python embebido 3.11 para compilar..."
+          PYTHON_EXE="nest-files-py-embedded-mac/python-runtime/bin/python3"
+
+          # Verificar versión de Python
+          $PYTHON_EXE --version
+
+          # Ejecutar compilación con Python embebido
+          $PYTHON_EXE compile-python-scripts.py nest-files-py-embedded-mac
 
           if [ $? -ne 0 ]; then
             echo "[ERROR] Error compilando scripts Python"
