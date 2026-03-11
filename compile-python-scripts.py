@@ -23,13 +23,8 @@ else:
     # Por defecto, usar Windows
     SCRIPTS_DIR = Path("nest-files-py-embedded")
 
-# Scripts que queremos compilar
-SCRIPTS_TO_COMPILE = [
-    "saludar.py",
-    "generar_pdf.py",
-    "generar_pdf_path.py",
-    "test_imports.py"
-]
+# Scripts que queremos compilar (None = compilar todos los .py)
+SCRIPTS_TO_COMPILE = None  # Si es None, compila todos los .py del directorio
 
 def compile_script(script_path: Path) -> Path:
     """Compila un script Python a bytecode"""
@@ -79,8 +74,19 @@ def main():
     hashes = {}
     compiled_files = []
     
+    # Determinar qué scripts compilar
+    if SCRIPTS_TO_COMPILE is None:
+        # Compilar todos los archivos .py del directorio
+        scripts_to_process = [f.name for f in SCRIPTS_DIR.glob("*.py")]
+        print(f"[*] Compilando TODOS los archivos .py encontrados ({len(scripts_to_process)} archivos)")
+        print()
+    else:
+        scripts_to_process = SCRIPTS_TO_COMPILE
+        print(f"[*] Compilando {len(scripts_to_process)} archivos específicos")
+        print()
+    
     # Compilar cada script
-    for script_name in SCRIPTS_TO_COMPILE:
+    for script_name in scripts_to_process:
         script_path = SCRIPTS_DIR / script_name
         
         if not script_path.exists():

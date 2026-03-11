@@ -25,6 +25,12 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/set-up/set-up').then((m) => m.SetUp),
     canActivate: [authGuard],
   },
+  {
+    path: 'python-tests',
+    loadComponent: () =>
+      import('./pages/python-tests/python-tests.component').then((m) => m.PythonTestsComponent),
+    canActivate: [authGuard],
+  },
 
   // ============================================
   // RUTA POR DEFECTO (404 o redirect)

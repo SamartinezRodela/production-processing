@@ -42,6 +42,26 @@ export class PythonController {
     return this.pythonService.getDebugInfo();
   }
 
+  /**
+   * Verifica la configuración de rutas (basePath y outputPath)
+   * GET /python/verify-paths
+   */
+  @Get('verify-paths')
+  async verifyPaths() {
+    try {
+      return await this.pythonService.verifyPathsConfiguration();
+    } catch (error) {
+      throw new HttpException(
+        {
+          message: 'Error verificando configuración de rutas',
+          error: error.message || error,
+          details: error,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
   @Get('verify-integrity')
   async verifyIntegrity() {
     return this.pythonService.verifyAllFiles();
@@ -214,6 +234,261 @@ export class PythonController {
         {
           message: 'Error al ejecutar ejecutable',
           exeName: body.exeName,
+          error: error.message || error,
+          details: error,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  // ==========================================
+  // 📚 ENDPOINTS DE PRUEBA DE BIBLIOTECAS
+  // ==========================================
+
+  /**
+   * Prueba rápida de todas las bibliotecas
+   * GET /python/test/quick
+   */
+  @Get('test/quick')
+  async quickTest() {
+    try {
+      return await this.pythonService.quickTest();
+    } catch (error) {
+      throw new HttpException(
+        {
+          message: 'Error en prueba rápida',
+          error: error.message || error,
+          details: error,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Verifica que todas las bibliotecas estén instaladas
+   * GET /python/test/libraries
+   */
+  @Get('test/libraries')
+  async testAllLibraries() {
+    try {
+      return await this.pythonService.testAllLibraries();
+    } catch (error) {
+      throw new HttpException(
+        {
+          message: 'Error verificando bibliotecas',
+          error: error.message || error,
+          details: error,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Prueba NumPy
+   * GET /python/test/numpy
+   */
+  @Get('test/numpy')
+  async testNumpy() {
+    try {
+      return await this.pythonService.testNumpy();
+    } catch (error) {
+      throw new HttpException(
+        {
+          message: 'Error probando NumPy',
+          error: error.message || error,
+          details: error,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Prueba Pandas
+   * GET /python/test/pandas
+   */
+  @Get('test/pandas')
+  async testPandas() {
+    try {
+      return await this.pythonService.testPandas();
+    } catch (error) {
+      throw new HttpException(
+        {
+          message: 'Error probando Pandas',
+          error: error.message || error,
+          details: error,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Prueba NumPy y Pandas combinados
+   * GET /python/test/numpy-pandas
+   */
+  @Get('test/numpy-pandas')
+  async testNumpyPandas() {
+    try {
+      return await this.pythonService.testNumpyPandasCombined();
+    } catch (error) {
+      throw new HttpException(
+        {
+          message: 'Error probando NumPy y Pandas',
+          error: error.message || error,
+          details: error,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Prueba ReportLab (crear PDF)
+   * POST /python/test/reportlab
+   * Body: { outputPath: string }
+   */
+  @Post('test/reportlab')
+  async testReportlab(@Body() body: { outputPath: string }) {
+    try {
+      const outputPath = body.outputPath || 'test_reportlab.pdf';
+      return await this.pythonService.testReportlab(outputPath);
+    } catch (error) {
+      throw new HttpException(
+        {
+          message: 'Error probando ReportLab',
+          error: error.message || error,
+          details: error,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Prueba Matplotlib (crear gráfico)
+   * POST /python/test/matplotlib
+   * Body: { tipo: 'lineas' | 'barras' | 'dispersion' | 'pastel', outputPath: string }
+   */
+  @Post('test/matplotlib')
+  async testMatplotlib(@Body() body: { tipo: string; outputPath: string }) {
+    try {
+      const tipo = body.tipo || 'lineas';
+      const outputPath = body.outputPath || `test_matplotlib_${tipo}.png`;
+      return await this.pythonService.testMatplotlib(tipo, outputPath);
+    } catch (error) {
+      throw new HttpException(
+        {
+          message: 'Error probando Matplotlib',
+          error: error.message || error,
+          details: error,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Prueba OpenCV (crear imagen)
+   * POST /python/test/opencv
+   * Body: { outputPath: string }
+   */
+  @Post('test/opencv')
+  async testOpenCV(@Body() body: { outputPath: string }) {
+    try {
+      const outputPath = body.outputPath || 'test_opencv.png';
+      return await this.pythonService.testOpenCV(outputPath);
+    } catch (error) {
+      throw new HttpException(
+        {
+          message: 'Error probando OpenCV',
+          error: error.message || error,
+          details: error,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Prueba Pillow (crear imagen)
+   * POST /python/test/pillow
+   * Body: { outputPath: string }
+   */
+  @Post('test/pillow')
+  async testPillow(@Body() body: { outputPath: string }) {
+    try {
+      const outputPath = body.outputPath || 'test_pillow.png';
+      return await this.pythonService.testPillow(outputPath);
+    } catch (error) {
+      throw new HttpException(
+        {
+          message: 'Error probando Pillow',
+          error: error.message || error,
+          details: error,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Prueba SciPy
+   * GET /python/test/scipy
+   */
+  @Get('test/scipy')
+  async testScipy() {
+    try {
+      return await this.pythonService.testScipy();
+    } catch (error) {
+      throw new HttpException(
+        {
+          message: 'Error probando SciPy',
+          error: error.message || error,
+          details: error,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Prueba PyPDF (leer PDF)
+   * POST /python/test/pypdf
+   * Body: { pdfPath?: string } (opcional - si no se proporciona, busca en basePath)
+   */
+  @Post('test/pypdf')
+  async testPyPDF(@Body() body: { pdfPath?: string }) {
+    try {
+      return await this.pythonService.testPyPDF(body.pdfPath);
+    } catch (error) {
+      throw new HttpException(
+        {
+          message: 'Error probando PyPDF',
+          error: error.message || error,
+          details: error,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Prueba PyMuPDF (analizar PDF)
+   * POST /python/test/pymupdf
+   * Body: { pdfPath?: string } (opcional - si no se proporciona, busca en basePath)
+   */
+  @Post('test/pymupdf')
+  async testPyMuPDF(@Body() body: { pdfPath?: string }) {
+    try {
+      return await this.pythonService.testPyMuPDF(body.pdfPath);
+    } catch (error) {
+      throw new HttpException(
+        {
+          message: 'Error probando PyMuPDF',
           error: error.message || error,
           details: error,
         },

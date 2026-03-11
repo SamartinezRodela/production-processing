@@ -1,0 +1,414 @@
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 transition-all duration-300">
+  <!-- Window Header -->
+  <div
+    class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-3 flex items-center justify-between"
+  >
+    <div class="flex items-center gap-3">
+      <app-button
+        [variant]="'ghost'"
+        [icon]="'arrow-left'"
+        [iconPosition]="'only'"
+        [iconSize]="20"
+        (clicked)="goBack()"
+        [customClass]="'p-2'"
+      />
+      <h1 class="text-lg font-semibold text-gray-800 dark:text-gray-100">
+        <div class="flex items-start gap-2">
+          <app-icon
+            [name]="'shell'"
+            [size]="30"
+            class="text-green-600 dark:text-green-400 shrink-0 mt-0.5"
+          />
+
+          <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100 mt-1">
+            Python Libraries Testing
+          </h2>
+        </div>
+      </h1>
+    </div>
+    <app-badge
+      [label]="allTestsRunning ? 'Testing...' : 'Ready'"
+      [variant]="allTestsRunning ? 'warning' : 'success'"
+      [size]="'sm'"
+    />
+  </div>
+
+  <div class="p-8">
+    <div class="max-w-7xl mx-auto space-y-6">
+      <!-- Configuration Warning -->
+      @if (pathsVerification && !pathsVerification.summary.ready) {
+        <div
+          class="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 dark:border-yellow-600 p-4 rounded-lg"
+        >
+          <div class="flex items-start gap-3">
+            <app-icon
+              [name]="'alert-triangle'"
+              [size]="20"
+              class="text-yellow-600 dark:text-yellow-400 shrink-0 mt-0.5"
+            />
+            <div class="flex-1">
+              <h3 class="text-sm font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
+                Configuration Issues Detected
+              </h3>
+
+              <!-- BasePath Status -->
+              <div
+                class="mb-3 p-3 bg-white dark:bg-gray-800 rounded border border-yellow-200 dark:border-yellow-800"
+              >
+                <div class="flex items-center justify-between mb-2">
+                  <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Base Path</p>
+                  @if (pathsVerification.basePath.exists && pathsVerification.basePath.readable) {
+                    <app-badge [label]="'OK'" [variant]="'success'" [size]="'sm'" />
+                  } @else {
+                    <app-badge [label]="'Error'" [variant]="'danger'" [size]="'sm'" />
+                  }
+                </div>
+                <p class="text-xs text-gray-600 dark:text-gray-400 mb-1 font-mono">
+                  {{ pathsVerification.basePath.path }}
+                </p>
+                @if (pathsVerification.basePath.error) {
+                  <p class="text-xs text-red-600 dark:text-red-400 mt-1">
+                    ❌ {{ pathsVerification.basePath.error }}
+                  </p>
+                }
+                @if (
+                  pathsVerification.basePath.exists &&
+                  pathsVerification.basePath.pdfFiles.length === 0
+                ) {
+                  <p class="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                    ⚠️ No PDF files found in this directory
+                  </p>
+                }
+                @if (
+                  pathsVerification.basePath.exists &&
+                  pathsVerification.basePath.pdfFiles.length > 0
+                ) {
+                  <p class="text-xs text-green-600 dark:text-green-400 mt-1">
+                    ✅ {{ pathsVerification.basePath.pdfFiles.length }} PDF file(s) found
+                  </p>
+                }
+              </div>
+
+              <!-- OutputPath Status -->
+              <div
+                class="p-3 bg-white dark:bg-gray-800 rounded border border-yellow-200 dark:border-yellow-800"
+              >
+                <div class="flex items-center justify-between mb-2">
+                  <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Output Path</p>
+                  @if (
+                    pathsVerification.outputPath.exists && pathsVerification.outputPath.writable
+                  ) {
+                    <app-badge [label]="'OK'" [variant]="'success'" [size]="'sm'" />
+                  } @else {
+                    <app-badge [label]="'Error'" [variant]="'danger'" [size]="'sm'" />
+                  }
+                </div>
+                <p class="text-xs text-gray-600 dark:text-gray-400 mb-1 font-mono">
+                  {{ pathsVerification.outputPath.path }}
+                </p>
+                @if (pathsVerification.outputPath.error) {
+                  <p class="text-xs text-red-600 dark:text-red-400 mt-1">
+                    ❌ {{ pathsVerification.outputPath.error }}
+                  </p>
+                }
+              </div>
+
+              <div class="mt-3 flex items-center gap-2">
+                <app-button
+                  [label]="'Refresh Status'"
+                  [variant]="'white'"
+                  [size]="'sm'"
+                  [icon]="'refresh-cw'"
+                  [iconPosition]="'left'"
+                  [iconSize]="14"
+                  (clicked)="verifyPathsConfiguration()"
+                  [customClass]="'text-xs'"
+                />
+                <app-button
+                  [label]="'Go to Settings'"
+                  [variant]="'white'"
+                  [size]="'sm'"
+                  [icon]="'settings'"
+                  [iconPosition]="'left'"
+                  [iconSize]="14"
+                  (clicked)="goBack()"
+                  [customClass]="'text-xs'"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Description Card -->
+      <div
+        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
+      >
+        <div class="flex items-start gap-4">
+          <div class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg shrink-0">
+            <app-icon [name]="'info'" [size]="24" class="text-blue-600 dark:text-blue-400" />
+          </div>
+          <div class="flex-1">
+            <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100 mb-2">
+              About Python Libraries Testing
+            </h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+              Verify that all required Python libraries are installed and functioning correctly.
+              These libraries are essential for data processing, PDF generation, image manipulation,
+              and scientific computing.
+            </p>
+            <div class="flex items-center gap-2">
+              <app-button
+                [label]="allTestsRunning ? 'Testing...' : 'Run All Tests'"
+                [variant]="'primary'"
+                [size]="'md'"
+                [icon]="'play'"
+                [iconPosition]="'left'"
+                [iconSize]="16"
+                (clicked)="runAllTests()"
+                [disabled]="allTestsRunning"
+                [customClass]="'text-sm text-gray-100'"
+              />
+              <app-button
+                [label]="'Clear Results'"
+                [variant]="'white'"
+                [size]="'md'"
+                [icon]="'trash'"
+                [iconPosition]="'left'"
+                [iconSize]="16"
+                (clicked)="clearResults()"
+                [disabled]="allTestsRunning"
+                [customClass]="'text-sm'"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tests Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div
+          *ngFor="let test of tests"
+          class="bg-white dark:bg-gray-800 border-2 rounded-lg p-5 transition-all duration-200 hover:shadow-lg"
+          [ngClass]="{
+            'border-gray-200 dark:border-gray-700': test.status === 'pending',
+            'border-blue-400 dark:border-blue-600 bg-blue-50/50 dark:bg-blue-900/10':
+              test.status === 'running',
+            'border-green-400 dark:border-green-600 bg-green-50/50 dark:bg-green-900/10':
+              test.status === 'success',
+            'border-red-400 dark:border-red-600 bg-red-50/50 dark:bg-red-900/10':
+              test.status === 'error',
+          }"
+        >
+          <!-- Test Header -->
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <app-icon
+                [name]="getStatusIcon(test.status)"
+                [size]="20"
+                [ngClass]="{
+                  'text-gray-400 dark:text-gray-500': test.status === 'pending',
+                  'text-blue-600 dark:text-blue-400 animate-spin': test.status === 'running',
+                  'text-green-600 dark:text-green-400': test.status === 'success',
+                  'text-red-600 dark:text-red-400': test.status === 'error',
+                }"
+              />
+              <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                {{ test.name }}
+              </h3>
+            </div>
+            <app-button
+              [variant]="'ghost'"
+              [icon]="'play'"
+              [iconPosition]="'only'"
+              [iconSize]="16"
+              (clicked)="runTest(test)"
+              [disabled]="test.status === 'running' || allTestsRunning"
+              [customClass]="'p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded'"
+            />
+          </div>
+
+          <!-- Test Body -->
+          <div class="min-h-[60px]">
+            <!-- Running State -->
+            <div
+              *ngIf="test.status === 'running'"
+              class="flex items-center gap-2 text-blue-600 dark:text-blue-400"
+            >
+              <div class="animate-spin">
+                <app-icon [name]="'loader'" [size]="16" />
+              </div>
+              <span class="text-xs font-medium">Running test...</span>
+            </div>
+
+            <!-- Success State -->
+            <div *ngIf="test.status === 'success'" class="space-y-2">
+              <div class="flex items-center gap-2 text-green-600 dark:text-green-400">
+                <app-icon [name]="'check'" [size]="16" />
+                <span class="text-xs font-medium">Test passed</span>
+              </div>
+              <p class="text-xs text-gray-500 dark:text-gray-400">
+                <app-icon [name]="'clock'" [size]="12" class="inline-block mr-1 text-gray-400" />
+                {{ test.duration }}ms
+              </p>
+              <details class="mt-2">
+                <summary
+                  class="text-xs font-medium text-gray-700 dark:text-gray-300 cursor-pointer hover:text-gray-900 dark:hover:text-gray-100"
+                >
+                  View result
+                </summary>
+                <pre
+                  class="mt-2 p-2 bg-gray-900 dark:bg-gray-950 text-gray-100 text-xs rounded overflow-x-auto max-h-40"
+                  >{{ formatResult(test.result) }}</pre
+                >
+              </details>
+            </div>
+
+            <!-- Error State -->
+            <div *ngIf="test.status === 'error'" class="space-y-2">
+              <div class="flex items-center gap-2 text-red-600 dark:text-red-400">
+                <app-icon [name]="'x'" [size]="16" />
+                <span class="text-xs font-medium">Test failed</span>
+              </div>
+              <p class="text-xs text-gray-500 dark:text-gray-400">
+                <app-icon [name]="'clock'" [size]="12" class="inline-block mr-1 text-gray-400" />
+                {{ test.duration }}ms
+              </p>
+              <div
+                class="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded"
+              >
+                <p class="text-xs text-red-800 dark:text-red-200">{{ test.error }}</p>
+              </div>
+            </div>
+
+            <!-- Pending State -->
+            <div
+              *ngIf="test.status === 'pending'"
+              class="flex items-center gap-2 text-gray-400 dark:text-gray-500"
+            >
+              <app-icon [name]="'pause'" [size]="16" />
+              <span class="text-xs font-medium">Waiting to run</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Libraries Info Section -->
+      <div
+        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
+      >
+        <div class="flex items-center gap-2 mb-4">
+          <app-icon [name]="'package'" [size]="20" class="text-gray-600 dark:text-gray-400" />
+          <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100">
+            Installed Libraries
+          </h2>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+            <div class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded">
+              <app-icon [name]="'chart-bar'" [size]="16" class="text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <p class="text-sm font-medium text-gray-800 dark:text-gray-100">NumPy</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">
+                Arrays and mathematical operations
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+            <div class="p-2 bg-green-100 dark:bg-green-900/30 rounded">
+              <app-icon
+                [name]="'database'"
+                [size]="16"
+                class="text-green-600 dark:text-green-400"
+              />
+            </div>
+            <div>
+              <p class="text-sm font-medium text-gray-800 dark:text-gray-100">Pandas</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">DataFrames and data analysis</p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+            <div class="p-2 bg-purple-100 dark:bg-purple-900/30 rounded">
+              <app-icon
+                [name]="'trending-up'"
+                [size]="16"
+                class="text-purple-600 dark:text-purple-400"
+              />
+            </div>
+            <div>
+              <p class="text-sm font-medium text-gray-800 dark:text-gray-100">Matplotlib</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">Charts and visualizations</p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+            <div class="p-2 bg-orange-100 dark:bg-orange-900/30 rounded">
+              <app-icon [name]="'eye'" [size]="16" class="text-orange-600 dark:text-orange-400" />
+            </div>
+            <div>
+              <p class="text-sm font-medium text-gray-800 dark:text-gray-100">OpenCV</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">Computer vision</p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+            <div class="p-2 bg-pink-100 dark:bg-pink-900/30 rounded">
+              <app-icon [name]="'image'" [size]="16" class="text-pink-600 dark:text-pink-400" />
+            </div>
+            <div>
+              <p class="text-sm font-medium text-gray-800 dark:text-gray-100">Pillow</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">Image manipulation</p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+            <div class="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded">
+              <app-icon
+                [name]="'activity'"
+                [size]="16"
+                class="text-indigo-600 dark:text-indigo-400"
+              />
+            </div>
+            <div>
+              <p class="text-sm font-medium text-gray-800 dark:text-gray-100">SciPy</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">Scientific functions</p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+            <div class="p-2 bg-red-100 dark:bg-red-900/30 rounded">
+              <app-icon [name]="'file-text'" [size]="16" class="text-red-600 dark:text-red-400" />
+            </div>
+            <div>
+              <p class="text-sm font-medium text-gray-800 dark:text-gray-100">ReportLab</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">Create PDFs</p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+            <div class="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded">
+              <app-icon [name]="'file'" [size]="16" class="text-yellow-600 dark:text-yellow-400" />
+            </div>
+            <div>
+              <p class="text-sm font-medium text-gray-800 dark:text-gray-100">PyPDF</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">Read PDFs</p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+            <div class="p-2 bg-teal-100 dark:bg-teal-900/30 rounded">
+              <app-icon [name]="'file-plus'" [size]="16" class="text-teal-600 dark:text-teal-400" />
+            </div>
+            <div>
+              <p class="text-sm font-medium text-gray-800 dark:text-gray-100">PyMuPDF</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">Analyze PDFs</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

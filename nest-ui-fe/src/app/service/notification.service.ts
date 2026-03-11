@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, NgZone } from '@angular/core';
 
 export interface Notification {
   id: string;
@@ -23,6 +23,8 @@ export class NotificationService {
   private notifications = signal<Notification[]>([]);
   position = signal<NotificationPosition>('top-right');
 
+  constructor(private ngZone: NgZone) {}
+
   setPosition(pos: NotificationPosition): void {
     this.position.set(pos);
   }
@@ -31,27 +33,34 @@ export class NotificationService {
   getNotifications = this.notifications.asReadonly();
 
   show(type: Notification['type'], message: string, duration: number = 3000, title?: string): void {
-    const current = this.notifications();
+    // Ejecutar fuera de la zona de Angular para evitar ExpressionChangedAfterItHasBeenCheckedError
+    this.ngZone.runOutsideAngular(() => {
+      setTimeout(() => {
+        this.ngZone.run(() => {
+          const current = this.notifications();
 
-    // Buscar si ya existe una notificación similar
-    const existing = current.find((n) => n.message === message && n.type === type);
+          // Buscar si ya existe una notificación similar
+          const existing = current.find((n) => n.message === message && n.type === type);
 
-    if (existing) {
-      // Incrementar contador
-      existing.count = (existing.count || 1) + 1;
-      this.notifications.set([...current]);
-      return;
-    }
+          if (existing) {
+            // Incrementar contador
+            existing.count = (existing.count || 1) + 1;
+            this.notifications.set([...current]);
+            return;
+          }
 
-    // Crear nueva notificación
-    const id = `notification-${Date.now()}-${Math.random()}`;
-    const notification: Notification = { id, type, title, message, duration, count: 1 };
+          // Crear nueva notificación
+          const id = `notification-${Date.now()}-${Math.random()}`;
+          const notification: Notification = { id, type, title, message, duration, count: 1 };
 
-    this.notifications.set([...current, notification]);
+          this.notifications.set([...current, notification]);
 
-    if (duration > 0) {
-      setTimeout(() => this.remove(id), duration);
-    }
+          if (duration > 0) {
+            setTimeout(() => this.remove(id), duration);
+          }
+        });
+      }, 0);
+    });
   }
 
   success(message: string, duration?: number, title?: string): void {
@@ -95,10 +104,14 @@ export class NotificationService {
   // );
 
   remove(id: string): void {
-    this.notifications.set(this.notifications().filter((n) => n.id !== id));
+    this.ngZone.run(() => {
+      this.notifications.set(this.notifications().filter((n) => n.id !== id));
+    });
   }
 
   clear(): void {
-    this.notifications.set([]);
+    this.ngZone.run(() => {
+      this.notifications.set([]);
+    });
   }
 }

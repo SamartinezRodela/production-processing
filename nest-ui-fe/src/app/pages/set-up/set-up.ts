@@ -19,6 +19,7 @@ import { SettingsService } from '@services/set-up/settings.service';
 import { FacilityManagementService } from '@services/set-up/facility-management.service';
 import { ModalStateService } from '@services/set-up/modal-state.service';
 import { AuthService } from '@services/auth.service';
+import { PythonTestService } from '@services/python-test.service';
 
 import { OrderManagementService } from '@services/order-management.service';
 
@@ -51,6 +52,11 @@ export class SetUp {
   facilityService = inject(FacilityManagementService);
   modalService = inject(ModalStateService);
   private authService = inject(AuthService);
+  private pythonTestService = inject(PythonTestService);
+
+  // Estado de pruebas Python
+  pythonTestsRunning = false;
+  pythonTestsResult: any = null;
 
   // Delegated getters
   get operatingSystem() {
@@ -579,5 +585,66 @@ export class SetUp {
 
   logout(): void {
     this.authService.logout();
+  }
+
+  // ==========================================
+  // 🐍 PRUEBAS DE BIBLIOTECAS PYTHON
+  // ==========================================
+
+  /**
+   * Ejecuta la prueba rápida de todas las bibliotecas Python
+   */
+  async testPythonLibraries(): Promise<void> {
+    // Evitar múltiples ejecuciones simultáneas
+    if (this.pythonTestsRunning) {
+      return;
+    }
+
+    // Usar setTimeout para TODAS las actualizaciones de estado
+    setTimeout(() => {
+      this.pythonTestsRunning = true;
+      this.pythonTestsResult = null;
+      this.notificationService.info('Testing Python libraries...');
+    }, 0);
+
+    try {
+      const result = await firstValueFrom(this.pythonTestService.quickTest());
+
+      // Actualizar estado en el siguiente ciclo
+      setTimeout(() => {
+        this.pythonTestsResult = result;
+        this.pythonTestsRunning = false;
+
+        // Contar bibliotecas instaladas
+        const installed = Object.values(result).filter((lib: any) => lib.instalado).length;
+        const total = Object.keys(result).length;
+
+        if (installed === total) {
+          this.notificationService.success(
+            `All ${total} Python libraries are installed and working!`,
+          );
+        } else {
+          this.notificationService.warning(`${installed}/${total} Python libraries are installed`);
+        }
+      }, 0);
+    } catch (error: any) {
+      console.error('Error testing Python libraries:', error);
+
+      // Actualizar estado en el siguiente ciclo
+      setTimeout(() => {
+        this.notificationService.error(
+          `Error testing libraries: ${error.message || 'Unknown error'}`,
+        );
+        this.pythonTestsResult = { error: error.message || 'Unknown error' };
+        this.pythonTestsRunning = false;
+      }, 0);
+    }
+  }
+
+  /**
+   * Navega a la página completa de pruebas Python
+   */
+  goToPythonTests(): void {
+    this.router.navigate(['/python-tests']);
   }
 }

@@ -43,23 +43,51 @@ jobs:
           # Instalar pip
           .\python.exe get-pip.py --no-warn-script-location
 
-          # Instalar reportlab
+          # Instalar todas las bibliotecas necesarias
+          Write-Host "Instalando bibliotecas Python..." -ForegroundColor Cyan
+
+          # Bibliotecas básicas
           .\python.exe -m pip install reportlab --no-warn-script-location
+          .\python.exe -m pip install pypdf --no-warn-script-location
+          .\python.exe -m pip install Pillow --no-warn-script-location
+          .\python.exe -m pip install openpyxl --no-warn-script-location
+          .\python.exe -m pip install requests --no-warn-script-location
+
+          # Bibliotecas científicas y procesamiento
+          .\python.exe -m pip install numpy --no-warn-script-location
+          .\python.exe -m pip install pandas --no-warn-script-location
+          .\python.exe -m pip install scipy --no-warn-script-location
+          .\python.exe -m pip install matplotlib --no-warn-script-location
+
+          # Procesamiento de imágenes y PDFs
+          .\python.exe -m pip install opencv-python-headless --no-warn-script-location
+          .\python.exe -m pip install pymupdf --no-warn-script-location
+          .\python.exe -m pip install tifffile --no-warn-script-location
+
+          Write-Host "[OK] Todas las bibliotecas instaladas" -ForegroundColor Green
 
           cd ..
 
-          # Copiar scripts Python personalizados
-          Write-Host "Copiando scripts Python personalizados..."
+          # Copiar TODOS los scripts Python personalizados
+          Write-Host "Copiando scripts Python personalizados..." -ForegroundColor Cyan
           if (Test-Path "nest-files-py") {
-            Copy-Item -Path "nest-files-py\*.py" -Destination "nest-files-py-embedded\" -Force
-            Write-Host "Scripts copiados exitosamente"
+            $scriptFiles = Get-ChildItem -Path "nest-files-py\*.py"
+            Write-Host "Archivos encontrados: $($scriptFiles.Count)" -ForegroundColor Yellow
+            
+            foreach ($file in $scriptFiles) {
+              Copy-Item -Path $file.FullName -Destination "nest-files-py-embedded\" -Force
+              Write-Host "   [OK] Copiado: $($file.Name)" -ForegroundColor White
+            }
+            
+            Write-Host "[OK] Todos los scripts copiados exitosamente" -ForegroundColor Green
           } else {
-            Write-Host "Advertencia: carpeta nest-files-py no encontrada"
+            Write-Host "[ERROR] Carpeta nest-files-py no encontrada" -ForegroundColor Red
+            exit 1
           }
 
           # Crear carpeta executables
           New-Item -ItemType Directory -Path "nest-files-py-embedded\executables" -Force | Out-Null
-          Write-Host "Carpeta executables creada"
+          Write-Host "[OK] Carpeta executables creada" -ForegroundColor Green
         shell: pwsh
 
       - name: Compile Python Scripts to Bytecode

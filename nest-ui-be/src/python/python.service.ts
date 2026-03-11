@@ -3,6 +3,7 @@ import { spawn } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as crypto from 'crypto';
+import { SettingsService } from '../settings/settings.service';
 
 @Injectable()
 export class PythonService {
@@ -15,7 +16,7 @@ export class PythonService {
    */
   private HASHES_WHITELIST: Record<string, string> = {};
 
-  constructor() {
+  constructor(private readonly settingsService: SettingsService) {
     this.loadHashesWhitelist();
   }
 
@@ -110,6 +111,41 @@ export class PythonService {
 
   // Calcula la ruta correcta según el entorno
   private readonly scriptsPath = this.getScriptsPath();
+
+  /**
+   * Construye la ruta completa de salida usando el outputPath de Settings
+   * Si no hay outputPath configurado, lanza un error
+   */
+  private buildOutputPath(fileName: string): string {
+    try {
+      const settings = this.settingsService.getSettings();
+      const outputPath = settings.outputPath;
+
+      this.logger.log(`📁 Checking outputPath: ${outputPath}`);
+
+      // Validar que outputPath esté configurado
+      if (!outputPath || outputPath.trim() === '') {
+        const error =
+          'OutputPath is not configured. Please configure it in Settings before running tests that generate files.';
+        this.logger.error(`❌ ${error}`);
+        throw new Error(error);
+      }
+
+      // Validar que outputPath exista
+      if (!fs.existsSync(outputPath)) {
+        const error = `OutputPath does not exist: ${outputPath}. Please create the directory or update the path in Settings.`;
+        this.logger.error(`❌ ${error}`);
+        throw new Error(error);
+      }
+
+      const fullPath = path.join(outputPath, fileName);
+      this.logger.log(`✅ Output file will be saved to: ${fullPath}`);
+      return fullPath;
+    } catch (error) {
+      this.logger.error(`❌ Error building output path: ${error.message}`);
+      throw error;
+    }
+  }
 
   /**
    * 🔒 Verifica la integridad de un archivo .pyc
@@ -213,15 +249,19 @@ export class PythonService {
    */
   async executeScript(scriptName: string, args: string[] = []): Promise<any> {
     return new Promise((resolve, reject) => {
-      // 🔒 PASO 1: Convertir .py a .pyc si es necesario
+      const resourcesPath =
+        process.env.RESOURCES_PATH || (process as any).resourcesPath;
+      const isProduction = !!resourcesPath;
+
+      // 🔒 PASO 1: Convertir .py a .pyc si es necesario (solo en producción)
       let finalScriptName = scriptName;
-      if (scriptName.endsWith('.py')) {
+      if (isProduction && scriptName.endsWith('.py')) {
         finalScriptName = scriptName.replace('.py', '.pyc');
         this.logger.log(`🔄 Convirtiendo ${scriptName} → ${finalScriptName}`);
       }
 
-      // 🔒 PASO 2: Verificar integridad del archivo
-      if (!this.verifyFileIntegrity(finalScriptName)) {
+      // 🔒 PASO 2: Verificar integridad del archivo (solo en producción)
+      if (isProduction && !this.verifyFileIntegrity(finalScriptName)) {
         const error = {
           error: 'Integrity check failed',
           message: 'El archivo ha sido modificado o no existe',
@@ -466,6 +506,122 @@ export class PythonService {
   }
 
   /**
+   * Verifica la configuración de basePath y outputPath
+   * Retorna información detallada sobre el estado de las rutas
+   */
+  verifyPathsConfiguration(): any {
+    const settings = this.settingsService.getSettings();
+    const basePath = settings.basePath;
+    const outputPath = settings.outputPath;
+
+    const result: any = {
+      basePath: {
+        configured: !!basePath && basePath.trim() !== '',
+        path: basePath || 'Not configured',
+        exists: false,
+        readable: false,
+        writable: false,
+        pdfFiles: [],
+        error: null,
+      },
+      outputPath: {
+        configured: !!outputPath && outputPath.trim() !== '',
+        path: outputPath || 'Not configured',
+        exists: false,
+        readable: false,
+        writable: false,
+        error: null,
+      },
+    };
+
+    // Verificar basePath
+    if (result.basePath.configured) {
+      try {
+        result.basePath.exists = fs.existsSync(basePath);
+
+        if (result.basePath.exists) {
+          // Verificar permisos de lectura
+          try {
+            fs.accessSync(basePath, fs.constants.R_OK);
+            result.basePath.readable = true;
+
+            // Listar archivos PDF
+            const files = fs.readdirSync(basePath);
+            result.basePath.pdfFiles = files.filter((file) =>
+              file.toLowerCase().endsWith('.pdf'),
+            );
+          } catch (error) {
+            result.basePath.error = `Cannot read directory: ${error.message}`;
+          }
+
+          // Verificar permisos de escritura
+          try {
+            fs.accessSync(basePath, fs.constants.W_OK);
+            result.basePath.writable = true;
+          } catch (error) {
+            // No es crítico si no tiene permisos de escritura
+          }
+        } else {
+          result.basePath.error = 'Directory does not exist';
+        }
+      } catch (error) {
+        result.basePath.error = error.message;
+      }
+    } else {
+      result.basePath.error = 'BasePath is not configured in Settings';
+    }
+
+    // Verificar outputPath
+    if (result.outputPath.configured) {
+      try {
+        result.outputPath.exists = fs.existsSync(outputPath);
+
+        if (result.outputPath.exists) {
+          // Verificar permisos de lectura
+          try {
+            fs.accessSync(outputPath, fs.constants.R_OK);
+            result.outputPath.readable = true;
+          } catch (error) {
+            result.outputPath.error = `Cannot read directory: ${error.message}`;
+          }
+
+          // Verificar permisos de escritura
+          try {
+            fs.accessSync(outputPath, fs.constants.W_OK);
+            result.outputPath.writable = true;
+          } catch (error) {
+            result.outputPath.error = `Cannot write to directory: ${error.message}`;
+          }
+        } else {
+          result.outputPath.error = 'Directory does not exist';
+        }
+      } catch (error) {
+        result.outputPath.error = error.message;
+      }
+    } else {
+      result.outputPath.error = 'OutputPath is not configured in Settings';
+    }
+
+    // Resumen general
+    result.summary = {
+      allConfigured: result.basePath.configured && result.outputPath.configured,
+      allExist: result.basePath.exists && result.outputPath.exists,
+      allReadable: result.basePath.readable && result.outputPath.readable,
+      allWritable: result.basePath.writable && result.outputPath.writable,
+      ready:
+        result.basePath.configured &&
+        result.basePath.exists &&
+        result.basePath.readable &&
+        result.outputPath.configured &&
+        result.outputPath.exists &&
+        result.outputPath.writable,
+      pdfFilesAvailable: result.basePath.pdfFiles.length > 0,
+    };
+
+    return result;
+  }
+
+  /**
    * 🔒 Verifica la integridad de todos los archivos en la whitelist
    * Útil para diagnóstico y testing
    */
@@ -517,5 +673,199 @@ export class PythonService {
       totalFiles: Object.keys(this.HASHES_WHITELIST).length,
       results: results,
     };
+  }
+
+  // ==========================================
+  // 📚 MÉTODOS DE PRUEBA DE BIBLIOTECAS
+  // ==========================================
+
+  /**
+   * Verifica que todas las bibliotecas estén instaladas
+   */
+  async testAllLibraries(): Promise<any> {
+    return this.executeScript('test_all_libraries.py', []);
+  }
+
+  /**
+   * Prueba NumPy
+   */
+  async testNumpy(): Promise<any> {
+    return this.executeScript('test_numpy_pandas.py', []);
+  }
+
+  /**
+   * Prueba Pandas
+   */
+  async testPandas(): Promise<any> {
+    return this.executeScript('test_numpy_pandas.py', ['pandas']);
+  }
+
+  /**
+   * Prueba NumPy y Pandas combinados
+   */
+  async testNumpyPandasCombined(): Promise<any> {
+    return this.executeScript('test_numpy_pandas.py', ['combinado']);
+  }
+
+  /**
+   * Crea un PDF de prueba con ReportLab
+   */
+  async testReportlab(outputPath: string): Promise<any> {
+    const fullPath = this.buildOutputPath(outputPath);
+    return this.executeScript('test_reportlab.py', [fullPath]);
+  }
+
+  /**
+   * Crea un gráfico con Matplotlib
+   * @param tipo - Tipo de gráfico: 'lineas', 'barras', 'dispersion', 'pastel'
+   * @param outputPath - Ruta donde guardar el gráfico
+   */
+  async testMatplotlib(tipo: string, outputPath: string): Promise<any> {
+    const fullPath = this.buildOutputPath(outputPath);
+    return this.executeScript('test_matplotlib.py', [tipo, fullPath]);
+  }
+
+  /**
+   * Crea una imagen con OpenCV
+   */
+  async testOpenCV(outputPath: string): Promise<any> {
+    const fullPath = this.buildOutputPath(outputPath);
+    return this.executeScript('test_opencv.py', [fullPath]);
+  }
+
+  /**
+   * Crea una imagen con Pillow
+   */
+  async testPillow(outputPath: string): Promise<any> {
+    const fullPath = this.buildOutputPath(outputPath);
+    return this.executeScript('test_pillow.py', [fullPath]);
+  }
+
+  /**
+   * Prueba funciones estadísticas de SciPy
+   */
+  async testScipy(): Promise<any> {
+    return this.executeScript('test_scipy.py', []);
+  }
+
+  /**
+   * Lee información de un PDF con PyPDF
+   */
+  async testPyPDF(pdfPath?: string): Promise<any> {
+    let fullPath = pdfPath;
+
+    // Si no se proporciona un path, buscar un PDF en basePath
+    if (!fullPath) {
+      const settings = this.settingsService.getSettings();
+      const basePath = settings.basePath;
+
+      this.logger.log(`📁 Checking basePath: ${basePath}`);
+
+      // Validar que basePath esté configurado
+      if (!basePath || basePath.trim() === '') {
+        const error =
+          'BasePath is not configured. Please configure it in Settings before running PDF tests.';
+        this.logger.error(`❌ ${error}`);
+        throw new Error(error);
+      }
+
+      // Validar que basePath exista
+      if (!fs.existsSync(basePath)) {
+        const error = `BasePath does not exist: ${basePath}. Please create the directory or update the path in Settings.`;
+        this.logger.error(`❌ ${error}`);
+        throw new Error(error);
+      }
+
+      // Buscar el primer archivo PDF en basePath
+      const files = fs.readdirSync(basePath);
+      this.logger.log(`📂 Files in basePath: ${files.join(', ')}`);
+
+      const pdfFile = files.find((file) => file.toLowerCase().endsWith('.pdf'));
+
+      if (pdfFile) {
+        fullPath = path.join(basePath, pdfFile);
+        this.logger.log(`✅ Using PDF from basePath: ${fullPath}`);
+      } else {
+        const error = `No PDF files found in basePath: ${basePath}. Please add at least one PDF file to this directory.`;
+        this.logger.error(`❌ ${error}`);
+        throw new Error(error);
+      }
+    } else if (!path.isAbsolute(fullPath)) {
+      // Si es una ruta relativa, construir desde el directorio del proyecto
+      fullPath = path.resolve(__dirname, '../../../', fullPath);
+      this.logger.log(`📄 Resolved PDF path: ${fullPath}`);
+    }
+
+    // Verificar que el archivo existe
+    if (!fs.existsSync(fullPath)) {
+      const error = `PDF file not found: ${fullPath}`;
+      this.logger.error(`❌ ${error}`);
+      throw new Error(error);
+    }
+
+    return this.executeScript('test_pypdf.py', [fullPath]);
+  }
+
+  /**
+   * Analiza un PDF con PyMuPDF
+   */
+  async testPyMuPDF(pdfPath?: string): Promise<any> {
+    let fullPath = pdfPath;
+
+    // Si no se proporciona un path, buscar un PDF en basePath
+    if (!fullPath) {
+      const settings = this.settingsService.getSettings();
+      const basePath = settings.basePath;
+
+      this.logger.log(`📁 Checking basePath: ${basePath}`);
+
+      // Validar que basePath esté configurado
+      if (!basePath || basePath.trim() === '') {
+        const error =
+          'BasePath is not configured. Please configure it in Settings before running PDF tests.';
+        this.logger.error(`❌ ${error}`);
+        throw new Error(error);
+      }
+
+      // Validar que basePath exista
+      if (!fs.existsSync(basePath)) {
+        const error = `BasePath does not exist: ${basePath}. Please create the directory or update the path in Settings.`;
+        this.logger.error(`❌ ${error}`);
+        throw new Error(error);
+      }
+
+      // Buscar el primer archivo PDF en basePath
+      const files = fs.readdirSync(basePath);
+      this.logger.log(`� Files in basePath: ${files.join(', ')}`);
+
+      const pdfFile = files.find((file) => file.toLowerCase().endsWith('.pdf'));
+
+      if (pdfFile) {
+        fullPath = path.join(basePath, pdfFile);
+        this.logger.log(`✅ Using PDF from basePath: ${fullPath}`);
+      } else {
+        const error = `No PDF files found in basePath: ${basePath}. Please add at least one PDF file to this directory.`;
+        this.logger.error(`❌ ${error}`);
+        throw new Error(error);
+      }
+    } else if (!path.isAbsolute(fullPath)) {
+      // Si es una ruta relativa, construir desde el directorio del proyecto
+      fullPath = path.resolve(__dirname, '../../../', fullPath);
+      this.logger.log(`📄 Resolved PDF path: ${fullPath}`);
+    }
+
+    // Verificar que el archivo existe
+    if (!fs.existsSync(fullPath)) {
+      throw new Error(`PDF file not found: ${fullPath}`);
+    }
+
+    return this.executeScript('test_pymupdf.py', [fullPath]);
+  }
+
+  /**
+   * Ejecuta la prueba rápida de todas las bibliotecas
+   */
+  async quickTest(): Promise<any> {
+    return this.executeScript('quick_test.py', []);
   }
 }

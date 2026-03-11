@@ -53,6 +53,21 @@ import {
   Monitor,
   ChevronDown,
   ChevronUp,
+  Play,
+  Trash,
+  ChartBar,
+  Database,
+  TrendingUp,
+  Image,
+  Activity,
+  File,
+  Package,
+  FilePlus,
+  ExternalLink,
+  Loader,
+  Pause,
+  HelpCircle,
+  Shell,
 } from 'lucide-angular';
 
 @Component({
@@ -120,6 +135,21 @@ export class Icon {
     monitor: Monitor,
     'chevron-down': ChevronDown,
     'chevron-up': ChevronUp,
+    play: Play,
+    delete: Trash,
+    'chart-bar': ChartBar,
+    database: Database,
+    'trending-up': TrendingUp,
+    image: Image,
+    activity: Activity,
+    file: File,
+    package: Package,
+    'file-plus': FilePlus,
+    'external-link': ExternalLink,
+    loader: Loader,
+    pause: Pause,
+    help: HelpCircle,
+    shell: Shell,
   };
 
   getIcon() {

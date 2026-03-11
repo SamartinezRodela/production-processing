@@ -50,11 +50,34 @@ jobs:
           mv python python-runtime
 
           echo "Instalando dependencias..."
-          python-runtime/bin/pip3 install pypdf pillow reportlab openpyxl requests pandas numpy
 
-          # Copiar scripts Python
+          # Bibliotecas básicas
+          python-runtime/bin/pip3 install reportlab pypdf Pillow openpyxl requests
+
+          # Bibliotecas científicas y procesamiento
+          python-runtime/bin/pip3 install numpy pandas scipy matplotlib
+
+          # Procesamiento de imágenes y PDFs
+          python-runtime/bin/pip3 install opencv-python-headless pymupdf tifffile
+
+          echo "✅ Todas las bibliotecas instaladas"
+
+          # Copiar TODOS los scripts Python
+          echo "Copiando scripts Python personalizados..."
           if [ -d "../nest-files-py" ]; then
-            cp ../nest-files-py/*.py . 2>/dev/null || true
+            script_count=$(ls -1 ../nest-files-py/*.py 2>/dev/null | wc -l)
+            echo "Archivos encontrados: $script_count"
+            
+            for file in ../nest-files-py/*.py; do
+              if [ -f "$file" ]; then
+                cp "$file" .
+                echo "   [OK] Copiado: $(basename $file)"
+              fi
+            done
+            
+            echo "✅ Todos los scripts copiados exitosamente"
+          else
+            echo "⚠️ Carpeta nest-files-py no encontrada"
           fi
 
           cd ..

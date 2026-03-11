@@ -7,5 +7,6 @@ import { DatabaseModule } from '../database/database.module';
   imports: [DatabaseModule],
   controllers: [SettingsController],
   providers: [SettingsService],
+  exports: [SettingsService], // Exportar para que otros módulos puedan usarlo
 })
 export class SettingsModule {}
