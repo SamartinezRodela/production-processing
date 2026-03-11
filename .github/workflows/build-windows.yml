@@ -148,20 +148,26 @@ jobs:
         run: |
           Write-Host "Liberando archivos Python embebidos..." -ForegroundColor Cyan
 
-          # Terminar cualquier proceso de Python que pueda estar corriendo
+          # Terminar TODOS los procesos de Python (incluyendo subprocesos)
+          Write-Host "Terminando procesos Python..." -ForegroundColor Yellow
           Get-Process python* -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-          Write-Host "Procesos Python terminados (si existían)" -ForegroundColor Yellow
+          Get-Process pip* -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 
-          # Esperar más tiempo para que Windows libere los archivos
+          # Esperar a que los procesos terminen completamente
           Start-Sleep -Seconds 5
 
-          # Forzar garbage collection múltiple
-          [System.GC]::Collect()
-          [System.GC]::WaitForPendingFinalizers()
-          [System.GC]::Collect()
+          # Forzar garbage collection múltiple con esperas
+          Write-Host "Liberando memoria y handles..." -ForegroundColor Yellow
+          for ($i = 1; $i -le 3; $i++) {
+            [System.GC]::Collect()
+            [System.GC]::WaitForPendingFinalizers()
+            [System.GC]::Collect()
+            Start-Sleep -Seconds 3
+          }
 
-          # Esperar adicional
-          Start-Sleep -Seconds 3
+          # Espera adicional para archivos .pyd (DLLs de Python)
+          Write-Host "Esperando liberación de archivos .pyd..." -ForegroundColor Yellow
+          Start-Sleep -Seconds 10
 
           Write-Host "[OK] Archivos liberados" -ForegroundColor Green
         shell: pwsh
@@ -199,14 +205,22 @@ jobs:
         run: |
           Write-Host "Preparando para build de Electron..." -ForegroundColor Cyan
 
-          # Liberar cualquier handle de archivo
-          [System.GC]::Collect()
-          [System.GC]::WaitForPendingFinalizers()
-          [System.GC]::Collect()
-          [System.GC]::WaitForPendingFinalizers()
+          # Terminar TODOS los procesos de Python
+          Write-Host "Terminando procesos Python..." -ForegroundColor Yellow
+          Get-Process python* -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+          Start-Sleep -Seconds 3
 
-          # Esperar más tiempo para asegurar que Windows libere los archivos
-          Start-Sleep -Seconds 8
+          # Liberar handles de archivos múltiples veces
+          Write-Host "Liberando handles de archivos..." -ForegroundColor Yellow
+          for ($i = 1; $i -le 5; $i++) {
+            [System.GC]::Collect()
+            [System.GC]::WaitForPendingFinalizers()
+            Start-Sleep -Seconds 2
+          }
+
+          # Espera adicional para OpenCV y bibliotecas grandes
+          Write-Host "Esperando liberación de bibliotecas (OpenCV, NumPy, etc.)..." -ForegroundColor Yellow
+          Start-Sleep -Seconds 15
 
           # Verificar que los archivos Python existen y son accesibles
           $pythonDir = "nest-files-py-embedded"
@@ -218,16 +232,65 @@ jobs:
             exit 1
           }
 
+          # Verificar específicamente archivos problemáticos
+          $problematicFiles = @(
+            "$pythonDir\Lib\site-packages\cv2\cv2.pyd",
+            "$pythonDir\Lib\site-packages\numpy\core\_multiarray_umath.pyd"
+          )
+
+          foreach ($file in $problematicFiles) {
+            if (Test-Path $file) {
+              Write-Host "[CHECK] Archivo accesible: $(Split-Path $file -Leaf)" -ForegroundColor Cyan
+            }
+          }
+
           # Espera final antes de Electron
           Write-Host "Esperando antes de iniciar Electron Builder..." -ForegroundColor Cyan
-          Start-Sleep -Seconds 5
+          Start-Sleep -Seconds 10
+
+          Write-Host "[OK] Preparación completada" -ForegroundColor Green
         shell: pwsh
 
       - name: Build Electron App (Windows)
         working-directory: nest-electron
-        run: npm run dist:win
+        run: |
+          Write-Host "Iniciando Electron Builder..." -ForegroundColor Cyan
+
+          # Intentar build con reintentos en caso de EBUSY
+          $maxRetries = 3
+          $retryCount = 0
+          $success = $false
+
+          while (-not $success -and $retryCount -lt $maxRetries) {
+            try {
+              if ($retryCount -gt 0) {
+                Write-Host "Reintento $retryCount de $maxRetries..." -ForegroundColor Yellow
+                Start-Sleep -Seconds 10
+                
+                # Limpiar y liberar archivos
+                Get-Process python* -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+                [System.GC]::Collect()
+                [System.GC]::WaitForPendingFinalizers()
+                Start-Sleep -Seconds 5
+              }
+              
+              npm run dist:win
+              $success = $true
+              Write-Host "[OK] Build completado exitosamente" -ForegroundColor Green
+              
+            } catch {
+              $retryCount++
+              Write-Host "[ERROR] Build falló: $_" -ForegroundColor Red
+              
+              if ($retryCount -ge $maxRetries) {
+                Write-Host "[FATAL] Máximo de reintentos alcanzado" -ForegroundColor Red
+                throw
+              }
+            }
+          }
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
 
       - name: Upload Windows Installer
         uses: actions/upload-artifact@v4
