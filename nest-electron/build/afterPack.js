@@ -21,13 +21,11 @@ exports.default = async function (context) {
   let pythonSource, pythonDest;
 
   if (platform === "win32") {
-    pythonSource = path.join(context.appOutDir, "../../nest-files-py-embedded");
+    // Usar path.resolve desde __dirname para obtener la ruta correcta
+    pythonSource = path.resolve(__dirname, "../../nest-files-py-embedded");
     pythonDest = path.join(context.appOutDir, "resources/python");
   } else if (platform === "darwin") {
-    pythonSource = path.join(
-      context.appOutDir,
-      "../../nest-files-py-embedded-mac",
-    );
+    pythonSource = path.resolve(__dirname, "../../nest-files-py-embedded-mac");
     pythonDest = path.join(context.appOutDir, "resources/python");
   } else {
     console.log("Platform not supported for Python embedding");
