@@ -39,8 +39,32 @@ exports.default = async function (context) {
   // Verificar que el directorio fuente existe
   if (!fs.existsSync(pythonSource)) {
     console.error(`ERROR: Python source directory not found: ${pythonSource}`);
+    console.error("");
+    console.error("Available directories:");
+    const parentDir = path.resolve(__dirname, "../..");
+    const dirs = fs.readdirSync(parentDir).filter((f) => {
+      return fs.statSync(path.join(parentDir, f)).isDirectory();
+    });
+    console.error(dirs.join(", "));
     throw new Error("Python source directory not found");
   }
+
+  // Verificar que tiene contenido
+  const sourceFiles = fs.readdirSync(pythonSource);
+  console.log(`Source directory contains ${sourceFiles.length} items`);
+  console.log("Key items:", sourceFiles.slice(0, 10).join(", "));
+  console.log("");
+
+  // Verificar específicamente Lib/site-packages
+  const libPath = path.join(pythonSource, "Lib", "site-packages");
+  if (fs.existsSync(libPath)) {
+    const packages = fs.readdirSync(libPath);
+    console.log(`Found ${packages.length} packages in site-packages`);
+    console.log("Sample packages:", packages.slice(0, 15).join(", "));
+  } else {
+    console.error("WARNING: Lib/site-packages not found in source!");
+  }
+  console.log("");
 
   // Esperar antes de copiar para asegurar que los archivos estén liberados
   console.log("Waiting 15 seconds for file handles to be released...");
@@ -63,15 +87,14 @@ exports.default = async function (context) {
       await fs.copy(pythonSource, pythonDest, {
         overwrite: true,
         errorOnExist: false,
+        preserveTimestamps: true,
+        dereference: true,
         filter: (src) => {
-          // Excluir archivos innecesarios
+          // Solo excluir __pycache__ y get-pip.py
           const basename = path.basename(src);
-          if (basename === "get-pip.py") return false;
           if (basename === "__pycache__") return false;
-          if (src.endsWith(".py") && !src.endsWith(".pyc")) {
-            // Excluir .py pero permitir .pyc
-            return false;
-          }
+          if (basename === "get-pip.py") return false;
+          // Copiar TODO lo demás (incluyendo .py y .pyc)
           return true;
         },
       });
@@ -84,10 +107,23 @@ exports.default = async function (context) {
       // Contar archivos copiados
       const fileCount = await countFiles(pythonDest);
       console.log(`Total files copied: ${fileCount}`);
+
+      // Verificar que Lib/site-packages se copió
+      const destLibPath = path.join(pythonDest, "Lib", "site-packages");
+      if (fs.existsSync(destLibPath)) {
+        const destPackages = fs.readdirSync(destLibPath);
+        console.log(`Packages in destination: ${destPackages.length}`);
+        console.log("Sample packages:", destPackages.slice(0, 15).join(", "));
+      } else {
+        console.error(
+          "ERROR: Lib/site-packages was NOT copied to destination!",
+        );
+      }
       console.log("");
     } catch (error) {
       retries--;
       console.error(`[ERROR] Copy failed: ${error.message}`);
+      console.error(`Stack: ${error.stack}`);
 
       if (retries === 0) {
         console.error("[FATAL] Maximum retries reached");
