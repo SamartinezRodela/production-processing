@@ -16,7 +16,114 @@ Este error ocurre cuando Electron Builder intenta copiar archivos `.pyd` (DLLs d
 - `_multiarray_umath.pyd` (NumPy)
 - Otros archivos `.pyd` de bibliotecas científicas
 
-## ✅ Soluciones Implementadas
+## ✅ Solución Definitiva: afterPack Hook
+
+La solución más robusta es usar el hook `afterPack` de Electron Builder, que copia los archivos de Python DESPUÉS de que Electron Builder termine su empaquetado, evitando completamente el problema de archivos bloqueados.
+
+### Implementación
+
+**1. Crear `nest-electron/build/afterPack.js`:**
+
+```javascript
+const fs = require("fs-extra");
+const path = require("path");
+
+exports.default = async function (context) {
+  const platform = context.electronPlatformName;
+
+  // Determinar rutas según la plataforma
+  let pythonSource, pythonDest;
+
+  if (platform === "win32") {
+    pythonSource = path.join(context.appOutDir, "../../nest-files-py-embedded");
+    pythonDest = path.join(context.appOutDir, "resources/python");
+  } else if (platform === "darwin") {
+    pythonSource = path.join(
+      context.appOutDir,
+      "../../nest-files-py-embedded-mac",
+    );
+    pythonDest = path.join(context.appOutDir, "resources/python");
+  }
+
+  // Esperar 15 segundos para liberar archivos
+  await new Promise((resolve) => setTimeout(resolve, 15000));
+
+  // Copiar con reintentos (5 intentos)
+  let retries = 5;
+  while (retries > 0) {
+    try {
+      await fs.copy(pythonSource, pythonDest, {
+        overwrite: true,
+        filter: (src) => {
+          // Excluir archivos innecesarios
+          if (path.basename(src) === "get-pip.py") return false;
+          if (path.basename(src) === "__pycache__") return false;
+          if (src.endsWith(".py") && !src.endsWith(".pyc")) return false;
+          return true;
+        },
+      });
+
+      console.log("[OK] Python files copied successfully!");
+      break;
+    } catch (error) {
+      retries--;
+      if (retries === 0) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 10000));
+    }
+  }
+};
+```
+
+**2. Actualizar `nest-electron/package.json`:**
+
+```json
+{
+  "build": {
+    "afterPack": "./build/afterPack.js",
+    "extraResources": [
+      // REMOVER la sección de Python de aquí
+      // Python se copiará con afterPack
+    ]
+  },
+  "devDependencies": {
+    "fs-extra": "^11.1.0"
+  }
+}
+```
+
+### Ventajas
+
+1. ✅ **Sin EBUSY**: Python se copia DESPUÉS del empaquetado
+2. ✅ **Reintentos**: 5 intentos con esperas de 10 segundos
+3. ✅ **Espera inicial**: 15 segundos para liberar archivos
+4. ✅ **Filtrado**: Excluye archivos innecesarios (.py, **pycache**)
+5. ✅ **Multiplataforma**: Funciona en Windows y Mac
+6. ✅ **Logs claros**: Muestra progreso y errores
+
+### Resultado
+
+```
+============================================================
+AFTERPACK HOOK: Copiando archivos Python
+============================================================
+
+Platform: win32
+Source: D:\a\...\nest-files-py-embedded
+Destination: D:\a\...\nest-electron\release\win-unpacked\resources\python
+
+Waiting 15 seconds for file handles to be released...
+Copying Python files... (attempt 1/5)
+
+[OK] Python files copied successfully!
+
+Total files copied: 2847
+
+============================================================
+AFTERPACK HOOK: Completed
+============================================================
+```
+
+## ✅ Estado Actual (Solución Implementada)
 
 ### 1. **Liberación Agresiva de Archivos**
 

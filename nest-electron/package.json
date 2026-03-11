@@ -31,6 +31,7 @@
       "**/*.node",
       "resources/python/**/*"
     ],
+    "afterPack": "./build/afterPack.js",
     "directories": {
       "output": "release"
     },
@@ -75,16 +76,6 @@
         "filter": [
           "**/*"
         ]
-      },
-      {
-        "from": "../nest-files-py-embedded",
-        "to": "python",
-        "filter": [
-          "**/*",
-          "!get-pip.py",
-          "!*.py",
-          "!**/__pycache__/**"
-        ]
       }
     ],
     "win": {
@@ -96,19 +87,7 @@
           ]
         }
       ],
-      "signAndEditExecutable": false,
-      "extraResources": [
-        {
-          "from": "../nest-files-py-embedded",
-          "to": "python",
-          "filter": [
-            "**/*",
-            "!get-pip.py",
-            "!*.py",
-            "!**/__pycache__/**"
-          ]
-        }
-      ]
+      "signAndEditExecutable": false
     },
     "mac": {
       "target": "dmg",
@@ -117,18 +96,7 @@
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
-      "extendInfo": "build/Info.plist",
-      "extraResources": [
-        {
-          "from": "../nest-files-py-embedded-mac",
-          "to": "python",
-          "filter": [
-            "**/*",
-            "!*.py",
-            "!**/__pycache__/**"
-          ]
-        }
-      ]
+      "extendInfo": "build/Info.plist"
     },
     "nsis": {
       "oneClick": false,
@@ -151,6 +119,7 @@
     "electron-builder": "^26.8.1",
     "electron-packager": "^17.1.2",
     "typescript": "^5.3.0",
-    "@types/node": "^20.0.0"
+    "@types/node": "^20.0.0",
+    "fs-extra": "^11.1.0"
   }
 }
