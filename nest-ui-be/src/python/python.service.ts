@@ -394,12 +394,7 @@ export class PythonService {
 
   async saveMetadata(data: any): Promise<any> {
     try {
-      // Determinar la ruta de la carpeta "data" en el backend
-      const resourcesPath =
-        process.env.RESOURCES_PATH || (process as any).resourcesPath;
-      const dataDir = resourcesPath
-        ? path.join(resourcesPath, 'backend', 'data') // Ruta en producción
-        : path.resolve(__dirname, '../../data'); // Ruta en desarrollo (nest-ui-be/data)
+      const dataDir = this.getDataDirectory();
 
       if (!fs.existsSync(dataDir)) {
         fs.mkdirSync(dataDir, { recursive: true });
@@ -408,10 +403,44 @@ export class PythonService {
       const filePath = path.join(dataDir, 'tabla_metadatos.json');
       fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
 
+      this.logger.log(`Metadata saved to: ${filePath}`);
       return { success: true, message: 'Metadata saved successfully' };
     } catch (error) {
       this.logger.error(`Error saving metadata: ${error.message}`);
       throw error;
+    }
+  }
+
+  /**
+   * Obtiene el directorio de datos según el entorno.
+   * Producción: AppData/Roaming (Windows), ~/Library/Application Support (Mac), ~/.config (Linux)
+   * Desarrollo: nest-ui-be/data
+   */
+  private getDataDirectory(): string {
+    const isProduction =
+      process.env.NODE_ENV === 'production' ||
+      (process as any).resourcesPath !== undefined;
+
+    if (isProduction) {
+      let userDataPath: string;
+
+      if (process.platform === 'darwin') {
+        userDataPath = path.join(
+          process.env.HOME || '~',
+          'Library',
+          'Application Support',
+        );
+      } else if (process.platform === 'win32') {
+        userDataPath =
+          process.env.APPDATA ||
+          path.join(process.env.HOME || '~', 'AppData', 'Roaming');
+      } else {
+        userDataPath = path.join(process.env.HOME || '~', '.config');
+      }
+
+      return path.join(userDataPath, 'Production Processing');
+    } else {
+      return path.resolve(__dirname, '../../data');
     }
   }
 

@@ -54,3 +54,6 @@ nest-electron/.git
 
 # Large build folders
 NEST-UI-V2-MAC-BUILD/
+
+# User data files (PDFs, templates, etc.)
+Base_Files/
