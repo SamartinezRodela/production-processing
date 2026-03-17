@@ -4,45 +4,89 @@ import {
   Body,
   HttpException,
   HttpStatus,
+  UseGuards,
+  Request,
+  Get,
 } from '@nestjs/common';
+import { AuthService } from './auth.service';
+import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
+import { JwtAuthGuard } from './jwt-auth.guard';
 
 @Controller('auth')
 export class AuthController {
+  constructor(private readonly authService: AuthService) {}
+
   @Post('login')
-  async login(@Body() credentials: { username: string; password: string }) {
-    // Validar que se envíen las credenciales
-    if (!credentials.username || !credentials.password) {
+  async login(@Body() loginDto: LoginDto) {
+    try {
+      return await this.authService.login(loginDto);
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new HttpException(
         {
           success: false,
-          message: 'Username and password are required',
+          message: error.message || 'Login failed',
         },
-        HttpStatus.BAD_REQUEST,
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+  }
 
-    // Validación simple (reemplazar con lógica real)
-    if (
-      credentials.username === 'admin' &&
-      credentials.password === 'admin123'
-    ) {
-      return {
-        success: true,
-        token: 'jwt-token-here',
-        user: {
-          username: credentials.username,
-          role: 'admin',
+  @Post('register')
+  @UseGuards(JwtAuthGuard) // Solo usuarios autenticados pueden registrar nuevos usuarios
+  async register(@Body() registerDto: RegisterDto) {
+    try {
+      return await this.authService.register(registerDto);
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        {
+          success: false,
+          message: error.message || 'Registration failed',
         },
-      };
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
+  }
 
-    // Credenciales inválidas
-    throw new HttpException(
-      {
-        success: false,
-        message: 'Invalid username or password',
-      },
-      HttpStatus.UNAUTHORIZED,
-    );
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  async getProfile(@Request() req) {
+    // req.user viene del JwtStrategy.validate()
+    return {
+      success: true,
+      user: req.user,
+    };
+  }
+
+  @Post('change-password')
+  @UseGuards(JwtAuthGuard)
+  async changePassword(
+    @Request() req,
+    @Body() body: { oldPassword: string; newPassword: string },
+  ) {
+    try {
+      return await this.authService.changePassword(
+        req.user.id,
+        body.oldPassword,
+        body.newPassword,
+      );
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        {
+          success: false,
+          message: error.message || 'Password change failed',
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }

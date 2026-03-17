@@ -63,7 +63,7 @@ export class SettingsService {
       // Limpiar localStorage viejo (migración)
       this.migrateFromLocalStorage();
 
-      console.log('Settings loaded from backend:', settings);
+      // console.log('Settings loaded from backend:', settings);
       return settings;
     } catch (error) {
       console.error('Error loading settings from backend:', error);
@@ -87,7 +87,7 @@ export class SettingsService {
 
       // Eliminar el localStorage viejo
       localStorage.removeItem(this.SETTINGS_KEY);
-      console.log('Migrated from old localStorage and cleaned up');
+      //console.log('Migrated from old localStorage and cleaned up');
     }
   }
 
@@ -129,7 +129,7 @@ export class SettingsService {
           selectedFacilityId: settings.selectedFacility,
         }),
       );
-      console.log('✅ Settings synchronized with backend');
+      //console.log('✅ Settings synchronized with backend');
     } catch (error) {
       console.error('❌ Error synchronizing settings with backend:', error);
     }

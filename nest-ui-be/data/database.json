@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastModified": "2026-03-11T15:10:00.581Z",
+  "lastModified": "2026-03-17T18:44:08.571Z",
   "facilities": [
     {
       "id": "1",
@@ -51,7 +51,7 @@
     "basePath": "C:\\Users\\samartinez\\Documents\\BasePath",
     "outputPath": "C:\\Users\\samartinez\\Documents\\OutputPath",
     "os": "windows",
-    "theme": "dark",
+    "theme": "light",
     "autoSave": false,
     "notifications": true
   }

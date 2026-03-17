@@ -11,8 +11,10 @@ export const APP_CONFIG = {
 } as const;
 
 export const STORAGE_KEYS = {
-  IS_LOGGED_IN: 'isLoggedIn',
-  USERNAME: 'username',
+  IS_LOGGED_IN: 'isLoggedIn', // Legacy - mantener para compatibilidad
+  USERNAME: 'username', // Legacy - mantener para compatibilidad
+  JWT_TOKEN: 'jwt_token', // Nuevo - token JWT
+  USER_DATA: 'user_data', // Nuevo - datos del usuario
   THEME: 'theme',
   APP_SETTINGS: 'appSettings',
 } as const;

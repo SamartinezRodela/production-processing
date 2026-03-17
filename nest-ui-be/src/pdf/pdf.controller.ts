@@ -4,8 +4,10 @@ import {
   Body,
   HttpException,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { PdfService } from './pdf.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 interface GeneratePdfDto {
   type: 'single' | 'multiple';
@@ -20,6 +22,7 @@ interface GeneratePdfDto {
 }
 
 @Controller('pdf')
+@UseGuards(JwtAuthGuard) // ✅ Proteger todas las rutas de PDF
 export class PdfController {
   constructor(private readonly pdfService: PdfService) {}
 

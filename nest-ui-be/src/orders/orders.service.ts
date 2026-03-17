@@ -4,7 +4,7 @@ import {
   CreateOrderDto,
   UpdateOrderDto,
 } from '../database/dto/create-order.dto';
-import { Order } from '../database/entities/order.entity';
+import { Order } from '../database/entities/database.entity';
 
 @Injectable()
 export class OrdersService {

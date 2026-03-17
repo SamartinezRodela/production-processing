@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { Injectable, output } from '@angular/core';
+import { error } from 'console';
 
 declare global {
   interface Window {
@@ -6,11 +7,13 @@ declare global {
       // Métodos de sistema (fuera de python)
       getBackendPort: () => Promise<number>;
       selectFolder: () => Promise<{ canceled: boolean; path: string | null }>;
+      showItemInFolder: (filePath: string) => Promise<{ success: boolean; error?: string }>;
       readFolder: (folderPath: string) => Promise<any>;
       readFolderRecursive: (folderPath: string) => Promise<any>;
       sendMessage: (channel: string, data: any) => void;
       onMessage: (channel: string, callback: Function) => void;
       getParentPath: (folderPath: string) => Promise<any>;
+      saveJsonFile: (filePath: string, data: any) => Promise<{ success: boolean; error?: string }>;
 
       python: {
         // ==========================================
@@ -19,21 +22,45 @@ declare global {
         // Ejemplo:
         // tuFuncion: (param1: string, param2: number) => Promise<any>;
 
-        saludar: (nombre: string) => Promise<any>;
-        generarPDF: (datos: {
-          titulo: string;
-          contenido: string;
-          autor: string;
-          nombre_archivo: string;
+        saludar: (nombre: string, token?: string) => Promise<any>;
+        generarPDF: (
+          datos: {
+            titulo: string;
+            contenido: string;
+            autor: string;
+            nombre_archivo: string;
+          },
+          token?: string,
+        ) => Promise<any>;
+
+        generarPathPDF: (
+          datos: {
+            titulo: string;
+            contenido: string;
+            autor: string;
+            nombre_archivo: string;
+            ruta_salida: string;
+          },
+          token?: string,
+        ) => Promise<any>;
+
+        procesarPDF: (datos: {
+          input_path: string;
+          file_name: string;
+          output_path: string;
+          base_path: string;
+          style?: string;
+          size?: string;
         }) => Promise<any>;
 
-        generarPathPDF: (datos: {
-          titulo: string;
-          contenido: string;
-          autor: string;
-          nombre_archivo: string;
-          ruta_salida: string;
-        }) => Promise<any>;
+        guardarPdfRelativo: (
+          datos: {
+            output_path: string;
+            relative_path: string;
+            input_path: string;
+          },
+          token?: string,
+        ) => Promise<any>;
       };
     };
   }
@@ -76,7 +103,31 @@ export class ElectronService {
     }
   }
 
-  async pythonSaludar(nombre: string): Promise<any> {
+  async showItemInFolder(filePath: string): Promise<{ success: boolean; error?: string }> {
+    //console.log('🔍 ElectronService.showItemInFolder llamado:', { filePath });
+
+    if (!this.isElectron) {
+      console.warn('showItemInFolder solo funciona en Electron');
+      return { success: false, error: 'Not running in Electron' };
+    }
+
+    if (!window.electronAPI?.showItemInFolder) {
+      console.error('window.electronAPI.showItemInFolder no está definido');
+      return { success: false, error: 'showItemInFolder API not available' };
+    }
+
+    try {
+      // console.log('📂 Llamando a window.electronAPI.showItemInFolder...');
+      const result = await window.electronAPI.showItemInFolder(filePath);
+      // console.log('✅ Resultado:', result);
+      return result;
+    } catch (error: any) {
+      console.error('❌ Error completo:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async pythonSaludar(nombre: string, token?: string): Promise<any> {
     console.log('ElectronService.pythonSaludar llamado:', { nombre });
 
     if (!this.isElectron) {
@@ -84,9 +135,9 @@ export class ElectronService {
     }
 
     try {
-      console.log('Llamando a window.electronAPI.python.saludar...');
-      const result = await window.electronAPI!.python.saludar(nombre);
-      console.log('Resultado:', result);
+      //console.log('Llamando a window.electronAPI.python.saludar...');
+      const result = await window.electronAPI!.python.saludar(nombre, token);
+      //console.log('Resultado:', result);
       return result;
     } catch (error: any) {
       console.error('Error completo:', error);
@@ -96,22 +147,25 @@ export class ElectronService {
     }
   }
 
-  async pythonGenerarPDF(datos: {
-    titulo: string;
-    contenido: string;
-    autor: string;
-    nombre_archivo: string;
-  }): Promise<any> {
-    console.log('ElectronService.pythonGenerarPDF llamado:', { datos });
+  async pythonGenerarPDF(
+    datos: {
+      titulo: string;
+      contenido: string;
+      autor: string;
+      nombre_archivo: string;
+    },
+    token?: string,
+  ): Promise<any> {
+    //console.log('ElectronService.pythonGenerarPDF llamado:', { datos });
 
     if (!this.isElectron) {
       throw new Error('No está corriendo en Electron');
     }
 
     try {
-      console.log('Llamando a window.electronAPI.python.generarPDF...');
-      const result = await window.electronAPI!.python.generarPDF(datos);
-      console.log('Resultado:', result);
+      //console.log('Llamando a window.electronAPI.python.generarPDF...');
+      const result = await window.electronAPI!.python.generarPDF(datos, token);
+      //console.log('Resultado:', result);
       return result;
     } catch (error: any) {
       console.error('Error completo:', error);
@@ -121,23 +175,26 @@ export class ElectronService {
     }
   }
 
-  async pythonGenerarPathPDF(datos: {
-    titulo: string;
-    contenido: string;
-    autor: string;
-    nombre_archivo: string;
-    ruta_salida: string;
-  }): Promise<any> {
-    console.log('ElectronService.generarPathPDF llamado:', { datos });
+  async pythonGenerarPathPDF(
+    datos: {
+      titulo: string;
+      contenido: string;
+      autor: string;
+      nombre_archivo: string;
+      ruta_salida: string;
+    },
+    token?: string,
+  ): Promise<any> {
+    //console.log('ElectronService.generarPathPDF llamado:', { datos });
 
     if (!this.isElectron) {
       throw new Error('No está corriendo en Electron');
     }
 
     try {
-      console.log('Llamando a window.electronAPI.python.generarPathPDF...');
-      const result = await window.electronAPI!.python.generarPathPDF(datos);
-      console.log('Resultado:', result);
+      //console.log('Llamando a window.electronAPI.python.generarPathPDF...');
+      const result = await window.electronAPI!.python.generarPathPDF(datos, token);
+      //console.log('Resultado:', result);
       return result;
     } catch (error: any) {
       console.error('Error completo:', error);
@@ -148,7 +205,7 @@ export class ElectronService {
   }
 
   async readFolder(folderPath: string): Promise<any> {
-    console.log('ElectronService.readFolder llamado:', { folderPath });
+    //console.log('ElectronService.readFolder llamado:', { folderPath });
 
     if (!this.isElectron) {
       console.warn('readFolder solo funciona en Electron');
@@ -162,9 +219,9 @@ export class ElectronService {
     }
 
     try {
-      console.log('Llamando a window.electronAPI.readFolder...');
+      //console.log('Llamando a window.electronAPI.readFolder...');
       const result = await window.electronAPI.readFolder(folderPath);
-      console.log('Resultado:', result);
+      //console.log('Resultado:', result);
       return result;
     } catch (error: any) {
       console.error('Error completo:', error);
@@ -175,7 +232,7 @@ export class ElectronService {
   }
 
   async getParentPath(folderPath: string): Promise<any> {
-    console.log('ElectronService.getParentPath llamado:', { folderPath });
+    //console.log('ElectronService.getParentPath llamado:', { folderPath });
 
     if (!this.isElectron) {
       console.warn('getParentPath solo funciona en Electron');
@@ -188,12 +245,28 @@ export class ElectronService {
     }
 
     try {
-      console.log('Llamando a window.electronAPI.getParentPath...');
+      //console.log('Llamando a window.electronAPI.getParentPath...');
       const result = await window.electronAPI.getParentPath(folderPath);
-      console.log('Resultado:', result);
+      //console.log('Resultado:', result);
       return result;
     } catch (error: any) {
       console.error('Error completo:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async saveJsonFile(filePath: string, data: any): Promise<{ success: boolean; error?: string }> {
+    if (!this.isElectron) {
+      console.warn('saveJsonFile solo funciona en Electron');
+      return { success: false, error: 'Not Running in Electron' };
+    }
+    if (!window.electronAPI?.saveJsonFile) {
+      return { success: false, error: 'saveJsonFile API not Available' };
+    }
+    try {
+      return await window.electronAPI.saveJsonFile(filePath, data);
+    } catch (error: any) {
+      console.error('Error Saving JSON File:', error);
       return { success: false, error: error.message };
     }
   }
@@ -222,6 +295,53 @@ export class ElectronService {
   onMessage(channel: string, callback: Function): void {
     if (this.isElectron) {
       window.electronAPI!.onMessage(channel, callback);
+    }
+  }
+
+  async pythonProcesarPDF(datos: {
+    input_path: string;
+    file_name: string;
+    output_path: string;
+    base_path: string;
+    style?: string;
+    size?: string;
+  }): Promise<any> {
+    console.log('ElectronService.pythonProcesarPDF llamado:', { datos });
+
+    if (!this.isElectron) {
+      throw new Error('No está corriendo en Electron');
+    }
+
+    try {
+      console.log('Llamando a window.electronAPI.python.procesarPDF...');
+      const result = await window.electronAPI!.python.procesarPDF(datos);
+      console.log('Resultado:', result);
+      return result;
+    } catch (error: any) {
+      console.error('Error completo:', error);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+      throw error;
+    }
+  }
+
+  async pythonGuardarPdfRelativo(
+    datos: {
+      output_path: string;
+      relative_path: string;
+      input_path: string;
+    },
+    token?: string,
+  ): Promise<any> {
+    if (!this.isElectron) {
+      throw new Error('No esta corriendo el electron');
+    }
+
+    try {
+      return await window.electronAPI!.python.guardarPdfRelativo(datos, token);
+    } catch (error: any) {
+      console.error('Error completo:', error);
+      throw error;
     }
   }
 }

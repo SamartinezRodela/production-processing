@@ -9,14 +9,17 @@ import {
   Query,
   HttpException,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import {
   CreateOrderDto,
   UpdateOrderDto,
 } from '../database/dto/create-order.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('orders')
+@UseGuards(JwtAuthGuard) // Proteger todas las rutas de orders
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 

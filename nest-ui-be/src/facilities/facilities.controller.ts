@@ -8,14 +8,17 @@ import {
   Param,
   HttpException,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { FacilitiesService } from './facilities.service';
 import {
   CreateFacilityDto,
   UpdateFacilityDto,
 } from '../database/dto/create-facility.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('facilities')
+@UseGuards(JwtAuthGuard) // Proteger todas las rutas de facilities
 export class FacilitiesController {
   constructor(private readonly facilitiesService: FacilitiesService) {}
 

@@ -1,0 +1,115 @@
+<div
+  class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg mb-4 overflow-hidden transition-all duration-300"
+>
+  <!-- Header colapsable -->
+  <button
+    type="button"
+    (click)="toggleExpanded()"
+    class="w-full px-4 py-2.5 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+  >
+    <div class="flex items-center gap-2">
+      <app-icon [name]="'folder-cog'" [size]="16" class="text-gray-500 dark:text-gray-400" />
+      <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+        Quick Path Configuration
+      </span>
+      @if (showWarning()) {
+        <app-badge [label]="'Configure'" [variant]="'warning'" [size]="'sm'" />
+      }
+    </div>
+    <app-icon
+      [name]="isExpanded() ? 'chevron-up' : 'chevron-down'"
+      [size]="16"
+      class="text-gray-400 transition-transform duration-300"
+    />
+  </button>
+
+  <!-- Contenido colapsable -->
+  @if (isExpanded()) {
+    <div class="px-4 pb-4 pt-2 border-t border-gray-200 dark:border-gray-700 animate-slideDown">
+      <div class="space-y-3">
+        <!-- Base
+ Path -->
+        <div class="flex items-start gap-2">
+          <app-icon
+            [name]="'folder-heart'"
+            [size]="16"
+            class="text-gray-500 dark:text-gray-400 shrink-0 mt-2"
+            title="Base Path"
+          />
+          <div class="flex-1 min-w-0">
+            <label class="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">
+              Base Path (Templates)
+            </label>
+            <div class="flex items-center gap-2">
+              <div class="flex-1 relative group">
+                <app-input
+                  [(value)]="basePath"
+                  [placeholder]="'C:\\Production\\Files'"
+                  [customClass]="'w-full'"
+                  [inputClass]="'text-xs py-2 px-3 font-mono pr-8'"
+                  (blur)="basePathBlur.emit()"
+                />
+                <div
+                  class="absolute left-0 right-0 top-full mt-1 px-3 py-2 bg-gray-800 dark:bg-gray-950 text-gray-100 dark:text-gray-200 text-xs rounded shadow-xl border border-gray-700 dark:border-gray-600 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none break-all"
+                  [title]="basePath()"
+                >
+                  {{ basePath() }}
+                </div>
+              </div>
+              <app-button
+                [variant]="'white'"
+                [icon]="'folder-open'"
+                [iconPosition]="'only'"
+                [iconSize]="16"
+                (clicked)="browseBasePath.emit()"
+                [customClass]="'p-2 shrink-0'"
+                title="Browse Base Path"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Output Path -->
+        <div class="flex items-start gap-2">
+          <app-icon
+            [name]="'folder-output'"
+            [size]="16"
+            class="text-green-500 dark:text-green-400 shrink-0 mt-2"
+            title="Output Path"
+          />
+          <div class="flex-1 min-w-0">
+            <label class="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">
+              Output Path (Generated Files)
+            </label>
+            <div class="flex items-center gap-2">
+              <div class="flex-1 relative group">
+                <app-input
+                  [(value)]="outputPath"
+                  [placeholder]="'C:\\Production\\Output'"
+                  [customClass]="'w-full'"
+                  [inputClass]="'text-xs py-2 px-3 font-mono pr-8'"
+                  (blur)="outputPathBlur.emit()"
+                />
+                <div
+                  class="absolute left-0 right-0 bottom-full mb-1 px-3 py-2 bg-gray-800 dark:bg-gray-950 text-gray-100 dark:text-gray-200 text-xs rounded shadow-xl border border-gray-700 dark:border-gray-600 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none break-all"
+                  [title]="outputPath()"
+                >
+                  {{ outputPath() }}
+                </div>
+              </div>
+              <app-button
+                [variant]="'white'"
+                [icon]="'folder-open'"
+                [iconPosition]="'only'"
+                [iconSize]="16"
+                (clicked)="browseOutputPath.emit()"
+                [customClass]="'p-2 shrink-0'"
+                title="Browse Output Path"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</div>

@@ -1,0 +1,483 @@
+/* nest-ui-fe/src/app/components/file-upload-area/file-upload-area.css */
+
+/* Upload Area Container */
+.upload-area-container {
+  position: relative;
+  min-height: 400px;
+  transition: all 0.3s ease;
+}
+
+/* Upload Drop Zone (overlay invisible) */
+.upload-drop-zone {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 10;
+  border-radius: 0.5rem;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Efecto cuando se arrastra sobre el área - Estilo Google Drive */
+.upload-drop-zone.dragging {
+  pointer-events: all;
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.08) 0%,
+    rgba(147, 197, 253, 0.05) 50%,
+    rgba(59, 130, 246, 0.08) 100%
+  );
+  backdrop-filter: blur(8px);
+  box-shadow:
+    0 0 0 2px rgba(59, 130, 246, 0.4) inset,
+    0 20px 40px -10px rgba(59, 130, 246, 0.25),
+    0 0 60px -15px rgba(59, 130, 246, 0.35);
+}
+
+/* Borde animado cuando se arrastra */
+.upload-drop-zone.dragging::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 0.5rem;
+  padding: 2px;
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.7),
+    rgba(147, 197, 253, 0.7),
+    rgba(59, 130, 246, 0.7)
+  );
+  background-size: 200% 200%;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  animation: gradient-rotate 3s linear infinite;
+}
+
+/* Efecto de partículas flotantes */
+.upload-drop-zone.dragging::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.2) 0%, transparent 40%),
+    radial-gradient(circle at 90% 30%, rgba(147, 197, 253, 0.2) 0%, transparent 40%),
+    radial-gradient(circle at 30% 80%, rgba(59, 130, 246, 0.15) 0%, transparent 40%),
+    radial-gradient(circle at 70% 70%, rgba(147, 197, 253, 0.18) 0%, transparent 40%);
+  animation: particles-float 4s ease-in-out infinite;
+  pointer-events: none;
+  border-radius: 0.5rem;
+}
+
+@keyframes gradient-rotate {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes particles-float {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.7;
+  }
+  33% {
+    transform: translate(2%, -2%) scale(1.15);
+    opacity: 0.9;
+  }
+  66% {
+    transform: translate(-2%, 2%) scale(0.95);
+    opacity: 0.8;
+  }
+}
+
+/* Upload Content */
+.upload-content {
+  position: relative;
+  z-index: 1;
+  padding: 2rem;
+  pointer-events: none; /* Permitir que el drop pase a través */
+}
+
+/* Hacer que los elementos interactivos sean clickeables */
+.upload-content button,
+.upload-content input,
+.upload-content app-button,
+.upload-content .file-item,
+.upload-content .file-list {
+  pointer-events: auto;
+}
+
+/* Upload Placeholder (cuando no hay archivos) */
+.upload-placeholder {
+  text-align: center;
+  padding: 3rem 2rem;
+}
+
+.upload-icon-container {
+  transition: transform 0.3s ease;
+}
+
+.upload-area-container:hover .upload-icon-container {
+  transform: translateY(-5px);
+}
+
+/* File List */
+.file-list {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+}
+
+.file-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.file-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.file-list::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.5);
+  border-radius: 3px;
+}
+
+.file-list::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(156, 163, 175, 0.7);
+}
+
+/* File Item Animation */
+.file-item {
+  animation: slideIn 0.3s ease forwards;
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+@keyframes slideIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* File Drop Preview Animations - Estilo Google Drive */
+.file-drop-preview,
+.folder-drop-preview {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 15;
+}
+
+/* Archivos individuales */
+.file-drop-preview {
+  width: 32px;
+  height: 40px;
+  animation: file-drop 2.5s ease-in-out infinite;
+}
+
+/* Carpetas */
+.folder-drop-preview {
+  width: 45px;
+  height: 36px;
+  animation: folder-drop 2.2s ease-in-out infinite;
+}
+
+/* Posiciones y delays para archivos */
+.file-drop-preview:nth-child(1) {
+  left: 10%;
+  animation-delay: 0s;
+}
+
+.file-drop-preview:nth-child(2) {
+  left: 25%;
+  animation-delay: 0.4s;
+}
+
+.file-drop-preview:nth-child(3) {
+  left: 50%;
+  animation-delay: 0.8s;
+}
+
+.file-drop-preview:nth-child(4) {
+  left: 70%;
+  animation-delay: 1.2s;
+}
+
+.file-drop-preview:nth-child(5) {
+  left: 85%;
+  animation-delay: 1.6s;
+}
+
+/* Posiciones y delays para carpetas */
+.folder-drop-preview:nth-child(6) {
+  left: 18%;
+  animation-delay: 0.3s;
+}
+
+.folder-drop-preview:nth-child(7) {
+  left: 60%;
+  animation-delay: 0.9s;
+}
+
+.folder-drop-preview:nth-child(8) {
+  left: 80%;
+  animation-delay: 1.4s;
+}
+
+/* Animación de caída para archivos */
+@keyframes file-drop {
+  0% {
+    top: -10%;
+    opacity: 0;
+    transform: translateY(0) rotate(-8deg) scale(0.7);
+  }
+  10% {
+    opacity: 1;
+  }
+  50% {
+    top: 45%;
+    transform: translateY(-50%) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+  70% {
+    opacity: 0.9;
+  }
+  100% {
+    top: 110%;
+    opacity: 0;
+    transform: translateY(0) rotate(8deg) scale(0.8);
+  }
+}
+
+/* Animación de caída para carpetas */
+@keyframes folder-drop {
+  0% {
+    top: -10%;
+    opacity: 0;
+    transform: translateY(0) rotate(-10deg) scale(0.6);
+  }
+  10% {
+    opacity: 1;
+  }
+  50% {
+    top: 45%;
+    transform: translateY(-50%) rotate(0deg) scale(1.05);
+    opacity: 1;
+  }
+  70% {
+    opacity: 0.9;
+  }
+  100% {
+    top: 110%;
+    opacity: 0;
+    transform: translateY(0) rotate(10deg) scale(0.75);
+  }
+}
+
+/* Diseño del icono de archivo */
+.file-drop-preview::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+  border-radius: 4px;
+  box-shadow:
+    0 8px 24px rgba(59, 130, 246, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.3) inset;
+}
+
+/* Esquina doblada del archivo */
+.file-drop-preview::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 10px 10px 0;
+  border-color: transparent rgba(255, 255, 255, 0.3) transparent transparent;
+}
+
+/* Diseño de la carpeta */
+.folder-drop-preview::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 28px;
+  background: linear-gradient(135deg, #fbbf24 0%, #fcd34d 100%);
+  border-radius: 4px;
+  box-shadow:
+    0 8px 24px rgba(251, 191, 36, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.3) inset;
+}
+
+/* Pestaña de la carpeta */
+.folder-drop-preview::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 22px;
+  height: 12px;
+  background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+  border-radius: 4px 4px 0 0;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+}
+
+/* Dark mode adjustments */
+:host-context(.dark) .upload-drop-zone.dragging {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: #60a5fa;
+}
+
+/* Animación del icono de upload cuando se arrastra */
+.upload-icon-container {
+  position: relative;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Efecto de pulso en el icono */
+.upload-icon-container::before {
+  content: '';
+  position: absolute;
+  inset: -25%;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.25) 0%, transparent 70%);
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+/* Activar efectos cuando se arrastra - usando la clase dragging del drop-zone */
+.upload-drop-zone.dragging ~ .upload-content .upload-icon-container {
+  transform: translateY(-15px) scale(1.2);
+}
+
+.upload-drop-zone.dragging ~ .upload-content .upload-icon-container::before {
+  opacity: 1;
+  animation: icon-pulse 2s ease-in-out infinite;
+}
+
+@keyframes icon-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.4);
+    opacity: 0.9;
+  }
+}
+
+/* Efecto de ondas concéntricas */
+.upload-drop-zone.dragging ~ .upload-content .upload-icon-container::after {
+  content: '';
+  position: absolute;
+  inset: -35%;
+  border: 2px solid rgba(59, 130, 246, 0.4);
+  border-radius: 50%;
+  animation: ripple-waves 2s ease-out infinite;
+}
+
+@keyframes ripple-waves {
+  0% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+/* Texto con efecto de brillo cuando se arrastra */
+.upload-placeholder h2 {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.upload-drop-zone.dragging ~ .upload-content .upload-placeholder h2 {
+  transform: translateY(-6px);
+  letter-spacing: 0.03em;
+}
+
+.upload-drop-zone.dragging ~ .upload-content .upload-placeholder h2 span {
+  background: linear-gradient(
+    135deg,
+    #3b82f6 0%,
+    #60a5fa 25%,
+    #93c5fd 50%,
+    #60a5fa 75%,
+    #3b82f6 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: text-shimmer 3s linear infinite;
+  font-weight: 600;
+  filter: drop-shadow(0 2px 10px rgba(59, 130, 246, 0.4));
+}
+
+@keyframes text-shimmer {
+  0% {
+    background-position: 0% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+/* Mejorar visibilidad en dark mode */
+:host-context(.dark) .upload-drop-zone.dragging {
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.12) 0%,
+    rgba(147, 197, 253, 0.08) 50%,
+    rgba(59, 130, 246, 0.12) 100%
+  );
+  box-shadow:
+    0 0 0 2px rgba(96, 165, 250, 0.5) inset,
+    0 20px 40px -10px rgba(59, 130, 246, 0.3),
+    0 0 60px -15px rgba(59, 130, 246, 0.4);
+}
+
+:host-context(.dark) .file-drop-preview::before {
+  box-shadow:
+    0 8px 24px rgba(59, 130, 246, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.4) inset;
+}
+
+:host-context(.dark) .folder-drop-preview::before {
+  box-shadow:
+    0 8px 24px rgba(251, 191, 36, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.4) inset;
+}
+
+/* Hacer que el contenido sea interactivo pero permita el drop */
+.upload-content {
+  pointer-events: none;
+}
+
+.upload-content button,
+.upload-content input,
+.upload-content app-button,
+.upload-content .file-item {
+  pointer-events: auto;
+}

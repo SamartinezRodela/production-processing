@@ -76,7 +76,16 @@
       <div
         class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
       >
-        <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Base Path</h2>
+        <div class="flex items-start gap-2 mb-2">
+          <app-icon
+            [name]="'folder-heart'"
+            [size]="30"
+            class="text-blue-600 dark:text-blue-400 shrink-0"
+          />
+
+          <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-2">Base Path</h2>
+        </div>
+        <!-- <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Base Path</h2> -->
 
         <!-- Warning si es default -->
         @if (isDefaultBasePath()) {
@@ -99,11 +108,7 @@
         <div
           class="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-start gap-2"
         >
-          <app-icon
-            [name]="'info'"
-            [size]="16"
-            class="text-blue-600 dark:text-blue-400 shrink-0 mt-0.5"
-          />
+          <app-icon [name]="'info'" [size]="16" class="text-blue-600 dark:text-blue-400 shrink-0" />
           <p class="text-xs text-blue-800 dark:text-blue-200">
             This is the folder where your template files are stored. These files will be used as
             reference for processing.
@@ -137,7 +142,15 @@
       <div
         class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
       >
-        <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Output Path</h2>
+        <div class="flex items-start gap-2 mb-2">
+          <app-icon
+            [name]="'folder-output'"
+            [size]="30"
+            class="text-green-600 dark:text-green-400 shrink-0"
+          />
+
+          <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-2">Output Path</h2>
+        </div>
 
         <!-- Warning si es default -->
         @if (isDefaultOutputPath()) {
@@ -163,7 +176,7 @@
           <app-icon
             [name]="'info'"
             [size]="16"
-            class="text-green-600 dark:text-green-400 shrink-0 mt-0.5"
+            class="text-green-600 dark:text-green-400 shrink-0"
           />
           <p class="text-xs text-green-800 dark:text-green-200">
             This is the folder where all generated/processed files will be saved. Make sure you have
@@ -199,7 +212,15 @@
         class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
       >
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100">Facilities</h2>
+          <div class="flex items-start gap-2 mb-2">
+            <app-icon
+              [name]="'factory'"
+              [size]="30"
+              class="text-amber-600 dark:text-amber-400 shrink-0"
+            />
+
+            <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-2">Facilities</h2>
+          </div>
           <!-- Badge con contador de facilities -->
           <app-badge
             [label]="facilities().length + ' facilities'"
@@ -277,9 +298,20 @@
         class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
       >
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-4">
+          <div class="flex items-start gap-2 mb-2">
+            <app-icon
+              [name]="'package-search'"
+              [size]="30"
+              class="text-indigo-600 dark:text-indigo-400 shrink-0"
+            />
+
+            <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-2">
+              Process Types (Orders)
+            </h2>
+          </div>
+          <!-- <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-4">
             Process Types (Orders)
-          </h2>
+          </h2> -->
           <!-- Badge con contador de facilities -->
           <app-badge [label]="orders().length + ' orders'" [variant]="'primary'" [size]="'sm'" />
         </div>
@@ -359,9 +391,16 @@
       <div
         class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
       >
-        <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-4">
+        <div class="flex items-start gap-2 mb-2">
+          <app-icon [name]="'cog'" [size]="30" class="text-zinc-600 dark:text-zinc-400 shrink-0" />
+
+          <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-2">
+            Advanced Settings
+          </h2>
+        </div>
+        <!-- <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-4">
           Advanced Settings
-        </h2>
+        </h2> -->
 
         <div class="space-y-3">
           <!-- Dark Mode Toggle -->
@@ -397,34 +436,6 @@
               ></span>
             </button>
           </label>
-
-          <!-- Auto-save -->
-          <!-- <label class="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              [(ngModel)]="autoSave"
-              class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            />
-            <div>
-              <span class="text-sm text-gray-700 dark:text-gray-200 font-medium">Auto-save</span>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Automatically save changes</p>
-            </div>
-          </label> -->
-
-          <!-- Notifications -->
-          <!-- <label class="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              [(ngModel)]="notifications"
-              class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            />
-            <div>
-              <span class="text-sm text-gray-700 dark:text-gray-200 font-medium"
-                >Notifications</span
-              >
-              <p class="text-xs text-gray-500 dark:text-gray-400">Show desktop notifications</p>
-            </div>
-          </label> -->
         </div>
       </div>
 
@@ -434,9 +445,17 @@
       >
         <div class="flex items-center justify-between mb-4">
           <div>
-            <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1">
-              🐍 Python Libraries
-            </h2>
+            <div class="flex items-start gap-2">
+              <app-icon
+                [name]="'shell'"
+                [size]="30"
+                class="text-green-600 dark:text-green-400 shrink-0 mt-0.5"
+              />
+
+              <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100 mt-1">
+                Python Libraries
+              </h2>
+            </div>
             <p class="text-xs text-gray-500 dark:text-gray-400">
               Test installed Python libraries for data processing
             </p>
@@ -455,9 +474,9 @@
               @for (lib of pythonTestsResult | keyvalue; track lib.key) {
                 <div class="flex items-center gap-2">
                   @if (lib.value.instalado) {
-                    <app-icon [name]="'check-circle'" [size]="16" class="text-green-500 shrink-0" />
+                    <app-icon [name]="'check'" [size]="16" class="text-green-500 shrink-0" />
                   } @else {
-                    <app-icon [name]="'x-circle'" [size]="16" class="text-red-500 shrink-0" />
+                    <app-icon [name]="'close'" [size]="16" class="text-red-500 shrink-0" />
                   }
                   <div class="min-w-0">
                     <p class="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">

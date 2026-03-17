@@ -4,17 +4,32 @@ const API_BASE_URL = "http://localhost:3000";
 
 export class ApiClient {
   /**
+   * Obtiene el token JWT del localStorage del renderer process
+   * Nota: Esto requiere que el token esté disponible en el contexto de Electron
+   */
+  private static getAuthToken(): string | null {
+    // El token debe ser pasado desde el renderer process
+    // Por ahora retornamos null, pero se debe implementar un mecanismo
+    // para obtener el token desde el renderer
+    return null;
+  }
+
+  /**
    * Realiza una petición GET
    */
-  static async get(endpoint: string): Promise<any> {
-    return this.request("GET", endpoint);
+  static async get(endpoint: string, token?: string): Promise<any> {
+    return this.request("GET", endpoint, undefined, token);
   }
 
   /**
    * Realiza una petición POST
    */
-  static async post(endpoint: string, data?: any): Promise<any> {
-    return this.request("POST", endpoint, data);
+  static async post(
+    endpoint: string,
+    data?: any,
+    token?: string,
+  ): Promise<any> {
+    return this.request("POST", endpoint, data, token);
   }
 
   /**
@@ -24,6 +39,7 @@ export class ApiClient {
     method: string,
     endpoint: string,
     data?: any,
+    token?: string,
   ): Promise<any> {
     return new Promise((resolve, reject) => {
       const url = `${API_BASE_URL}${endpoint}`;
@@ -33,8 +49,14 @@ export class ApiClient {
         url,
       });
 
+      // Agregar Content-Type si hay data
       if (data) {
         request.setHeader("Content-Type", "application/json");
+      }
+
+      // ✅ Agregar Authorization header si hay token
+      if (token) {
+        request.setHeader("Authorization", `Bearer ${token}`);
       }
 
       let responseData = "";
@@ -91,35 +113,55 @@ export class ApiClient {
   // ==========================================
 
   // Ejemplo GET:
-  // static async pythonTuFuncion(param1: string): Promise<any> {
-  //   return this.get(`/python/tu-endpoint?param1=${param1}`);
+  // static async pythonTuFuncion(param1: string, token?: string): Promise<any> {
+  //   return this.get(`/python/tu-endpoint?param1=${param1}`, token);
   // }
 
   // Ejemplo POST:
-  // static async pythonTuFuncion(param1: string, param2: number): Promise<any> {
-  //   return this.post("/python/tu-endpoint", { param1, param2 });
+  // static async pythonTuFuncion(param1: string, param2: number, token?: string): Promise<any> {
+  //   return this.post("/python/tu-endpoint", { param1, param2 }, token);
   // }
 
-  static async pythonSaludar(nombre: string): Promise<any> {
-    return this.get(`/python/saludar?nombre=${encodeURIComponent(nombre)}`);
+  static async pythonSaludar(nombre: string, token?: string): Promise<any> {
+    return this.get(
+      `/python/saludar?nombre=${encodeURIComponent(nombre)}`,
+      token,
+    );
   }
 
-  static async pythonGenerarPDF(datos: {
-    titulo: string;
-    contenido: string;
-    autor: string;
-    nombre_archivo: string;
-  }): Promise<any> {
-    return this.post("/python/generar-pdf", datos);
+  static async pythonGenerarPDF(
+    datos: {
+      titulo: string;
+      contenido: string;
+      autor: string;
+      nombre_archivo: string;
+    },
+    token?: string,
+  ): Promise<any> {
+    return this.post("/python/generar-pdf", datos, token);
   }
 
-  static async pythonGenerarPathPDF(datos: {
-    titulo: string;
-    contenido: string;
-    autor: string;
-    nombre_archivo: string;
-    ruta_salida: string;
-  }): Promise<any> {
-    return this.post("/python/generar-path-pdf", datos);
+  static async pythonGenerarPathPDF(
+    datos: {
+      titulo: string;
+      contenido: string;
+      autor: string;
+      nombre_archivo: string;
+      ruta_salida: string;
+    },
+    token?: string,
+  ): Promise<any> {
+    return this.post("/python/generar-path-pdf", datos, token);
+  }
+
+  static async pythonGuardarPdfRelativo(
+    datos: {
+      output_path: string;
+      relative_path: string;
+      input_path: string;
+    },
+    token?: string,
+  ): Promise<any> {
+    return this.post("/python/guardar-pdf-relativo", datos, token);
   }
 }

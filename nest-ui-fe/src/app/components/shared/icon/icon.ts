@@ -48,6 +48,7 @@ import {
   Info,
   Bell,
   ChevronRight,
+  ChevronLeft,
   RefreshCcw,
   Laptop,
   Monitor,
@@ -68,6 +69,22 @@ import {
   Pause,
   HelpCircle,
   Shell,
+  FolderRoot,
+  Tag,
+  Maximize2,
+  Shirt,
+  FolderTree,
+  HardDrive,
+  FolderHeart,
+  FolderOutput,
+  FolderCogIcon,
+  Factory,
+  PackageSearch,
+  Cog,
+  Logs,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
 } from 'lucide-angular';
 
 @Component({
@@ -130,6 +147,8 @@ export class Icon {
     info: Info,
     bell: Bell,
     'chevron-right': ChevronRight,
+    'chevron-left': ChevronLeft,
+
     'refresh-cw': RefreshCcw,
     laptop: Laptop,
     monitor: Monitor,
@@ -150,6 +169,23 @@ export class Icon {
     pause: Pause,
     help: HelpCircle,
     shell: Shell,
+    'folder-root': FolderRoot,
+    'folder-tree': FolderTree,
+    tag: Tag,
+    'maximize-2': Maximize2,
+    shirt: Shirt,
+    'hard-drive': HardDrive,
+    'folder-heart': FolderHeart,
+    'folder-output': FolderOutput,
+    'folder-cog': FolderCogIcon,
+    factory: Factory,
+    'package-search': PackageSearch,
+    cog: Cog,
+    logs: Logs,
+
+    'arrow-up': ArrowUp,
+    'arrow-down': ArrowDown,
+    'arrow-up-down': ArrowUpDown,
   };
 
   getIcon() {

@@ -372,6 +372,15 @@ export class PythonService {
     return this.executeScript('generar_pdf.py', [datosJson]);
   }
 
+  async guardarPdfRelativo(datos: {
+    output_path: string;
+    relative_path: string;
+    input_path: string;
+  }): Promise<any> {
+    const datosJson = JSON.stringify(datos);
+    return this.executeScript('guardar_pdf_path.py', [datosJson]);
+  }
+
   async generarPathPDF(datos: {
     titulo: string;
     contenido: string;
@@ -382,6 +391,30 @@ export class PythonService {
     const datosJson = JSON.stringify(datos);
     return this.executeScript('generar_pdf_path.py', [datosJson]);
   }
+
+  async saveMetadata(data: any): Promise<any> {
+    try {
+      // Determinar la ruta de la carpeta "data" en el backend
+      const resourcesPath =
+        process.env.RESOURCES_PATH || (process as any).resourcesPath;
+      const dataDir = resourcesPath
+        ? path.join(resourcesPath, 'backend', 'data') // Ruta en producción
+        : path.resolve(__dirname, '../../data'); // Ruta en desarrollo (nest-ui-be/data)
+
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+      }
+
+      const filePath = path.join(dataDir, 'tabla_metadatos.json');
+      fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+
+      return { success: true, message: 'Metadata saved successfully' };
+    } catch (error) {
+      this.logger.error(`Error saving metadata: ${error.message}`);
+      throw error;
+    }
+  }
+
   /**
    * Ejecuta un archivo ejecutable .exe y retorna el resultado como JSON
    *

@@ -1,0 +1,65 @@
+<div
+  class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-6 flex items-center justify-between gap-8"
+>
+  <div class="flex items-center gap-8 flex-1">
+    <div class="flex items-center gap-3">
+      <label class="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+        Facility:
+      </label>
+      <div class="w-64">
+        <app-select
+          [options]="facilityOptions()"
+          [placeholder]="'Buscar y seleccionar...'"
+          [value]="selectedFacility()"
+          [selectClass]="'h-9 text-sm'"
+          [searchable]="true"
+          (valueChange)="facilityChange.emit($event)"
+        />
+      </div>
+      @if (selectedFacility()) {
+        <app-badge [label]="selectedFacility()" [variant]="'info'" [size]="'sm'" />
+      }
+    </div>
+
+    <div class="flex items-center gap-3">
+      <label class="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+        Process Type:
+      </label>
+      <div class="w-64">
+        <app-select
+          [options]="orderOptions()"
+          [placeholder]="'Order'"
+          [value]="selectedOrder()"
+          [selectClass]="'h-9 text-sm'"
+          [searchable]="true"
+          (valueChange)="orderChange.emit($event)"
+        />
+      </div>
+      @if (selectedOrder()) {
+        <app-badge [label]="selectedOrder()" [variant]="'secondary'" [size]="'sm'" />
+      }
+    </div>
+  </div>
+
+  <!-- Botones de acción -->
+  <div class="flex items-center gap-2">
+    <app-button label="Hi!" (click)="testSaludar.emit()" variant="primary" />
+    <app-button
+      label="PDF"
+      [iconPosition]="'left'"
+      [icon]="'file-text'"
+      [iconSize]="16"
+      (click)="generatePDF.emit()"
+      [variant]="'primary'"
+    />
+
+    <app-button
+      label="Save PDF"
+      [iconPosition]="'left'"
+      [icon]="'save'"
+      [iconSize]="16"
+      (click)="testGuardarPdf.emit()"
+      [variant]="'primary'"
+    />
+  </div>
+</div>

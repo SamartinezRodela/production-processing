@@ -7,6 +7,7 @@ Documentación completa del proyecto organizada por categorías.
 ## 🚀 Inicio Rápido
 
 - **[GUIA-ESTRUCTURA-PROYECTO.md](GUIA-ESTRUCTURA-PROYECTO.md)** - Estructura completa del proyecto
+- **[GUIA-DIAGRAMAS-FLUJO.md](GUIA-DIAGRAMAS-FLUJO.md)** ⭐ NUEVO - Diagramas de flujo visuales
 - **[GUIA-SCRIPTS.md](GUIA-SCRIPTS.md)** - Documentación de todos los scripts disponibles
 
 ---
@@ -101,80 +102,40 @@ Documentación completa del proyecto organizada por categorías.
   - Herramientas necesarias
   - Setup inicial
 
-### Drag & Drop
+### Drag & Drop y Animaciones
 
-- **[GUIA-ARREGLAR-DRAG-DROP.md](GUIA-ARREGLAR-DRAG-DROP.md)**
-  - Implementación de drag & drop
-  - Manejo de archivos
-  - Eventos y validaciones
-
-- **[CAMBIOS-DRAG-DROP-APLICADOS.md](CAMBIOS-DRAG-DROP-APLICADOS.md)**
-  - Historial de cambios en drag & drop
-  - Mejoras implementadas
-
-- **[RESUMEN-FINAL-DRAG-DROP.md](RESUMEN-FINAL-DRAG-DROP.md)**
-  - Resumen completo de la implementación
-
-### Animaciones y Estilos
-
-- **[ANIMACIONES-AJUSTADAS-AL-CONTENEDOR.md](ANIMACIONES-AJUSTADAS-AL-CONTENEDOR.md)**
-  - Animaciones CSS ajustadas
-  - Transiciones suaves
-  - Performance
-
-### Utilidades
-
-- **[DETECCION-ARCHIVOS-DUPLICADOS.md](DETECCION-ARCHIVOS-DUPLICADOS.md)**
-  - Detectar archivos duplicados
-  - Validación de uploads
-  - Prevención de duplicados
+- **[GUIA-DRAG-DROP-COMPLETA.md](GUIA-DRAG-DROP-COMPLETA.md)** ⭐ CONSOLIDADO
+  - Implementación completa de drag & drop
+  - Animaciones premium (8 elementos)
+  - Soluciones a problemas comunes
+  - Testing y debugging
 
 ---
 
 ## 🔧 Soluciones a Problemas Comunes
 
-### Drag & Drop
+- **[GUIA-SOLUCIONES-COMUNES.md](GUIA-SOLUCIONES-COMUNES.md)** ⭐ CONSOLIDADO
+  - Errores de Python (Bad Magic Number, Encoding, etc.)
+  - Errores de Frontend (Settings Undefined, etc.)
+  - Errores de Base de Datos
+  - Errores de Permisos
+  - Errores de Build
+  - Diagnóstico general
 
-- **[SOLUCION-DRAG-DROP-NO-FUNCIONA.md](SOLUCION-DRAG-DROP-NO-FUNCIONA.md)**
-  - Drag & drop no responde
-  - Eventos no se disparan
-
-- **[SOLUCION-DROP-SOLO-FUNCIONA-ABAJO.md](SOLUCION-DROP-SOLO-FUNCIONA-ABAJO.md)**
-  - Drop solo funciona en parte inferior
-  - Problemas de z-index
-
-### Animaciones
-
-- **[SOLUCION-ANIMACION-TRABADA.md](SOLUCION-ANIMACION-TRABADA.md)**
-  - Animaciones que se traban
-  - Performance issues
-
-- **[SOLUCION-FINAL-ANIMACION-TRABADA.md](SOLUCION-FINAL-ANIMACION-TRABADA.md)**
-  - Solución definitiva para animaciones
-
-### UI y Layout
-
-- **[SOLUCION-ESPACIO-BLANCO-SOBRANTE.md](SOLUCION-ESPACIO-BLANCO-SOBRANTE.md)**
-  - Espacios blancos no deseados
-  - Problemas de layout
-
-- **[SOLUCION-ARCHIVO-ABRE-NUEVA-PESTANA.md](SOLUCION-ARCHIVO-ABRE-NUEVA-PESTANA.md)**
-  - Archivos que abren nueva pestaña
-  - Prevenir comportamiento por defecto
-
-### Errores Específicos
-
-- **[SOLUCION-ERROR-CONTAINS-NULL.md](SOLUCION-ERROR-CONTAINS-NULL.md)**
-  - Error "contains null"
-  - Validación de datos
+- **[SOLUCION-ERROR-EBUSY.md](SOLUCION-ERROR-EBUSY.md)** ⭐ CONSOLIDADO
+  - Error EBUSY en Windows y GitHub Actions
+  - Soluciones rápidas y definitivas
+  - afterPack hook
+  - Prevención
 
 ---
 
-## 📊 Resúmenes y Documentación Completa
+## 📊 Plan de Consolidación
 
-- **[RESUMEN-COMPLETO-SOLUCIONES.md](RESUMEN-COMPLETO-SOLUCIONES.md)**
-  - Resumen de todas las soluciones implementadas
-  - Historial de problemas resueltos
+- **[PLAN-CONSOLIDACION.md](PLAN-CONSOLIDACION.md)**
+  - Plan detallado de consolidación de documentos
+  - De 65 a 23 documentos
+  - Estructura optimizada
 
 ---
 
@@ -267,4 +228,4 @@ Si no encuentras lo que buscas:
 ---
 
 **Última actualización:** Marzo 2026  
-**Total de guías:** 29 documentos
+**Total de guías:** 23 documentos (consolidados de 65 originales)

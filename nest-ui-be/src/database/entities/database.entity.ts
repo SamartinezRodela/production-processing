@@ -1,5 +1,20 @@
-import { Facility } from './facility.entity';
-import { Order } from './order.entity';
+// nest-ui-be/src/database/entities/database.entity.ts
+
+export interface Facility {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Order {
+  id: string;
+  name: string;
+  facilityId?: string;
+  status: 'active' | 'inactive' | 'completed';
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface DatabaseSettings {
   selectedFacilityId: string;
@@ -16,6 +31,6 @@ export class Database {
   lastModified: string;
   facilities: Facility[];
   orders: Order[];
-  defaultSettings: DatabaseSettings; // ✅ NUEVO
+  defaultSettings: DatabaseSettings;
   settings: DatabaseSettings;
 }

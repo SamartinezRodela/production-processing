@@ -6,10 +6,13 @@ import {
   Query,
   HttpException,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { PythonService } from './python.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('python')
+@UseGuards(JwtAuthGuard) // ✅ Proteger todas las rutas de Python
 export class PythonController {
   constructor(private readonly pythonService: PythonService) {}
 
@@ -106,6 +109,40 @@ export class PythonController {
       nombre_archivo: body.nombre_archivo || 'documento.pdf',
     };
     return this.pythonService.generarPDF(datos);
+  }
+
+  @Post('guardar-pdf-relativo')
+  async guardarPdfRelativo(
+    @Body()
+    body: {
+      output_path: string;
+      relative_path: string;
+      input_path: string;
+    },
+  ) {
+    try {
+      return await this.pythonService.guardarPdfRelativo(body);
+    } catch (error: any) {
+      throw new HttpException(
+        { message: 'Error al guarda PDF', error: error.message || error },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Post('save-metadata')
+  async saveMetada(@Body() body: { data: any }) {
+    try {
+      return await this.pythonService.saveMetadata(body.data);
+    } catch (error) {
+      throw new HttpException(
+        {
+          message: 'Error al guardar metadatos',
+          error: error.message || error,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Post('generar-path-pdf')

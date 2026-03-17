@@ -1,10 +1,10 @@
-<div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-0">
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-0 overflow-x-hidden">
   <!-- Window Header (estilo macOS/Windows) -->
   <div
     class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-3 flex items-center justify-between"
   >
     <div class="flex items-center gap-3">
-      <h1 class="text-lg font-semibold text-gray-800 dark:text-gray-100">Production Processing</h1>
+      <h1 class="text-lg font-semibold text-gray-800 dark:text-gray-100">Auto Nesting</h1>
 
       <!-- Badge de estado de procesamiento -->
       @if (isProcessing()) {
@@ -59,7 +59,7 @@
     </div>
   </div>
 
-  <div class="p-8">
+  <div class="p-8 max-w-full">
     <!-- Warning Banner si los paths son defaults -->
     @if (showPathWarning()) {
       <div
@@ -102,686 +102,82 @@
     }
 
     <!-- Quick Path Configuration (Colapsable) -->
-    <div
-      class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg mb-4 overflow-hidden transition-all duration-300"
-    >
-      <!-- Header colapsable -->
-      <button
-        type="button"
-        (click)="togglePathEditor()"
-        class="w-full px-4 py-2.5 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-      >
-        <div class="flex items-center gap-2">
-          <app-icon [name]="'folder'" [size]="16" class="text-gray-500 dark:text-gray-400" />
-          <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Quick Path Configuration
-          </span>
-          <!-- Badge indicador si son paths default -->
-          @if (showPathWarning()) {
-            <app-badge [label]="'Configure'" [variant]="'warning'" [size]="'sm'" />
-          }
-        </div>
-        <app-icon
-          [name]="isPathEditorExpanded() ? 'chevron-up' : 'chevron-down'"
-          [size]="16"
-          class="text-gray-400 transition-transform duration-300"
-        />
-      </button>
+    <app-path-configuration-panel
+      [(basePath)]="settingsService.basePath"
+      [(outputPath)]="settingsService.outputPath"
+      [showWarning]="showPathWarning()"
+      [isExpanded]="isPathEditorExpanded()"
+      (basePathBlur)="onBasePathBlur()"
+      (outputPathBlur)="onOutputPathBlur()"
+      (browseBasePath)="browsePath()"
+      (browseOutputPath)="browseOutputPath()"
+      (expandedChange)="isPathEditorExpanded.set($event)"
+    />
 
-      <!-- Contenido colapsable -->
-      @if (isPathEditorExpanded()) {
-        <div class="px-4 pb-4 pt-2 border-t border-gray-200 dark:border-gray-700 animate-slideDown">
-          <div class="space-y-3">
-            <!-- Base Path -->
-            <div class="flex items-start gap-2">
-              <app-icon
-                [name]="'folder'"
-                [size]="16"
-                class="text-gray-500 dark:text-gray-400 shrink-0 mt-2"
-                title="Base Path"
-              />
-              <div class="flex-1 min-w-0">
-                <label class="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">
-                  Base Path (Templates)
-                </label>
-                <div class="flex items-center gap-2">
-                  <div class="flex-1 relative group">
-                    <app-input
-                      [(value)]="basePath"
-                      [placeholder]="'C:\\Production\\Files'"
-                      [customClass]="'w-full'"
-                      [inputClass]="'text-xs py-2 px-3 font-mono pr-8'"
-                      (blur)="onBasePathBlur()"
-                    />
-                    <!-- Tooltip con ruta completa -->
-                    <div
-                      class="absolute left-0 right-0 top-full mt-1 px-3 py-2 bg-gray-800 dark:bg-gray-950 text-gray-100 dark:text-gray-200 text-xs rounded shadow-xl border border-gray-700 dark:border-gray-600 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none break-all"
-                      [title]="basePath()"
-                    >
-                      {{ basePath() }}
-                    </div>
-                  </div>
-                  <app-button
-                    [variant]="'white'"
-                    [icon]="'folder-open'"
-                    [iconPosition]="'only'"
-                    [iconSize]="16"
-                    (clicked)="browsePath()"
-                    [customClass]="'p-2 shrink-0'"
-                    title="Browse Base Path"
-                  />
-                </div>
-              </div>
-            </div>
+    <!-- Filtros y botones de acción -->
+    <app-filters-panel
+      [facilityOptions]="facilityOptions"
+      [selectedFacility]="selectedFacility()"
+      [orderOptions]="orderOptions"
+      [selectedOrder]="selectedOrder()"
+      (facilityChange)="onFacilityChange($event)"
+      (orderChange)="onOrderChange($event)"
+      (testSaludar)="probarSaludar()"
+      (generatePDF)="prorbarGenerarPathPDF()"
+      (testGuardarPdf)="probarGuardarPdfRelativo()"
+    />
 
-            <!-- Output Path -->
-            <div class="flex items-start gap-2">
-              <app-icon
-                [name]="'folder'"
-                [size]="16"
-                class="text-green-500 dark:text-green-400 shrink-0 mt-2"
-                title="Output Path"
-              />
-              <div class="flex-1 min-w-0">
-                <label class="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">
-                  Output Path (Generated Files)
-                </label>
-                <div class="flex items-center gap-2">
-                  <div class="flex-1 relative group">
-                    <app-input
-                      [(value)]="outputPath"
-                      [placeholder]="'C:\\Production\\Output'"
-                      [customClass]="'w-full'"
-                      [inputClass]="'text-xs py-2 px-3 font-mono pr-8'"
-                      (blur)="onOutputPathBlur()"
-                    />
-                    <!-- Tooltip con ruta completa - aparece ARRIBA para evitar que se corte -->
-                    <div
-                      class="absolute left-0 right-0 bottom-full mb-1 px-3 py-2 bg-gray-800 dark:bg-gray-950 text-gray-100 dark:text-gray-200 text-xs rounded shadow-xl border border-gray-700 dark:border-gray-600 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none break-all"
-                      [title]="outputPath()"
-                    >
-                      {{ outputPath() }}
-                    </div>
-                  </div>
-                  <app-button
-                    [variant]="'white'"
-                    [icon]="'folder-open'"
-                    [iconPosition]="'only'"
-                    [iconSize]="16"
-                    (clicked)="browseOutputPath()"
-                    [customClass]="'p-2 shrink-0'"
-                    title="Browse Output Path"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      }
-    </div>
+    <!-- Upload Area Component -->
+    <app-file-upload-area
+      [selectedFiles]="selectedFiles()"
+      [isDragging]="isDragging()"
+      [isReadingFolder]="isReadingFolder()"
+      [folderReadingProgress]="folderReadingProgress()"
+      [isProcessing]="isProcessing()"
+      [loadedFromFolder]="loadedFromFolder()"
+      [validFilesCount]="pdfContainer().validFiles"
+      [totalValidFilesSize]="formattedTotalValidFilesSize"
+      [maxFileSize]="formattedMaxFileSize"
+      [remainingSpace]="formattedRemainingSpace"
+      [usagePercentage]="usagePercentage"
+      [isOverLimit]="isOverLimit"
+      [getFileExtension]="getFileExtension.bind(this)"
+      [formatFileSize]="formatFileSize.bind(this)"
+      (dragEnter)="onDragEnter($event)"
+      (dragOver)="onDragOver($event)"
+      (dragLeave)="onDragLeave($event)"
+      (drop)="onDrop($event)"
+      (fileSelect)="onFileSelect($event)"
+      (removeFile)="removeFile($event)"
+      (clearAllFiles)="clearAllFiles()"
+      (triggerFileInput)="triggerFileInput()"
+      (browseFolderRecursive)="browseFolderRecursive()"
+      (uploadFiles)="uploadFiles()"
+    />
 
-    <!-- Filtros en línea con botón Generate PDFs (estilo desktop) -->
-    <div
-      class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-6 flex items-center justify-between gap-8"
-    >
-      <div class="flex items-center gap-8 flex-1">
-        <div class="flex items-center gap-3">
-          <label class="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
-            Facility:
-          </label>
-          <div class="w-64">
-            <app-select
-              [options]="facilityOptions"
-              [placeholder]="'Buscar y seleccionar...'"
-              [value]="selectedFacility()"
-              [selectClass]="'h-9 text-sm'"
-              [searchable]="true"
-              (valueChange)="onFacilityChange($event)"
-            />
-          </div>
-          <!-- Badge de facility seleccionado -->
-          @if (selectedFacility()) {
-            <app-badge [label]="selectedFacility()" [variant]="'info'" [size]="'sm'" />
-          }
-        </div>
+    <!-- Progress Bars -->
+    <app-progress-bars
+      [isProcessing]="isProcessing()"
+      [processingProgress]="progress()"
+      [isGeneratingPDF]="isGeneratingPDF()"
+      [pdfProgress]="pdfProgress()"
+    />
 
-        <div class="flex items-center gap-3">
-          <label class="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
-            Process Type:
-          </label>
-          <div class="w-64">
-            <app-select
-              [options]="orderOptions"
-              [placeholder]="'Order'"
-              [value]="selectedOrder()"
-              [selectClass]="'h-9 text-sm'"
-              [searchable]="true"
-              (valueChange)="onOrderChange($event)"
-            />
-          </div>
-          <!-- Badge de order seleccionado -->
-          @if (selectedOrder()) {
-            <app-badge [label]="selectedOrder()" [variant]="'secondary'" [size]="'sm'" />
-          }
-        </div>
-      </div>
+    <!-- Error Log -->
+    <app-error-log-panel
+      [errorLog]="errorLog()"
+      (clearAll)="clearErrorLog()"
+      (removeError)="removeError($event)"
+      (openOutputFolder)="openOutputFolder()"
+    />
 
-      <!-- Botón Generate PDFs -->
-      <div class="flex items-center gap-2">
-        <app-button label="Hi!" (click)="probarSaludar()" variant="primary" />
-
-        <app-button
-          label="PDF"
-          [iconPosition]="'left'"
-          [icon]="'file-text'"
-          [iconSize]="16"
-          (click)="prorbarGenerarPathPDF()"
-          [variant]="'primary'"
-        />
-
-        <!-- <app-button
-          [label]="'Generate PDFs'"
-          [variant]="'primary'"
-          [size]="'md'"
-          [icon]="'file-text'"
-          [iconPosition]="'left'"
-          [iconSize]="16"
-          (clicked)="openPDFModal()"
-          [customClass]="'text-sm text-gray-100'"
-        /> -->
-      </div>
-    </div>
-
-    <!-- Agregar después de los filtros, antes del Upload Area -->
-    <!-- Folder Contents con Breadcrumb Navigation -->
-    <!-- <div
-      class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 mb-6"
-    > -->
-    <!-- Header con botones de navegación -->
-    <!-- <div class="flex items-center justify-between mb-4">
-        <div class="flex items-center gap-2 flex-1 min-w-0"> -->
-    <!-- Botón Back -->
-    <!-- <button
-            type="button"
-            (click)="navigateUp()"
-            [disabled]="!canNavigateUp()"
-            [class.opacity-50]="!canNavigateUp()"
-            [class.cursor-not-allowed]="!canNavigateUp()"
-            class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:hover:bg-transparent"
-            title="Go back"
-          >
-            <app-icon [name]="'arrow-left'" [size]="16" class="text-gray-700 dark:text-gray-400" />
-          </button> -->
-
-    <!-- Breadcrumb -->
-    <!-- <div class="flex items-center gap-1 flex-1 min-w-0 overflow-x-auto">
-            @if (breadcrumbs().length > 0) {
-              @for (crumb of breadcrumbs(); track crumb.path; let isLast = $last) {
-                <div class="flex items-center gap-1 shrink-0">
-                  <button
-                    type="button"
-                    (click)="navigateToBreadcrumb(crumb.path)"
-                    [class.font-semibold]="isLast"
-                    [class.text-gray-500]="!isLast"
-                    [class.text-gray-800]="isLast"
-                    class="text-sm hover:text-blue-600 dark:hover:text-blue-400 transition-colors px-1 py-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
-                  >
-                    {{ crumb.name }}
-                  </button>
-                  @if (!isLast) {
-                    <app-icon [name]="'chevron-right'" [size]="14" class="text-gray-400" />
-                  }
-                </div>
-              }
-            } @else {
-              <p class="text-xs text-gray-500 dark:text-gray-400">No folder selected</p>
-            }
-          </div> -->
-    <!-- </div> -->
-
-    <!-- Botón Refresh -->
-    <!-- <app-button
-          [label]="'Refresh'"
-          [variant]="'white'"
-          [size]="'sm'"
-          [icon]="'refresh-cw'"
-          [iconPosition]="'left'"
-          [iconSize]="14"
-          (clicked)="refreshFolder()"
-          [customClass]="'text-xs ml-2'"
-        />
-      </div> -->
-
-    <!-- Estadísticas -->
-    <!-- @if (folderItems().length > 0) {
-        <div class="flex items-center gap-4 mb-4 text-xs text-gray-600 dark:text-gray-400">
-          <span>
-            <app-icon [name]="'folder'" [size]="14" class="inline mr-1" />
-            {{ getFolderCount() }} folders
-          </span>
-          <span>
-            <app-icon [name]="'file'" [size]="14" class="inline mr-1" />
-            {{ getFileCount() }} files
-          </span>
-        </div>
-      } -->
-
-    <!-- Lista de archivos y carpetas -->
-    <!-- <div class="max-h-48 overflow-y-auto">
-        @if (folderItems().length > 0) {
-          <div class="space-y-1">
-            @for (item of folderItems(); track item.path) {
-              <div
-                class="flex items-center justify-between p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded transition-colors"
-                [class.cursor-pointer]="item.type === 'folder'"
-                (click)="item.type === 'folder' ? navigateToFolder(item.path) : null"
-              >
-                <div class="flex items-center gap-2 flex-1 min-w-0">
-                  <app-icon
-                    [name]="item.type === 'folder' ? 'folder' : 'file-text'"
-                    [size]="16"
-                    [class]="item.type === 'folder' ? 'text-blue-500' : 'text-gray-500'"
-                  />
-                  <span class="text-sm text-gray-700 dark:text-gray-300 truncate">
-                    {{ item.name }}
-                  </span>
-                </div>
-
-                @if (item.type === 'file' && item.size) {
-                  <span class="text-xs text-gray-500 dark:text-gray-400 ml-2">
-                    {{ (item.size / 1024).toFixed(1) }} KB
-                  </span>
-                }
-              </div>
-            }
-          </div>
-        } @else {
-          <div class="text-center py-8 text-sm text-gray-500 dark:text-gray-400">
-            <app-icon [name]="'folder-open'" [size]="48" class="mx-auto mb-2 opacity-50" />
-            <p>No files or folders found</p>
-            <p class="text-xs mt-1">Configure the base path in Settings</p>
-          </div>
-        }
-      </div>
-    </div> -->
-
-    <!-- Upload Area (estilo desktop minimalista) -->
-    <div
-      class="upload-area-container bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg"
-    >
-      <!-- Animación de lectura de carpeta -->
-      @if (isReadingFolder()) {
-        <div
-          class="mb-8 p-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg"
-        >
-          <div class="flex items-center gap-3 mb-3">
-            <div class="animate-spin">
-              <app-icon [name]="'loader'" [size]="20" class="text-blue-600 dark:text-blue-400" />
-            </div>
-            <span class="text-sm font-medium text-blue-900 dark:text-blue-100">
-              Reading folder: {{ folderReadingProgress().folderName }}
-            </span>
-          </div>
-
-          @if (folderReadingProgress().total > 0) {
-            <div class="space-y-2">
-              <div
-                class="flex items-center justify-between text-xs text-blue-700 dark:text-blue-300"
-              >
-                <span>Processing files...</span>
-                <span
-                  >{{ folderReadingProgress().current }} / {{ folderReadingProgress().total }}</span
-                >
-              </div>
-              <div class="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2 overflow-hidden">
-                <div
-                  class="bg-blue-600 dark:bg-blue-400 h-2 transition-all duration-300"
-                  [style.width.%]="
-                    (folderReadingProgress().current / folderReadingProgress().total) * 100
-                  "
-                ></div>
-              </div>
-            </div>
-          } @else {
-            <div class="text-xs text-blue-700 dark:text-blue-300">Scanning folder contents...</div>
-          }
-        </div>
-      }
-
-      <!-- Zona de drop que cubre todo el contenedor -->
-      <div
-        class="upload-drop-zone"
-        [ngClass]="{
-          dragging: isDragging(),
-        }"
-        (dragenter)="onDragEnter($event)"
-        (dragover)="onDragOver($event)"
-        (dragleave)="onDragLeave($event)"
-        (drop)="onDrop($event)"
-      >
-        <!-- Animaciones de archivos y carpetas cayendo -->
-        @if (isDragging()) {
-          <div class="file-drop-preview"></div>
-          <div class="file-drop-preview"></div>
-          <div class="file-drop-preview"></div>
-          <div class="file-drop-preview"></div>
-          <div class="file-drop-preview"></div>
-          <div class="folder-drop-preview"></div>
-          <div class="folder-drop-preview"></div>
-          <div class="folder-drop-preview"></div>
-        }
-      </div>
-
-      <!-- Contenido del upload area -->
-      <div class="upload-content">
-        <!-- Mostrar lista de archivos SI hay archivos, sino mostrar mensaje de drag & drop -->
-        @if (selectedFiles().length > 0) {
-          <!-- Lista de archivos -->
-          <div class="flex items-center justify-between mb-4">
-            <div class="flex items-center gap-2">
-              <div class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Files ready to process
-              </span>
-              <!-- Badge con contador de archivos -->
-              <app-badge
-                [label]="selectedFiles().length.toString()"
-                [variant]="'primary'"
-                [size]="'md'"
-              />
-            </div>
-            <button
-              type="button"
-              (click)="clearAllFiles(); $event.stopPropagation()"
-              class="text-xs font-medium text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 transition-colors px-3 py-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
-            >
-              Clear all
-            </button>
-          </div>
-
-          <div class="space-y-2 max-h-64 overflow-y-auto pr-2 file-list mb-6">
-            @for (file of selectedFiles(); track file.name; let i = $index) {
-              <div
-                class="file-item group flex items-center gap-3 p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-md transition-all duration-200"
-                [style.animation-delay.ms]="i * 50"
-              >
-                <!-- Icono de archivo con color según tipo -->
-                <div class="file-icon-wrapper shrink-0">
-                  <div
-                    class="w-10 h-12 rounded flex items-center justify-center relative"
-                    [ngClass]="{
-                      'bg-red-100 dark:bg-red-900/30': file.type === 'application/pdf',
-                      'bg-blue-100 dark:bg-blue-900/30':
-                        file.type.includes('word') || file.type.includes('document'),
-                      'bg-green-100 dark:bg-green-900/30':
-                        file.type.includes('sheet') || file.type.includes('excel'),
-                      'bg-purple-100 dark:bg-purple-900/30': file.type.includes('image'),
-                      'bg-gray-100 dark:bg-gray-700': !file.type || file.type === '',
-                    }"
-                  >
-                    <app-icon
-                      [name]="'file-text'"
-                      [size]="20"
-                      [ngClass]="{
-                        'text-red-600 dark:text-red-400': file.type === 'application/pdf',
-                        'text-blue-600 dark:text-blue-400':
-                          file.type.includes('word') || file.type.includes('document'),
-                        'text-green-600 dark:text-green-400':
-                          file.type.includes('sheet') || file.type.includes('excel'),
-                        'text-purple-600 dark:text-purple-400': file.type.includes('image'),
-                        'text-gray-600 dark:text-gray-400': !file.type || file.type === '',
-                      }"
-                    />
-                    <!-- Badge de extensión -->
-                    <div
-                      class="absolute -bottom-1 -right-1 px-1 py-0.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded text-[8px] font-bold uppercase"
-                      [ngClass]="{
-                        'text-red-600 border-red-200 dark:border-red-800':
-                          file.type === 'application/pdf',
-                        'text-blue-600 border-blue-200 dark:border-blue-800':
-                          file.type.includes('word') || file.type.includes('document'),
-                        'text-green-600 border-green-200 dark:border-green-800':
-                          file.type.includes('sheet') || file.type.includes('excel'),
-                        'text-purple-600 border-purple-200 dark:border-purple-800':
-                          file.type.includes('image'),
-                        'text-gray-600 border-gray-200 dark:border-gray-700':
-                          !file.type || file.type === '',
-                      }"
-                    >
-                      {{ getFileExtension(file.name) }}
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Información del archivo -->
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                    {{ file.name }}
-                  </p>
-                  <div class="flex items-center gap-2 mt-1">
-                    <!-- Badge de tamaño de archivo -->
-                    <app-badge
-                      [label]="formatFileSize(file.size)"
-                      [variant]="'gray'"
-                      [size]="'sm'"
-                    />
-                    <span class="text-xs text-gray-400 dark:text-gray-500">•</span>
-                    <span class="text-xs text-gray-500 dark:text-gray-400">
-                      {{ file.type || 'Unknown type' }}
-                    </span>
-                  </div>
-                </div>
-
-                <!-- Botón de eliminar -->
-                <button
-                  type="button"
-                  (click)="removeFile(i); $event.stopPropagation()"
-                  class="shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-50 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-all duration-200"
-                  title="Remove file"
-                >
-                  <app-icon [name]="'close'" [size]="16" />
-                </button>
-              </div>
-            }
-          </div>
-
-          <!-- Botones cuando hay archivos -->
-          <div
-            class="flex items-center justify-center gap-3 pt-4 border-t border-gray-200 dark:border-gray-700"
-          >
-            <input
-              type="file"
-              id="fileInput"
-              multiple
-              (change)="onFileSelect($event)"
-              class="hidden"
-            />
-
-            <app-button
-              [label]="'Browse Files'"
-              [variant]="'white'"
-              [size]="'md'"
-              [icon]="'folder'"
-              [iconPosition]="'left'"
-              [iconSize]="16"
-              (clicked)="triggerFileInput()"
-              [customClass]="'text-sm'"
-            />
-
-            <app-button
-              [label]="isProcessing() ? 'Processing...' : 'Start'"
-              [variant]="'primary'"
-              [size]="'md'"
-              (clicked)="uploadFiles()"
-              [disabled]="(!loadedFromFolder() && selectedFiles().length === 0) || isProcessing()"
-              [customClass]="'px-8 text-sm text-gray-500 dark:text-gray-100'"
-            />
-          </div>
-        } @else {
-          <!-- Mensaje de drag & drop cuando NO hay archivos -->
-          <div class="upload-placeholder">
-            <div class="upload-icon-container">
-              <app-icon
-                [name]="'cloud-upload'"
-                [size]="80"
-                class="mx-auto mb-4 text-gray-400 dark:text-gray-500"
-              />
-            </div>
-
-            <h2 class="text-base font-normal text-gray-700 dark:text-gray-300 mb-6">
-              @if (isDragging()) {
-                <span class="text-blue-600 dark:text-blue-400 font-medium"
-                  >Drop files or folders here</span
-                >
-              } @else {
-                <span>Drag & Drop Files or Folders Here</span>
-              }
-            </h2>
-
-            <input
-              type="file"
-              id="fileInput"
-              multiple
-              (change)="onFileSelect($event)"
-              class="hidden"
-            />
-
-            <!-- Botones cuando NO hay archivos -->
-            <div class="flex items-center justify-center gap-3">
-              <app-button
-                [label]="'Browse Files'"
-                [variant]="'white'"
-                [size]="'md'"
-                [icon]="'folder'"
-                [iconPosition]="'left'"
-                [iconSize]="16"
-                (clicked)="triggerFileInput()"
-                [customClass]="'text-sm'"
-              />
-
-              <app-button
-                [label]="isProcessing() ? 'Processing...' : 'Start'"
-                [variant]="'primary'"
-                [size]="'md'"
-                (clicked)="uploadFiles()"
-                [disabled]="(!loadedFromFolder() && selectedFiles().length === 0) || isProcessing()"
-                [customClass]="'px-8 text-sm text-gray-500 dark:text-gray-100'"
-              />
-            </div>
-          </div>
-        }
-      </div>
-    </div>
-
-    <!-- Progress Bar (estilo desktop) -->
-
-    <!-- Progress Bar (estilo desktop) -->
-    @if (isProcessing()) {
-      <div
-        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 mt-6"
-      >
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-sm font-medium text-gray-700 dark:text-gray-300"
-            >Processing: {{ progress() }}%</span
-          >
-        </div>
-        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
-          <div
-            class="bg-blue-600 h-2 transition-all duration-300"
-            [style.width.%]="progress()"
-          ></div>
-        </div>
-      </div>
-    }
-
-    <!-- PDF Generation Progress Bar -->
-    @if (isGeneratingPDF()) {
-      <div
-        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 mt-6"
-      >
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-sm font-medium text-gray-700 dark:text-gray-300"
-            >Generating PDFs: {{ pdfProgress() }}%</span
-          >
-        </div>
-        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
-          <div
-            class="bg-green-600 h-2 transition-all duration-300"
-            [style.width.%]="pdfProgress()"
-          ></div>
-        </div>
-      </div>
-    }
-
-    <!-- Error Log (estilo desktop) -->
-    <div
-      class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg mt-6"
-    >
-      <div
-        class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between"
-      >
-        <div class="flex items-center gap-2">
-          <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-100">Error Log</h3>
-          <!-- Badge con contador de errores -->
-          @if (errorLog().length > 0) {
-            <app-badge [label]="errorLog().length.toString()" [variant]="'danger'" [size]="'sm'" />
-          }
-        </div>
-        @if (errorLog().length > 0) {
-          <app-button
-            [label]="'Clear All'"
-            [variant]="'ghost'"
-            [size]="'sm'"
-            (clicked)="clearErrorLog()"
-            [customClass]="
-              'text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium p-0'
-            "
-          />
-        }
-      </div>
-
-      <div class="p-6">
-        @if (errorLog().length > 0) {
-          <ul class="space-y-2 max-h-80 overflow-y-auto pr-2 error-log-list">
-            @for (error of errorLog(); track error.timestamp; let i = $index) {
-              <li class="flex items-start gap-3 py-2">
-                <app-icon
-                  [name]="'alert-triangle'"
-                  [size]="16"
-                  class="text-red-500 mt-0.5 shrink-0"
-                />
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    Error: {{ error.fileName }} - {{ error.error }}
-                  </p>
-                </div>
-                <app-button
-                  [variant]="'ghost'"
-                  [icon]="'close'"
-                  [iconPosition]="'only'"
-                  [iconSize]="14"
-                  (clicked)="removeError(i)"
-                  [customClass]="'p-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'"
-                />
-              </li>
-            }
-          </ul>
-
-          <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
-            <app-button
-              [label]="'Open Output Folder'"
-              [variant]="'white'"
-              [size]="'md'"
-              (clicked)="openOutputFolder()"
-              [customClass]="'text-sm'"
-            />
-          </div>
-        } @else {
-          <div class="text-center py-8 text-sm text-gray-500 dark:text-gray-400">
-            No errors to display
-          </div>
-        }
-      </div>
-    </div>
+    <!-- PDF Metadata Analysis Component -->
+    <app-pdf-metadata-table
+      [pdfContainer]="pdfContainer()"
+      [maxFileSize]="maxFileSize"
+      (exportMetadata)="exportMetadata()"
+      (clearMetadata)="clearMetadata()"
+      (openFileLocation)="openFileLocation($event)"
+    />
   </div>
 </div>

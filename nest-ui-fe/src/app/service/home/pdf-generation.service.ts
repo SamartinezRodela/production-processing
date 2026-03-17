@@ -44,9 +44,9 @@ export class PdfGenerationService {
     this.multiplePDFNames.set([...names]);
   }
 
-  async generatePDF(datos: any): Promise<void> {
+  async generatePDF(datos: any, token?: string): Promise<void> {
     try {
-      const result = await this.electronService.pythonGenerarPDF(datos);
+      const result = await this.electronService.pythonGenerarPDF(datos, token);
 
       if (result.success) {
         this.notificationService.success(`PDF generated successfully: ${result.archivo}`);
@@ -59,10 +59,10 @@ export class PdfGenerationService {
     }
   }
 
-  async generatePDFWithPath(datos: any, outputPath: string): Promise<void> {
+  async generatePDFWithPath(datos: any, outputPath: string, token?: string): Promise<void> {
     try {
       const datosConRuta = { ...datos, ruta_salida: outputPath };
-      const result = await this.electronService.pythonGenerarPathPDF(datosConRuta);
+      const result = await this.electronService.pythonGenerarPathPDF(datosConRuta, token);
 
       if (result.success) {
         this.notificationService.success(`PDF generated at: ${result.ruta}`);

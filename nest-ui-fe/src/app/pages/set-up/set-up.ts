@@ -260,68 +260,68 @@ export class SetUp {
 
   async browsePath(): Promise<void> {
     try {
-      console.log('🔍 Opening folder selector for Base Path...');
+      //console.log('Opening folder selector for Base Path...');
       const result = await this.electronService.selectFolder();
 
       if (!result.canceled && result.path) {
-        console.log('📁 Selected path:', result.path);
-        console.log('🔐 Validating Base Path (read permissions)...');
+        //console.log('Selected path:', result.path);
+        //console.log('Validating Base Path (read permissions)...');
 
         // Validar el path antes de guardarlo
         const validation = await this.validatePath(result.path, 'read');
 
-        console.log('📊 Validation result:', validation);
+        //console.log('Validation result:', validation);
 
         if (!validation.valid) {
-          console.error('❌ Base Path validation failed:', validation.error);
+          console.error('Base Path validation failed:', validation.error);
           this.notificationService.error(
             `Invalid Base Path: ${validation.error}. Please select a folder with read permissions.`,
           );
           return;
         }
 
-        console.log('✅ Base Path validation passed!');
+        //console.log('Base Path validation passed!');
         this.settingsService.setBasePath(result.path);
         this.notificationService.success(`Base Path selected: ${result.path}`);
       } else {
-        console.log('❌ Folder selection cancelled');
+        //console.log('Folder selection cancelled');
       }
     } catch (error) {
-      console.error('💥 Error selecting folder:', error);
+      console.error('Error selecting folder:', error);
       this.notificationService.error(`Error selecting folder: ${error}`);
     }
   }
 
   async browseOutputPath(): Promise<void> {
     try {
-      console.log('🔍 Opening folder selector for Output Path...');
+      //console.log('Opening folder selector for Output Path...');
       const result = await this.electronService.selectFolder();
 
       if (!result.canceled && result.path) {
-        console.log('📁 Selected path:', result.path);
-        console.log('🔐 Validating Output Path (write permissions)...');
+        //console.log('Selected path:', result.path);
+        //console.log('Validating Output Path (write permissions)...');
 
         // Validar el path antes de guardarlo
         const validation = await this.validatePath(result.path, 'write');
 
-        console.log('📊 Validation result:', validation);
+        //console.log('Validation result:', validation);
 
         if (!validation.valid) {
-          console.error('❌ Output Path validation failed:', validation.error);
+          console.error('Output Path validation failed:', validation.error);
           this.notificationService.error(
             `Invalid Output Path: ${validation.error}. Please select a folder with write permissions.`,
           );
           return;
         }
 
-        console.log('✅ Output Path validation passed!');
+        //console.log('Output Path validation passed!');
         this.settingsService.setOutputPath(result.path);
         this.notificationService.success(`Output Path selected: ${result.path}`);
       } else {
-        console.log('❌ Folder selection cancelled');
+        //console.log('Folder selection cancelled');
       }
     } catch (error) {
-      console.error('💥 Error selecting folder:', error);
+      console.error('Error selecting folder:', error);
       this.notificationService.error(`Error selecting folder: ${error}`);
     }
   }
@@ -331,7 +331,7 @@ export class SetUp {
     type: 'read' | 'write' | 'both',
   ): Promise<{ valid: boolean; error?: string }> {
     try {
-      console.log('🌐 Sending validation request to backend...');
+      //console.log('Sending validation request to backend...');
       const apiUrl = await this.settingsService['apiUrlService'].getApiUrl();
       const result = await firstValueFrom(
         this.settingsService['http'].post<{
@@ -342,10 +342,10 @@ export class SetUp {
           error?: string;
         }>(`${apiUrl}/settings/validate-path`, { path, type }),
       );
-      console.log('📥 Received validation response from backend:', result);
+      //console.log('Received validation response from backend:', result);
       return result;
     } catch (error) {
-      console.error('💥 Error validating path:', error);
+      console.error('Error validating path:', error);
       return { valid: false, error: 'Failed to validate path' };
     }
   }
@@ -358,19 +358,19 @@ export class SetUp {
       return; // No validar si está vacío
     }
 
-    console.log('🔍 Validating Base Path on blur:', path);
+    //console.log('Validating Base Path on blur:', path);
 
     const validation = await this.validatePath(path, 'read');
 
     if (!validation.valid) {
-      console.error('❌ Base Path validation failed:', validation.error);
+      console.error('Base Path validation failed:', validation.error);
       this.notificationService.error(
         `Invalid Base Path: ${validation.error}. Please select a folder with read permissions.`,
       );
       // Opcional: revertir al valor anterior
       // this.settingsService.setBasePath(previousValue);
     } else {
-      console.log('✅ Base Path validation passed!');
+      //console.log('Base Path validation passed!');
       this.notificationService.success('Base Path validated successfully');
     }
   }
@@ -383,19 +383,19 @@ export class SetUp {
       return; // No validar si está vacío
     }
 
-    console.log('🔍 Validating Output Path on blur:', path);
+    //console.log('Validating Output Path on blur:', path);
 
     const validation = await this.validatePath(path, 'write');
 
     if (!validation.valid) {
-      console.error('❌ Output Path validation failed:', validation.error);
+      console.error('Output Path validation failed:', validation.error);
       this.notificationService.error(
         `Invalid Output Path: ${validation.error}. Please select a folder with write permissions.`,
       );
       // Opcional: revertir al valor anterior
       // this.settingsService.setOutputPath(previousValue);
     } else {
-      console.log('✅ Output Path validation passed!');
+      //console.log('Output Path validation passed!');
       this.notificationService.success('Output Path validated successfully');
     }
   }
@@ -534,11 +534,11 @@ export class SetUp {
 
       // Validar Base Path antes de guardar
       if (basePathValue) {
-        console.log('🔍 Validating Base Path before save:', basePathValue);
+        //console.log('Validating Base Path before save:', basePathValue);
         const basePathValidation = await this.validatePath(basePathValue, 'read');
 
         if (!basePathValidation.valid) {
-          console.error('❌ Base Path validation failed:', basePathValidation.error);
+          console.error('Base Path validation failed:', basePathValidation.error);
           this.notificationService.error(
             `Cannot save: Invalid Base Path. ${basePathValidation.error}`,
           );
@@ -548,11 +548,11 @@ export class SetUp {
 
       // Validar Output Path antes de guardar
       if (outputPathValue) {
-        console.log('🔍 Validating Output Path before save:', outputPathValue);
+        //console.log('Validating Output Path before save:', outputPathValue);
         const outputPathValidation = await this.validatePath(outputPathValue, 'write');
 
         if (!outputPathValidation.valid) {
-          console.error('❌ Output Path validation failed:', outputPathValidation.error);
+          console.error('Output Path validation failed:', outputPathValidation.error);
           this.notificationService.error(
             `Cannot save: Invalid Output Path. ${outputPathValidation.error}`,
           );
@@ -560,7 +560,7 @@ export class SetUp {
         }
       }
 
-      console.log('✅ All paths validated, saving settings...');
+      //console.log('All paths validated, saving settings...');
 
       // Guardar todo en el backend
       const apiUrl = await this.settingsService['apiUrlService'].getApiUrl();
@@ -588,7 +588,7 @@ export class SetUp {
   }
 
   // ==========================================
-  // 🐍 PRUEBAS DE BIBLIOTECAS PYTHON
+  // PRUEBAS DE BIBLIOTECAS PYTHON
   // ==========================================
 
   /**

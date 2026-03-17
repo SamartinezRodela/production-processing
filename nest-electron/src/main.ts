@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, Menu, shell, dialog } from "electron";
 import * as path from "path";
 import * as http from "http";
 import * as fs from "fs";
+import { exec } from "child_process";
 import { findAvailablePort } from "./port-finder";
 
 let mainWindow: BrowserWindow | null = null;
@@ -275,6 +276,28 @@ ipcMain.handle("get-version", () => {
 });
 
 // ==========================================
+// HANDLER PARA GUARDAR ARCHIVOS JSON
+// ==========================================
+
+ipcMain.handle(
+  "save-json-file",
+  async (_event, filePath: string, data: any) => {
+    try {
+      const fs = require("fs");
+      const pathModule = require("path");
+      //Crear la carpeta si no existe
+      const dir = pathModule.dirname(filePath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
+      return { succeess: true };
+    } catch (error: any) {
+      console.error("[IPC] Error saving JSON:", error);
+      return { success: false, error: error.message };
+    }
+  },
+);
+
+// ==========================================
 // AGREGA TUS IPC HANDLERS PYTHON AQUÍ ⬇
 // ==========================================
 
@@ -284,18 +307,120 @@ ipcMain.handle("get-version", () => {
 //   return ApiClient.pythonTuFuncion(param1, param2);
 // });
 
-ipcMain.handle("python:saludar", async (_event, nombre: string) => {
+ipcMain.handle(
+  "python:saludar",
+  async (_event, nombre: string, token?: string) => {
+    try {
+      console.log("[IPC] python:saludar llamado con:", nombre);
+      const { ApiClient } = require("./api-client");
+      const result = await ApiClient.pythonSaludar(nombre, token);
+      console.log("[IPC] python:saludar resultado:", result);
+      return result;
+    } catch (error: any) {
+      console.error("[IPC] Error en python:saludar:", error);
+      throw new Error(
+        `Error en saludar: ${error.message || JSON.stringify(error)}`,
+      );
+    }
+  },
+);
+
+ipcMain.handle(
+  "shell:show-item-in-folder",
+  async (_event, filePath: string) => {
+    try {
+      console.log("📂 [IPC] show-item-in-folder llamado:", filePath);
+
+      // Verificar que el archivo existe
+      const fs = require("fs");
+      if (!fs.existsSync(filePath)) {
+        console.error("❌ [IPC] Archivo no existe:", filePath);
+        return { success: false, error: "File does not exist" };
+      }
+
+      // Abrir la carpeta que contiene el archivo y seleccionarlo
+      shell.showItemInFolder(filePath);
+
+      console.log("✅ [IPC] Carpeta abierta exitosamente");
+      return { success: true };
+    } catch (error: any) {
+      console.error("❌ [IPC] Error en show-item-in-folder:", error);
+      return { success: false, error: error.message };
+    }
+  },
+);
+
+// Registrar el handler
+ipcMain.handle("python:procesarPDF", async (event, datos) => {
   try {
-    console.log("[IPC] python:saludar llamado con:", nombre);
-    const { ApiClient } = require("./api-client");
-    const result = await ApiClient.pythonSaludar(nombre);
-    console.log("[IPC] python:saludar resultado:", result);
-    return result;
+    console.log("[IPC] python:procesarPDF llamado con:", datos);
+
+    // Construir la ruta correcta del script
+    let scriptPath: string;
+    if (isDev) {
+      // En desarrollo: usar ruta relativa desde el directorio del proyecto
+      scriptPath = path.join(__dirname, "../../nest-files-py/procesar_pdf.py");
+    } else {
+      // En producción: usar ruta desde resources
+      scriptPath = path.join(
+        process.resourcesPath,
+        "nest-files-py",
+        "procesar_pdf.py",
+      );
+    }
+
+    console.log("[IPC] Script path:", scriptPath);
+
+    // Verificar que el archivo existe
+    if (!fs.existsSync(scriptPath)) {
+      console.error("[IPC] Script no encontrado:", scriptPath);
+      return { success: false, error: `Script not found: ${scriptPath}` };
+    }
+
+    // Convertir datos a JSON y escapar comillas
+    const datosJson = JSON.stringify(datos).replace(/"/g, '\\"');
+
+    // Construir comando con rutas entre comillas
+    const command = `py "${scriptPath}" "${datosJson}"`;
+    console.log("[IPC] Ejecutando comando:", command);
+
+    return new Promise((resolve, reject) => {
+      exec(
+        command,
+        { maxBuffer: 1024 * 1024 * 10 },
+        (error, stdout, stderr) => {
+          if (error) {
+            console.error("[IPC] Error ejecutando script:", error.message);
+            console.error("[IPC] stderr:", stderr);
+            resolve({ success: false, error: error.message });
+            return;
+          }
+
+          if (stderr) {
+            console.warn("[IPC] stderr:", stderr);
+          }
+
+          console.log("[IPC] stdout:", stdout);
+
+          try {
+            const result = JSON.parse(stdout);
+            console.log("[IPC] Resultado parseado:", result);
+            resolve(result);
+          } catch (e: any) {
+            console.error("[IPC] Error parseando JSON:", e.message);
+            console.error("[IPC] stdout raw:", stdout);
+            resolve({
+              success: false,
+              error: "Invalid JSON response",
+              raw: stdout,
+            });
+          }
+        },
+      );
+    });
   } catch (error: any) {
-    console.error("[IPC] Error en python:saludar:", error);
-    throw new Error(
-      `Error en saludar: ${error.message || JSON.stringify(error)}`,
-    );
+    console.error("[IPC] Error en python:procesarPDF:", error);
+    return { success: false, error: error.message };
   }
 });
 
@@ -353,11 +478,12 @@ ipcMain.handle(
       autor: string;
       nombre_archivo: string;
     },
+    token?: string,
   ) => {
     try {
       console.log("[IPC] python:generar-pdf llamado con:", datos);
       const { ApiClient } = require("./api-client");
-      const result = await ApiClient.pythonGenerarPDF(datos);
+      const result = await ApiClient.pythonGenerarPDF(datos, token);
       console.log("[IPC] python:generar-pdf resultado:", result);
       return result;
     } catch (error: any) {
@@ -365,6 +491,33 @@ ipcMain.handle(
       throw new Error(
         `Error en generar-pdf: ${error.message || JSON.stringify(error)}`,
       );
+    }
+  },
+);
+
+ipcMain.handle(
+  "python:guardar-pdf-relativo",
+  async (
+    _event,
+    datos: {
+      output_path: string;
+      relative_path: string;
+      input_path: string;
+    },
+    token?: string,
+  ) => {
+    try {
+      console.log("IPC python:guardar-pdf-relativo");
+      const { ApiClient } = require("./api-client");
+      return await ApiClient.pythonGuardarPdfRelativo(datos, token);
+    } catch (error: any) {
+      console.error("[IPC] Error en python:guardar-pdf-relativo:", error);
+
+      // Extraer el error real del backend si viene en formato JSON
+      const backendError = error.data
+        ? JSON.stringify(error.data)
+        : error.message || JSON.stringify(error);
+      throw new Error(`Fallo en el Backend: ${backendError}`);
     }
   },
 );
@@ -380,11 +533,12 @@ ipcMain.handle(
       nombre_archivo: string;
       ruta_salida: string;
     },
+    token?: string,
   ) => {
     try {
       console.log("[IPC] python:generar-pdf llamado con:", datos);
       const { ApiClient } = require("./api-client");
-      const result = await ApiClient.pythonGenerarPathPDF(datos);
+      const result = await ApiClient.pythonGenerarPathPDF(datos, token);
       console.log("[IPC] python:generar-pdf resultado:", result);
 
       return result;

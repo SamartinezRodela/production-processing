@@ -4,7 +4,7 @@ import {
   CreateFacilityDto,
   UpdateFacilityDto,
 } from '../database/dto/create-facility.dto';
-import { Facility } from '../database/entities/facility.entity';
+import { Facility } from '../database/entities/database.entity';
 
 @Injectable()
 export class FacilitiesService {

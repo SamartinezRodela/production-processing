@@ -9,9 +9,12 @@ import {
 import * as fs from 'fs';
 import * as path from 'path';
 import * as chokidar from 'chokidar';
-import { Database, DatabaseSettings } from './entities/database.entity';
-import { Facility } from './entities/facility.entity';
-import { Order } from './entities/order.entity';
+import {
+  Database,
+  DatabaseSettings,
+  Facility,
+  Order,
+} from './entities/database.entity';
 import { DatabaseGateway } from './database.gateway';
 
 @Injectable()
@@ -189,14 +192,14 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
 
         if (fs.existsSync(templatePath)) {
           fs.copyFileSync(templatePath, targetPath);
-          this.logger.log(`✅ Template database copied from: ${templatePath}`);
+          this.logger.log(` Template database copied from: ${templatePath}`);
           return;
         }
       }
 
-      this.logger.log('ℹ️ No template database found, will create default');
+      this.logger.log('ℹNo template database found, will create default');
     } catch (error) {
-      this.logger.warn(`⚠️ Could not copy template database: ${error.message}`);
+      this.logger.warn(`Could not copy template database: ${error.message}`);
     }
   }
 

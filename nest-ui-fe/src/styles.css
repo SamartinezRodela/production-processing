@@ -3,6 +3,13 @@
 /* Configuración de dark mode para Tailwind v4 */
 @variant dark (.dark &);
 
+/* Prevenir scroll horizontal en toda la aplicación */
+html,
+body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
 /* Transición suave para el cambio de tema */
 * {
   transition:

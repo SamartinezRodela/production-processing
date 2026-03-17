@@ -1,0 +1,1420 @@
+# Guía: Diagramas de Flujo del Proyecto
+
+Diagramas visuales que muestran cómo fluye la información en el proyecto.
+
+---
+
+## 🏗️ Arquitectura General
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    ELECTRON (Main)                      │
+│  - Ventana de la aplicación                            │
+│  - Gestión de procesos                                 │
+│  - IPC (Inter-Process Communication)                   │
+└────────────┬────────────────────────────┬───────────────┘
+             │                            │
+             ▼                            ▼
+┌────────────────────────┐    ┌──────────────────────────┐
+│   FRONTEND (Angular)   │    │   BACKEND (NestJS)       │
+│  - UI/UX               │◄───┤  - API REST              │
+│  - Componentes         │    │  - WebSockets            │
+│  - Servicios           │    │  - Lógica de negocio     │
+└────────────────────────┘    └──────────┬───────────────┘
+                                         │
+                                         ▼
+                              ┌──────────────────────────┐
+                              │   PYTHON (Embebido)      │
+                              │  - Scripts .py           │
+                              │  - Ejecutables .exe      │
+                              │  - Procesamiento PDFs    │
+                              └──────────────────────────┘
+```
+
+---
+
+## 📤 Flujo de Subida de Archivos
+
+```
+Usuario arrastra archivo
+         │
+         ▼
+┌────────────────────┐
+│  Drag & Drop       │
+│  (home.component)  │
+└─────────┬──────────┘
+          │
+          ▼
+┌────────────────────┐
+│  onDrop()          │
+│  - Validar archivo │
+│  - Agregar a lista │
+└─────────┬──────────┘
+          │
+          ▼
+┌────────────────────┐
+│  Click "Start"     │
+└─────────┬──────────┘
+          │
+          ▼
+┌────────────────────────────┐
+│  uploadFiles()             │
+│  - Preparar FormData       │
+│  - Llamar API              │
+└─────────┬──────────────────┘
+          │
+          ▼
+┌────────────────────────────┐
+│  POST /files/upload        │
+│  (Backend NestJS)          │
+└─────────┬──────────────────┘
+          │
+          ▼
+┌────────────────────────────┐
+│  Guardar archivos          │
+│  - Validar                 │
+│  - Guardar en disco        │
+└─────────┬──────────────────┘
+          │
+          ▼
+┌────────────────────────────┐
+│  Llamar Python             │
+│  - Ejecutar script         │
+│  - Procesar PDF            │
+└─────────┬──────────────────┘
+          │
+          ▼
+┌────────────────────────────┐
+│  Retornar resultado        │
+│  - JSON con status         │
+│  - Archivos generados      │
+└─────────┬──────────────────┘
+          │
+          ▼
+┌────────────────────────────┐
+│  Mostrar en UI             │
+│  - Actualizar lista        │
+│  - Mostrar notificación    │
+└────────────────────────────┘
+```
+
+## 🐍 Flujo de Ejecución de Python
+
+```
+Frontend solicita ejecutar script
+         │
+         ▼
+┌─────────────────────────────┐
+│  POST /python/execute-file  │
+│  Body: {                    │
+│    fileName: "script.py",   │
+│    args: ["arg1", "arg2"]   │
+│  }                          │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  PythonController           │
+│  - Validar fileName         │
+│  - Validar extensión        │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  PythonService              │
+│  - Detectar tipo (.py/.exe) │
+└─────────┬───────────────────┘
+          │
+          ├─── .py ───┐
+          │           ▼
+          │  ┌────────────────────────┐
+          │  │  executeScript()       │
+          │  │  - Buscar python.exe   │
+          │  │  - Ejecutar con spawn  │
+          │  └────────┬───────────────┘
+          │           │
+          └─── .exe ──┤
+                      ▼
+             ┌────────────────────────┐
+             │  executeExecutable()   │
+             │  - Buscar en /exec/    │
+             │  - Ejecutar directo    │
+             └────────┬───────────────┘
+                      │
+                      ▼
+             ┌────────────────────────┐
+             │  Python/Ejecutable     │
+             │  - Procesar datos      │
+             │  - Retornar JSON       │
+             └────────┬───────────────┘
+                      │
+                      ▼
+             ┌────────────────────────┐
+             │  Parsear resultado     │
+             │  - JSON.parse()        │
+             │  - Manejar errores     │
+             └────────┬───────────────┘
+                      │
+                      ▼
+             ┌────────────────────────┐
+             │  Retornar a Frontend   │
+             │  - Status 200          │
+             │  - Resultado JSON      │
+             └────────────────────────┘
+```
+
+---
+
+## 💾 Flujo de Base de Datos
+
+```
+Usuario modifica settings
+         │
+         ▼
+┌─────────────────────────────┐
+│  PUT /settings              │
+│  Body: {                    │
+│    basePath: "C:\...",      │
+│    outputPath: "C:\..."     │
+│  }                          │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  SettingsController         │
+│  - Validar datos            │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  DatabaseService            │
+│  - Actualizar settings      │
+│  - Guardar database.json    │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Escribir a disco           │
+│  Windows: %APPDATA%/...     │
+│  Mac: ~/Library/...         │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Emitir evento WebSocket    │
+│  Event: 'database-changed'  │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Frontend recibe evento     │
+│  - Recargar settings        │
+│  - Actualizar UI            │
+└─────────────────────────────┘
+```
+
+## 🔄 Flujo de WebSockets (Tiempo Real)
+
+```
+Backend detecta cambio en database.json
+         │
+         ▼
+┌─────────────────────────────┐
+│  File Watcher (Chokidar)    │
+│  - Detecta modificación     │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  DatabaseGateway            │
+│  - Leer database.json       │
+│  - Preparar datos           │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Emitir evento              │
+│  @SubscribeMessage()        │
+│  Event: 'database-changed'  │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  WebSocket Server           │
+│  - Broadcast a clientes     │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Frontend (WebSocketService)│
+│  - Recibir evento           │
+│  - Actualizar signals       │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  UI se actualiza            │
+│  - Reactivo (signals)       │
+│  - Sin recargar página      │
+└─────────────────────────────┘
+```
+
+---
+
+## 🚀 Flujo de Build y Deployment (GitHub Actions) - DETALLADO
+
+### Configuración Inicial de GitHub Actions
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  PASO 1: Crear estructura de carpetas                  │
+├─────────────────────────────────────────────────────────┤
+│  Proyecto/                                              │
+│  └── .github/                                           │
+│      └── workflows/                                     │
+│          ├── build-windows.yml                          │
+│          ├── build-mac.yml                              │
+│          └── build-all-platforms.yml                    │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Ejemplo: build-windows.yml
+
+```yaml
+name: Build Windows
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      # 1. Checkout del código
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+
+      # 3. Setup Python embebido
+      - name: Setup Python Embedded
+        run: |
+          # Descargar Python embebido
+          $pythonUrl = "https://www.python.org/ftp/python/3.13.0/python-3.13.0-embed-amd64.zip"
+          Invoke-WebRequest -Uri $pythonUrl -OutFile "python-embed.zip"
+
+          # Extraer
+          Expand-Archive -Path "python-embed.zip" -DestinationPath "nest-files-py-embedded"
+
+          # Instalar pip
+          cd nest-files-py-embedded
+          Invoke-WebRequest -Uri "https://bootstrap.pypa.io/get-pip.py" -OutFile "get-pip.py"
+          .\python.exe get-pip.py
+
+          # Instalar bibliotecas
+          .\python.exe -m pip install reportlab pypdf pillow
+
+      # 4. Instalar dependencias Backend
+      - name: Install Backend Dependencies
+        run: |
+          cd nest-ui-be
+          npm install
+
+      # 5. Build Backend
+      - name: Build Backend
+        run: |
+          cd nest-ui-be
+          npm run build
+
+      # 6. Instalar dependencias Frontend
+      - name: Install Frontend Dependencies
+        run: |
+          cd nest-ui-fe
+          npm install
+
+      # 7. Build Frontend
+      - name: Build Frontend
+        run: |
+          cd nest-ui-fe
+          npm run build
+
+      # 8. Compilar scripts Python
+      - name: Compile Python Scripts
+        run: |
+          $pythonExe = "nest-files-py-embedded\python.exe"
+          & $pythonExe compile-python-scripts.py
+
+      # 9. Liberar archivos Python
+      - name: Release Python Files
+        run: |
+          Get-Process python* -ErrorAction SilentlyContinue | Stop-Process -Force
+          Start-Sleep -Seconds 5
+
+          for ($i = 1; $i -le 3; $i++) {
+            [System.GC]::Collect()
+            [System.GC]::WaitForPendingFinalizers()
+            Start-Sleep -Seconds 3
+          }
+
+      # 10. Instalar dependencias Electron
+      - name: Install Electron Dependencies
+        run: |
+          cd nest-electron
+          npm install
+
+      # 11. Build Electron
+      - name: Build Electron
+        run: |
+          cd nest-electron
+          npm run build
+
+      # 12. Crear instalador Windows
+      - name: Build Windows Installer
+        run: |
+          cd nest-electron
+          npm run dist:win
+
+      # 13. Upload artifacts
+      - name: Upload Windows Installer
+        uses: actions/upload-artifact@v3
+        with:
+          name: windows-installer
+          path: nest-electron/release/*.exe
+```
+
+### Flujo Visual del Workflow
+
+```
+Developer hace push a main
+         │
+         ▼
+┌─────────────────────────────┐
+│  GitHub detecta push        │
+│  Trigger: on.push.main      │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Iniciar Runner             │
+│  OS: windows-latest         │
+│  Recursos: 2 CPU, 7GB RAM   │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Step 1: Checkout           │
+│  - Clonar repositorio       │
+│  - Branch: main             │
+│  Tiempo: ~5s                │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Step 2: Setup Node.js      │
+│  - Instalar Node 18         │
+│  - Configurar npm           │
+│  Tiempo: ~10s               │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Step 3: Setup Python       │
+│  - Descargar Python embed   │
+│  - Extraer archivos         │
+│  - Instalar pip             │
+│  - Instalar bibliotecas     │
+│  Tiempo: ~2-3 min           │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Step 4-5: Backend          │
+│  - npm install              │
+│  - npm run build            │
+│  Tiempo: ~3-4 min           │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Step 6-7: Frontend         │
+│  - npm install              │
+│  - npm run build            │
+│  Tiempo: ~4-5 min           │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Step 8: Compilar Python    │
+│  - Compilar .py → .pyc      │
+│  - Generar hashes           │
+│  Tiempo: ~30s               │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Step 9: Liberar archivos   │
+│  - Terminar procesos        │
+│  - Garbage collection       │
+│  - Esperar liberación       │
+│  Tiempo: ~30s               │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Step 10-11: Electron       │
+│  - npm install              │
+│  - npm run build            │
+│  Tiempo: ~2-3 min           │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Step 12: Crear Instalador  │
+│  - electron-builder         │
+│  - Empaquetar recursos      │
+│  - Crear .exe               │
+│  Tiempo: ~3-5 min           │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Step 13: Upload Artifact   │
+│  - Subir instalador         │
+│  - Disponible 90 días       │
+│  Tiempo: ~1-2 min           │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  ✅ Build Completo          │
+│  Tiempo total: ~20-25 min   │
+│  Artifact: *.exe            │
+└─────────────────────────────┘
+```
+
+### Ejemplo: build-all-platforms.yml (Multi-plataforma)
+
+```yaml
+name: Build All Platforms
+
+on:
+  push:
+    tags:
+      - "v*" # Trigger en tags como v1.0.0
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      # ... pasos de Windows ...
+
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      # ... pasos de Mac ...
+
+  create-release:
+    needs: [build-windows, build-mac]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+      - name: Download Windows Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: windows-installer
+
+      - name: Download Mac Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: mac-installer
+
+      - name: Upload Release Assets
+        # Subir instaladores al release
+```
+
+### Estructura de Carpetas en GitHub Actions
+
+```
+Runner (Máquina Virtual)
+├── /home/runner/work/
+│   └── NEST-UI-V2/
+│       └── NEST-UI-V2/          # Tu proyecto
+│           ├── nest-ui-be/
+│           ├── nest-ui-fe/
+│           ├── nest-electron/
+│           ├── nest-files-py-embedded/
+│           └── .github/
+│               └── workflows/
+```
+
+### Monitoreo del Build
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  GitHub → Actions → Tu Workflow                         │
+├─────────────────────────────────────────────────────────┤
+│  ✅ Checkout code                    (5s)               │
+│  ✅ Setup Node.js                    (10s)              │
+│  ✅ Setup Python Embedded            (2m 30s)           │
+│  ✅ Install Backend Dependencies     (1m 45s)           │
+│  ✅ Build Backend                    (1m 20s)           │
+│  ✅ Install Frontend Dependencies    (2m 10s)           │
+│  ✅ Build Frontend                   (2m 30s)           │
+│  ✅ Compile Python Scripts           (30s)              │
+│  ✅ Release Python Files             (30s)              │
+│  ✅ Install Electron Dependencies    (1m 15s)           │
+│  ✅ Build Electron                   (45s)              │
+│  🔄 Build Windows Installer          (en progreso...)   │
+│  ⏸️  Upload Windows Installer        (pendiente)        │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Descargar Artifacts
+
+```
+Build completo
+         │
+         ▼
+┌─────────────────────────────┐
+│  Ir a Actions tab           │
+│  en GitHub                  │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Seleccionar workflow run   │
+│  (el más reciente)          │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Scroll hasta Artifacts     │
+│  - windows-installer        │
+│  - mac-installer            │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Click para descargar       │
+│  - Se descarga como .zip    │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Extraer .zip               │
+│  - Contiene el instalador   │
+│  - Listo para distribuir    │
+└─────────────────────────────┘
+```
+
+## 🎯 Flujo de Drag & Drop
+
+```
+Usuario arrastra archivo
+         │
+         ▼
+┌─────────────────────────────┐
+│  dragenter                  │
+│  - onDragEnter()            │
+│  - isDragging = true        │
+│  - Iniciar watchdog (5s)    │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Mostrar animaciones        │
+│  - 5 archivos cayendo       │
+│  - 3 carpetas cayendo       │
+│  - Borde animado            │
+│  - Partículas flotantes     │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  dragover (continuo)        │
+│  - onDragOver()             │
+│  - Cancelar timeout         │
+│  - Mantener isDragging      │
+└─────────┬───────────────────┘
+          │
+          ├─── Sale del área ───┐
+          │                     ▼
+          │        ┌────────────────────────┐
+          │        │  dragleave             │
+          │        │  - onDragLeave()       │
+          │        │  - Timeout 10ms        │
+          │        │  - isDragging = false  │
+          │        └────────────────────────┘
+          │
+          └─── Suelta archivo ──┐
+                                ▼
+                   ┌────────────────────────┐
+                   │  drop                  │
+                   │  - onDrop()            │
+                   │  - Cancelar timeouts   │
+                   │  - isDragging = false  │
+                   └────────┬───────────────┘
+                            │
+                            ▼
+                   ┌────────────────────────┐
+                   │  Procesar archivos     │
+                   │  - Validar tipo        │
+                   │  - Agregar a lista     │
+                   │  - Actualizar UI       │
+                   └────────────────────────┘
+```
+
+---
+
+## 🔐 Flujo de Seguridad (Verificación de Integridad)
+
+```
+Backend inicia
+         │
+         ▼
+┌─────────────────────────────┐
+│  Cargar python-hashes.json  │
+│  - Leer archivo             │
+│  - Parsear JSON             │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  ¿Archivo existe?           │
+└─────────┬───────────────────┘
+          │
+          ├─── NO ────┐
+          │           ▼
+          │  ┌────────────────────────┐
+          │  │  Modo sin verificación │
+          │  │  - Permitir ejecución  │
+          │  │  - Log warning         │
+          │  └────────────────────────┘
+          │
+          └─── SÍ ───┐
+                     ▼
+            ┌────────────────────────┐
+            │  Modo con verificación │
+            │  - Cargar hashes       │
+            └────────┬───────────────┘
+                     │
+                     ▼
+            ┌────────────────────────┐
+            │  Ejecutar script       │
+            └────────┬───────────────┘
+                     │
+                     ▼
+            ┌────────────────────────┐
+            │  Verificar integridad  │
+            │  - Calcular hash       │
+            │  - Comparar con lista  │
+            └────────┬───────────────┘
+                     │
+                     ├─── Hash OK ────┐
+                     │                ▼
+                     │       ┌────────────────┐
+                     │       │  Ejecutar      │
+                     │       │  - Permitir    │
+                     │       └────────────────┘
+                     │
+                     └─── Hash FAIL ──┐
+                                      ▼
+                             ┌────────────────┐
+                             │  Rechazar      │
+                             │  - Error 403   │
+                             │  - Log error   │
+                             └────────────────┘
+```
+
+## 📦 Flujo de Empaquetado (Electron Builder)
+
+```
+npm run dist:win
+         │
+         ▼
+┌─────────────────────────────┐
+│  Electron Builder inicia    │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Compilar TypeScript        │
+│  - main.ts → main.js        │
+│  - preload.ts → preload.js  │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Empaquetar app.asar        │
+│  - Comprimir archivos       │
+│  - Incluir node_modules     │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Copiar extraResources      │
+│  - Frontend (dist/)         │
+│  - Backend (dist/)          │
+│  - Python (embebido)        │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  ¿Usar afterPack hook?      │
+└─────────┬───────────────────┘
+          │
+          ├─── NO ────┐
+          │           ▼
+          │  ┌────────────────────────┐
+          │  │  Copiar Python ahora   │
+          │  │  - Puede causar EBUSY  │
+          │  └────────────────────────┘
+          │
+          └─── SÍ ───┐
+                     ▼
+            ┌────────────────────────┐
+            │  Build completo        │
+            └────────┬───────────────┘
+                     │
+                     ▼
+            ┌────────────────────────┐
+            │  afterPack hook        │
+            │  - Esperar 15s         │
+            │  - Copiar Python       │
+            │  - Reintentos (5x)     │
+            └────────┬───────────────┘
+                     │
+                     ▼
+            ┌────────────────────────┐
+            │  Crear instalador      │
+            │  - NSIS (Windows)      │
+            │  - DMG (Mac)           │
+            └────────┬───────────────┘
+                     │
+                     ▼
+            ┌────────────────────────┐
+            │  Instalador listo      │
+            │  - release/*.exe       │
+            │  - release/*.dmg       │
+            └────────────────────────┘
+```
+
+---
+
+## 🌐 Flujo de Comunicación Frontend-Backend
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                      FRONTEND                            │
+│                                                          │
+│  ┌────────────┐    ┌────────────┐    ┌────────────┐   │
+│  │ Component  │───▶│  Service   │───▶│ HTTP/WS    │   │
+│  │            │    │            │    │ Client     │   │
+│  └────────────┘    └────────────┘    └──────┬─────┘   │
+│                                              │          │
+└──────────────────────────────────────────────┼──────────┘
+                                               │
+                                               │ HTTP/WebSocket
+                                               │
+┌──────────────────────────────────────────────┼──────────┐
+│                      BACKEND                 │          │
+│                                              ▼          │
+│  ┌────────────┐    ┌────────────┐    ┌────────────┐   │
+│  │ Controller │◀───│  Service   │◀───│  Gateway   │   │
+│  │            │    │            │    │ (WebSocket)│   │
+│  └──────┬─────┘    └──────┬─────┘    └────────────┘   │
+│         │                 │                            │
+│         │                 ▼                            │
+│         │          ┌────────────┐                      │
+│         │          │  Database  │                      │
+│         │          │  Service   │                      │
+│         │          └────────────┘                      │
+│         │                                              │
+│         ▼                                              │
+│  ┌────────────┐                                        │
+│  │  Python    │                                        │
+│  │  Service   │                                        │
+│  └──────┬─────┘                                        │
+│         │                                              │
+└─────────┼──────────────────────────────────────────────┘
+          │
+          ▼
+┌─────────────────┐
+│  Python Script  │
+│  - Procesar     │
+│  - Retornar     │
+└─────────────────┘
+```
+
+## 🔄 Flujo de Desarrollo (Dev Mode) - DETALLADO
+
+### Requisitos Previos
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  REQUISITOS PARA DESARROLLO                             │
+├─────────────────────────────────────────────────────────┤
+│  ✅ Node.js 18+ instalado                               │
+│  ✅ npm 9+ instalado                                    │
+│  ✅ Python 3.11+ instalado (para scripts)               │
+│  ✅ Git instalado                                       │
+│  ✅ Editor de código (VSCode recomendado)               │
+│  ✅ Terminal (PowerShell/Bash)                          │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Paso 1: Clonar y Configurar
+
+```
+git clone https://github.com/tu-usuario/NEST-UI-V2.git
+         │
+         ▼
+┌─────────────────────────────┐
+│  cd NEST-UI-V2              │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Instalar dependencias      │
+│  en cada proyecto           │
+└─────────┬───────────────────┘
+          │
+          ├─── Backend ───┐
+          │               ▼
+          │  ┌────────────────────────┐
+          │  │  cd nest-ui-be         │
+          │  │  npm install           │
+          │  │  Tiempo: ~2-3 min      │
+          │  └────────────────────────┘
+          │
+          ├─── Frontend ──┐
+          │               ▼
+          │  ┌────────────────────────┐
+          │  │  cd nest-ui-fe         │
+          │  │  npm install           │
+          │  │  Tiempo: ~3-4 min      │
+          │  └────────────────────────┘
+          │
+          └─── Electron ──┐
+                          ▼
+             ┌────────────────────────┐
+             │  cd nest-electron      │
+             │  npm install           │
+             │  Tiempo: ~2-3 min      │
+             └────────────────────────┘
+```
+
+### Paso 2: Configurar Python Embebido (Opcional)
+
+```
+┌─────────────────────────────┐
+│  ¿Necesitas Python?         │
+└─────────┬───────────────────┘
+          │
+          ├─── NO ────┐
+          │           ▼
+          │  ┌────────────────────────┐
+          │  │  Saltar este paso      │
+          │  └────────────────────────┘
+          │
+          └─── SÍ ───┐
+                     ▼
+            ┌────────────────────────┐
+            │  Descargar Python      │
+            │  embebido              │
+            └────────┬───────────────┘
+                     │
+                     ▼
+            ┌────────────────────────┐
+            │  Extraer en:           │
+            │  nest-files-py-embedded│
+            └────────┬───────────────┘
+                     │
+                     ▼
+            ┌────────────────────────┐
+            │  Instalar bibliotecas  │
+            │  pip install reportlab │
+            │  pip install pypdf     │
+            │  pip install pillow    │
+            └────────────────────────┘
+```
+
+### Paso 3: Ejecutar en Desarrollo
+
+```
+Developer ejecuta start-dev.ps1
+         │
+         ▼
+┌─────────────────────────────┐
+│  Verificar dependencias     │
+│  - node_modules existen?    │
+└─────────┬───────────────────┘
+          │
+          ├─── NO ────┐
+          │           ▼
+          │  ┌────────────────────────┐
+          │  │  npm install (todos)   │
+          │  │  Tiempo: ~8-10 min     │
+          │  └────────────────────────┘
+          │
+          └─── SÍ ───┐
+                     ▼
+            ┌────────────────────────┐
+            │  Abrir 3 terminales    │
+            └────────┬───────────────┘
+                     │
+                     ├─── Terminal 1 ───┐
+                     │                  ▼
+                     │     ┌────────────────────────┐
+                     │     │  Backend (NestJS)      │
+                     │     │  cd nest-ui-be         │
+                     │     │  npm run start:dev     │
+                     │     │  Puerto: 3000          │
+                     │     │  Hot reload: ✅        │
+                     │     │  Tiempo inicio: ~10s   │
+                     │     └────────────────────────┘
+                     │
+                     ├─── Terminal 2 ───┐
+                     │                  ▼
+                     │     ┌────────────────────────┐
+                     │     │  Frontend (Angular)    │
+                     │     │  cd nest-ui-fe         │
+                     │     │  npm start             │
+                     │     │  Puerto: 4200          │
+                     │     │  Hot reload: ✅        │
+                     │     │  Tiempo inicio: ~30s   │
+                     │     └────────────────────────┘
+                     │
+                     └─── Terminal 3 ───┐
+                                        ▼
+                           ┌────────────────────────┐
+                           │  Electron              │
+                           │  cd nest-electron      │
+                           │  npm run dev           │
+                           │  Ventana app           │
+                           │  DevTools: F12         │
+                           │  Tiempo inicio: ~5s    │
+                           └────────────────────────┘
+```
+
+### Comandos Manuales (Alternativa)
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  TERMINAL 1 - Backend                                   │
+├─────────────────────────────────────────────────────────┤
+│  cd nest-ui-be                                          │
+│  npm run start:dev                                      │
+│                                                         │
+│  Verás:                                                 │
+│  [Nest] LOG [NestFactory] Starting Nest application... │
+│  [Nest] LOG [InstanceLoader] AppModule dependencies... │
+│  [Nest] LOG Application is running on: http://...3000  │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│  TERMINAL 2 - Frontend                                  │
+├─────────────────────────────────────────────────────────┤
+│  cd nest-ui-fe                                          │
+│  npm start                                              │
+│                                                         │
+│  Verás:                                                 │
+│  ✔ Browser application bundle generation complete.     │
+│  ** Angular Live Development Server is listening on... │
+│  ** Open your browser on http://localhost:4200/        │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│  TERMINAL 3 - Electron                                  │
+├─────────────────────────────────────────────────────────┤
+│  cd nest-electron                                       │
+│  npm run build    # Primera vez o después de cambios   │
+│  npm run dev                                            │
+│                                                         │
+│  Verás:                                                 │
+│  Electron app abriendo...                              │
+│  Ventana de la aplicación se muestra                   │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Verificación de que Todo Funciona
+
+```
+┌─────────────────────────────┐
+│  Backend corriendo?         │
+│  http://localhost:3000      │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Frontend corriendo?        │
+│  http://localhost:4200      │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Electron abierto?          │
+│  Ventana visible            │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  ✅ Todo listo!             │
+│  Puedes empezar a           │
+│  desarrollar                │
+└─────────────────────────────┘
+```
+
+---
+
+## 📊 Flujo de Procesamiento de PDFs
+
+```
+Usuario sube archivos PDF
+         │
+         ▼
+┌─────────────────────────────┐
+│  Frontend valida archivos   │
+│  - Tipo: .pdf               │
+│  - Tamaño: < 10MB           │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  POST /files/upload         │
+│  - FormData con archivos    │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Backend guarda archivos    │
+│  - Carpeta temporal         │
+│  - Validar integridad       │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Llamar script Python       │
+│  procesar_pdf.py            │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Python procesa PDF         │
+│  1. Leer PDF (PyMuPDF)      │
+│  2. Extraer datos           │
+│  3. Aplicar template        │
+│  4. Generar nuevo PDF       │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Guardar resultado          │
+│  - Carpeta output           │
+│  - Nombre con timestamp     │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Retornar a Frontend        │
+│  - Ruta del archivo         │
+│  - Metadata                 │
+│  - Status                   │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Mostrar resultado en UI    │
+│  - Link de descarga         │
+│  - Preview (opcional)       │
+│  - Notificación éxito       │
+└─────────────────────────────┘
+```
+
+## 🎨 Flujo de Temas (Dark/Light Mode)
+
+```
+Usuario cambia tema
+         │
+         ▼
+┌─────────────────────────────┐
+│  ThemeService.toggleTheme() │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Actualizar signal          │
+│  currentTheme.set('dark')   │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Guardar en localStorage    │
+│  key: 'theme'               │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Aplicar clase al body      │
+│  document.body.classList    │
+│  .add('dark')               │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  CSS se actualiza           │
+│  - Variables CSS cambian    │
+│  - Colores se actualizan    │
+│  - Transición suave         │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Guardar en backend         │
+│  PUT /settings              │
+│  { theme: 'dark' }          │
+└─────────────────────────────┘
+```
+
+---
+
+## 🔍 Flujo de Búsqueda y Filtrado
+
+```
+Usuario escribe en búsqueda
+         │
+         ▼
+┌─────────────────────────────┐
+│  Input change event         │
+│  (input)="onSearch($event)" │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Actualizar signal          │
+│  searchTerm.set(value)      │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Computed signal filtra     │
+│  filteredItems = computed() │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  Aplicar filtros            │
+│  - Por nombre               │
+│  - Por fecha                │
+│  - Por status               │
+└─────────┬───────────────────┘
+          │
+          ▼
+┌─────────────────────────────┐
+│  UI se actualiza            │
+│  - Reactivo automático      │
+│  - Sin re-render manual     │
+└─────────────────────────────┘
+```
+
+---
+
+## 📝 Leyenda de Símbolos
+
+```
+┌─────────┐
+│ Proceso │  - Acción o proceso
+└─────────┘
+
+    │
+    ▼        - Flujo de datos
+
+    ├───     - Decisión/Bifurcación
+
+◄───┤        - Comunicación bidireccional
+
+[Texto]      - Nota o comentario
+
+✅           - Paso completado
+🔄           - En progreso
+⏸️           - Pendiente
+❌           - Error
+⚠️           - Advertencia
+```
+
+---
+
+## 🛠️ Troubleshooting Común
+
+### Desarrollo Local
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  PROBLEMA: Backend no inicia                            │
+├─────────────────────────────────────────────────────────┤
+│  Error: "Cannot find module..."                         │
+│                                                         │
+│  Solución:                                              │
+│  1. cd nest-ui-be                                       │
+│  2. rm -rf node_modules                                 │
+│  3. npm install                                         │
+│  4. npm run start:dev                                   │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│  PROBLEMA: Frontend no compila                          │
+├─────────────────────────────────────────────────────────┤
+│  Error: "Module not found..."                           │
+│                                                         │
+│  Solución:                                              │
+│  1. cd nest-ui-fe                                       │
+│  2. rm -rf node_modules .angular                        │
+│  3. npm install                                         │
+│  4. npm start                                           │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│  PROBLEMA: Puerto ya en uso                             │
+├─────────────────────────────────────────────────────────┤
+│  Error: "Port 3000 is already in use"                   │
+│                                                         │
+│  Solución Windows:                                      │
+│  netstat -ano | findstr :3000                           │
+│  taskkill /PID [número] /F                              │
+│                                                         │
+│  Solución Mac/Linux:                                    │
+│  lsof -ti:3000 | xargs kill -9                          │
+└─────────────────────────────────────────────────────────┘
+```
+
+### GitHub Actions
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  PROBLEMA: Build falla en Python                        │
+├─────────────────────────────────────────────────────────┤
+│  Error: "EBUSY: resource busy or locked"                │
+│                                                         │
+│  Solución:                                              │
+│  - Agregar paso de liberación de archivos               │
+│  - Usar afterPack hook                                  │
+│  - Ver: SOLUCION-ERROR-EBUSY.md                         │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│  PROBLEMA: Artifact muy grande                          │
+├─────────────────────────────────────────────────────────┤
+│  Warning: "Artifact size exceeds limit"                 │
+│                                                         │
+│  Solución:                                              │
+│  - Excluir archivos innecesarios en package.json        │
+│  - Comprimir antes de subir                             │
+│  - Dividir en múltiples artifacts                       │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│  PROBLEMA: Timeout en build                             │
+├─────────────────────────────────────────────────────────┤
+│  Error: "The job running on runner... has exceeded..."  │
+│                                                         │
+│  Solución:                                              │
+│  - Agregar timeout-minutes: 60 al job                   │
+│  - Optimizar pasos lentos                               │
+│  - Usar caché para node_modules                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 💡 Tips y Mejores Prácticas
+
+### Desarrollo
+
+```
+✅ Usar start-dev.ps1 para iniciar todo de una vez
+✅ Mantener las 3 terminales abiertas mientras desarrollas
+✅ Hot reload está activo, los cambios se reflejan automáticamente
+✅ Usar F12 en Electron para abrir DevTools
+✅ Revisar logs en las terminales para errores
+```
+
+### GitHub Actions
+
+```
+✅ Usar caché para node_modules (ahorra ~2-3 min por build)
+✅ Ejecutar builds solo en main/tags, no en todas las ramas
+✅ Usar secrets para información sensible
+✅ Probar workflows localmente con act (https://github.com/nektos/act)
+✅ Mantener workflows simples y modulares
+```
+
+### Ejemplo de Caché en GitHub Actions
+
+```yaml
+- name: Cache Node Modules
+  uses: actions/cache@v3
+  with:
+    path: |
+      nest-ui-be/node_modules
+      nest-ui-fe/node_modules
+      nest-electron/node_modules
+    key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+    restore-keys: |
+      ${{ runner.os }}-node-
+```
+
+---
+
+## 🎯 Casos de Uso Principales
+
+### 1. Subir y Procesar Archivos
+
+- Usuario → Drag & Drop → Backend → Python → Resultado
+
+### 2. Configurar Settings
+
+- Usuario → Form → Backend → Database → WebSocket → UI
+
+### 3. Ver Resultados en Tiempo Real
+
+- Backend → File Watcher → WebSocket → Frontend → UI
+
+### 4. Ejecutar Script Python
+
+- Frontend → API → Python Service → Python Script → Resultado
+
+### 5. Cambiar Tema
+
+- Usuario → Theme Service → LocalStorage → CSS → Backend
+
+---
+
+## 📚 Referencias
+
+- **Arquitectura**: Ver `GUIA-ESTRUCTURA-PROYECTO.md`
+- **Python**: Ver `GUIA-PYTHON-EMBEBIDO-SIN-INSTALACION.md`
+- **WebSockets**: Ver `GUIA-WEBSOCKETS-TIEMPO-REAL.md`
+- **Drag & Drop**: Ver `GUIA-DRAG-DROP-COMPLETA.md`
+- **Build**: Ver `GUIA-PRODUCCION-ELECTRON.md`
+
+---
+
+**Fecha**: Marzo 2026  
+**Versión**: 1.0.0

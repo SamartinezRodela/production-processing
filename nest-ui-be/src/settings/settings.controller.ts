@@ -1,7 +1,11 @@
-import { Controller, Get, Put, Post, Body } from '@nestjs/common';
+import { Controller, Get, Put, Post, Body, UseGuards } from '@nestjs/common';
 import { SettingsService } from './settings.service';
-import { DatabaseSettings } from '../database/entities/database.entity';
 import { DatabaseService } from '../database/database.service';
+import {
+  UpdateSettingsDto,
+  ValidatePathDto,
+} from '../database/dto/update-settings.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('settings')
 export class SettingsController {
@@ -10,35 +14,43 @@ export class SettingsController {
     private readonly databaseService: DatabaseService,
   ) {}
 
-  @Get()
-  getSettings() {
-    return this.settingsService.getSettings();
-  }
-
+  // Ruta pública - necesaria antes del login
   @Get('default')
   getDefaultSettings() {
     return this.settingsService.getDefaultSettings();
   }
 
+  // Rutas protegidas
+  @UseGuards(JwtAuthGuard)
+  @Get()
+  getSettings() {
+    return this.settingsService.getSettings();
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get('database-info')
   getDatabaseInfo() {
     return this.databaseService.getDatabaseInfo();
   }
 
+  @UseGuards(JwtAuthGuard)
   @Put()
-  updateSettings(@Body() updates: Partial<DatabaseSettings>) {
-    return this.settingsService.updateSettings(updates);
+  updateSettings(@Body() updateSettingsDto: UpdateSettingsDto) {
+    return this.settingsService.updateSettings(updateSettingsDto);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post('reset')
   resetToDefault() {
     return this.settingsService.resetToDefault();
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post('validate-path')
-  validatePath(
-    @Body() body: { path: string; type: 'read' | 'write' | 'both' },
-  ) {
-    return this.settingsService.validatePath(body.path, body.type);
+  validatePath(@Body() validatePathDto: ValidatePathDto) {
+    return this.settingsService.validatePath(
+      validatePathDto.path,
+      validatePathDto.type,
+    );
   }
 }

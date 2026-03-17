@@ -11,10 +11,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
@@ -22,11 +22,6 @@ jobs:
             nest-ui-fe/package-lock.json
             nest-ui-be/package-lock.json
             nest-electron/package-lock.json
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
 
       - name: Prepare Python Embedded for Mac
         run: |
@@ -79,6 +74,9 @@ jobs:
           else
             echo "⚠️ Carpeta nest-files-py no encontrada"
           fi
+
+          # Crear carpeta executables
+          mkdir -p executables
 
           cd ..
           echo "✅ Python standalone portable listo"
@@ -156,6 +154,9 @@ jobs:
       - name: Build Backend
         working-directory: nest-ui-be
         run: npm run build
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_EXPIRATION: "12h"
 
       - name: Install Electron dependencies
         working-directory: nest-electron
@@ -171,6 +172,10 @@ jobs:
           echo "📦 Usando electron-packager (sin firma)..."
           npm run dist:mac-simple
           echo "✅ App creada exitosamente"
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_EXPIRATION: "12h"
+          NODE_ENV: "production"
 
       - name: Copy resources to Mac App
         run: |
@@ -180,24 +185,63 @@ jobs:
           APP_PATH=$(find nest-electron/release -name "Production Processing-darwin-*" -type d | head -n 1)
           echo "App path: $APP_PATH"
 
+          RESOURCES_DIR="$APP_PATH/Production Processing.app/Contents/Resources"
+
           # Copiar frontend
-          cp -r nest-ui-fe/dist/nest-ui-fe/browser "$APP_PATH/Production Processing.app/Contents/Resources/frontend"
+          cp -r nest-ui-fe/dist/nest-ui-fe/browser "$RESOURCES_DIR/frontend"
+          echo "✅ Frontend copiado"
 
           # Copiar backend
-          mkdir -p "$APP_PATH/Production Processing.app/Contents/Resources/backend"
-          cp -r nest-ui-be/dist "$APP_PATH/Production Processing.app/Contents/Resources/backend/"
-          cp -r nest-ui-be/node_modules "$APP_PATH/Production Processing.app/Contents/Resources/backend/"
-          cp nest-ui-be/package.json "$APP_PATH/Production Processing.app/Contents/Resources/backend/"
+          mkdir -p "$RESOURCES_DIR/backend"
+          cp -r nest-ui-be/dist "$RESOURCES_DIR/backend/"
+          cp -r nest-ui-be/node_modules "$RESOURCES_DIR/backend/"
+          cp nest-ui-be/package.json "$RESOURCES_DIR/backend/"
+          echo "✅ Backend copiado"
+
+          # Copiar carpeta data del backend (base de datos JSON, etc.)
+          if [ -d "nest-ui-be/data" ]; then
+            cp -r nest-ui-be/data "$RESOURCES_DIR/backend/data"
+            echo "✅ Carpeta data del backend copiada"
+          else
+            echo "⚠️ Carpeta data del backend no encontrada, creando vacía..."
+            mkdir -p "$RESOURCES_DIR/backend/data"
+          fi
+
+          # Copiar python-hashes.json al backend (verificación de integridad)
+          if [ -f "python-hashes.json" ]; then
+            cp python-hashes.json "$RESOURCES_DIR/backend/python-hashes.json"
+            echo "✅ python-hashes.json copiado al backend"
+          else
+            echo "⚠️ python-hashes.json no encontrado"
+          fi
+
+          # Crear archivo .env para JWT en producción
+          echo "Creando .env para backend en producción..."
+          JWT_SECRET="${JWT_SECRET:-default-secret-change-in-production-min-32-chars}"
+          JWT_EXPIRATION="${JWT_EXPIRATION:-12h}"
+          cat > "$RESOURCES_DIR/backend/.env" << EOF
+          # JWT Configuration
+          JWT_SECRET=${JWT_SECRET}
+          JWT_EXPIRATION=${JWT_EXPIRATION}
+
+          # Application
+          NODE_ENV=production
+          PORT=3000
+          EOF
+          echo "✅ .env creado para backend"
 
           # Copiar Python embebido
           if [ -d "nest-files-py-embedded-mac" ]; then
-            cp -r nest-files-py-embedded-mac "$APP_PATH/Production Processing.app/Contents/Resources/python"
+            cp -r nest-files-py-embedded-mac "$RESOURCES_DIR/python"
             echo "✅ Python embebido copiado"
           else
             echo "⚠️ Python embebido no encontrado"
           fi
 
-          echo "✅ Recursos copiados"
+          echo "✅ Todos los recursos copiados"
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_EXPIRATION: "12h"
 
       - name: Compress Mac App
         run: |

@@ -196,6 +196,9 @@ jobs:
       - name: Build Backend
         working-directory: nest-ui-be
         run: npm run build
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_EXPIRATION: "12h"
 
       - name: Build Frontend
         working-directory: nest-ui-fe
@@ -290,6 +293,9 @@ jobs:
           }
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_EXPIRATION: "12h"
+          NODE_ENV: "production"
         shell: pwsh
 
       - name: Upload Windows Installer

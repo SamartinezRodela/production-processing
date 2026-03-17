@@ -1,5 +1,5 @@
-/* Usar los mismos estilos base que home.css */
-@import '../home/home.css';
+/* Importar estilos base compartidos */
+@import '../shared-page-styles.css';
 
 /* Estilos específicos para Settings */
 
@@ -69,22 +69,6 @@ label.group:hover {
   margin-right: -0.5rem;
 }
 
-/* Animación de entrada */
-.bg-white {
-  animation: fadeIn 0.2s ease-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 /* Botones con iconos */
 button app-icon {
   transition: transform 0.2s ease;
@@ -92,14 +76,4 @@ button app-icon {
 
 button:hover:not(:disabled) app-icon {
   transform: scale(1.1);
-}
-
-/* Disabled state */
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-button:disabled:hover {
-  background-color: inherit;
 }

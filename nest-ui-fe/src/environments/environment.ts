@@ -25,7 +25,7 @@ export const environment = {
 
   //Limites
   limits: {
-    maxFileSize: 10 * 1024 * 1024, //10 MB
+    maxFileSize: 5 * 1024 * 1024 * 1024, // 5 GB (según requisitos)
     maxFiles: 100,
   },
 };

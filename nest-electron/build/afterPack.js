@@ -10,12 +10,50 @@ const path = require("path");
 exports.default = async function (context) {
   console.log("");
   console.log("============================================================");
-  console.log("AFTERPACK HOOK: Copiando archivos Python");
+  console.log("AFTERPACK HOOK: Copiando archivos Python y configurando JWT");
   console.log("============================================================");
   console.log("");
 
   const platform = context.electronPlatformName;
   console.log(`Platform: ${platform}`);
+
+  // ==========================================
+  // 1. CREAR ARCHIVO .env PARA BACKEND
+  // ==========================================
+  console.log("");
+  console.log("Creating .env file for backend...");
+
+  const backendPath = path.join(context.appOutDir, "resources/backend");
+  await fs.ensureDir(backendPath);
+
+  const jwtSecret =
+    process.env.JWT_SECRET ||
+    "default-secret-change-in-production-min-32-chars";
+  const jwtExpiration = process.env.JWT_EXPIRATION || "12h";
+  const nodeEnv = process.env.NODE_ENV || "production";
+
+  const envContent = `# JWT Configuration
+JWT_SECRET=${jwtSecret}
+JWT_EXPIRATION=${jwtExpiration}
+
+# Application
+NODE_ENV=${nodeEnv}
+PORT=3000
+`;
+
+  const envPath = path.join(backendPath, ".env");
+  await fs.writeFile(envPath, envContent, "utf-8");
+
+  console.log(`[OK] .env file created at: ${envPath}`);
+  console.log(
+    `JWT_SECRET: ${jwtSecret.substring(0, 10)}... (${jwtSecret.length} chars)`,
+  );
+  console.log(`JWT_EXPIRATION: ${jwtExpiration}`);
+  console.log("");
+
+  // ==========================================
+  // 2. COPIAR ARCHIVOS PYTHON
+  // ==========================================
 
   // Determinar rutas según la plataforma
   let pythonSource, pythonDest;
