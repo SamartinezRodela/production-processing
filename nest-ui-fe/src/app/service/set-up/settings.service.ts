@@ -31,8 +31,6 @@ export interface BackendSettings {
   providedIn: 'root',
 })
 export class SettingsService {
-  private readonly SETTINGS_KEY = 'appSettings';
-
   //Settings signals
   operatingSystem = signal<'windows' | 'macos'>('windows');
   basePath = signal(environment.paths.windows);
@@ -60,50 +58,12 @@ export class SettingsService {
       this.autoSave.set(settings.autoSave);
       this.notifications.set(settings.notifications);
 
-      // Limpiar localStorage viejo (migración)
-      this.migrateFromLocalStorage();
-
       // console.log('Settings loaded from backend:', settings);
       return settings;
     } catch (error) {
       console.error('Error loading settings from backend:', error);
       return null;
     }
-  }
-
-  /**
-   * Migra datos del localStorage viejo y lo limpia
-   */
-  private migrateFromLocalStorage(): void {
-    const oldSettings = this.getSettings();
-    if (oldSettings) {
-      // Guardar solo preferencias locales
-      const preferences = {
-        theme: oldSettings.theme,
-        autoSave: oldSettings.autoSave,
-        notifications: oldSettings.notifications,
-      };
-      localStorage.setItem('appPreferences', JSON.stringify(preferences));
-
-      // Eliminar el localStorage viejo
-      localStorage.removeItem(this.SETTINGS_KEY);
-      //console.log('Migrated from old localStorage and cleaned up');
-    }
-  }
-
-  /**
-   * Obtiene settings desde localStorage (fallback)
-   */
-  getSettings(): AppSettings | null {
-    const settingsStr = localStorage.getItem(this.SETTINGS_KEY);
-    if (settingsStr) {
-      try {
-        return JSON.parse(settingsStr);
-      } catch (e) {
-        console.error('Error parsing settings:', e);
-      }
-    }
-    return null;
   }
 
   getBasePath(): string {
@@ -135,13 +95,6 @@ export class SettingsService {
     }
   }
 
-  loadSettings(): AppSettings | null {
-    // DEPRECATED: Este método ya no debe usarse
-    // Usar loadSettingsFromBackend() en su lugar
-    console.warn(' loadSettings() is deprecated. Use loadSettingsFromBackend() instead.');
-    return this.getSettings();
-  }
-
   setOperatingSystem(os: 'windows' | 'macos'): void {
     this.operatingSystem.set(os);
 
@@ -168,9 +121,5 @@ export class SettingsService {
     this.outputPath.set('C:\\Output');
     this.autoSave.set(false);
     this.notifications.set(true);
-  }
-
-  clearSettings(): void {
-    localStorage.removeItem(this.SETTINGS_KEY);
   }
 }

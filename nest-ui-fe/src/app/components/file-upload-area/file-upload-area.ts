@@ -1,10 +1,11 @@
 // nest-ui-fe/src/app/components/file-upload-area/file-upload-area.ts
-import { Component, input, output, signal, computed } from '@angular/core';
+import { Component, input, output, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Button } from '@shared/button/button';
 import { Icon } from '@shared/icon/icon';
 import { Badge } from '@shared/badge/badge';
+import { LanguageService } from '@services/language.service';
 
 interface IndexedFile {
   file: File;
@@ -18,6 +19,8 @@ interface IndexedFile {
   styleUrl: './file-upload-area.css',
 })
 export class FileUploadArea {
+  languageService = inject(LanguageService);
+
   // Inputs
   selectedFiles = input.required<File[]>();
   isDragging = input.required<boolean>();

@@ -34,7 +34,7 @@
     </div>
     <div class="flex items-center gap-2">
       <app-button
-        [label]="'Export JSON'"
+        [label]="languageService.t().TABLE.EXPORT"
         [variant]="'white'"
         [size]="'sm'"
         [icon]="'download'"
@@ -45,7 +45,7 @@
         [customClass]="'text-xs'"
       />
       <app-button
-        [label]="'Clear All'"
+        [label]="languageService.t().TABLE.CLEAR"
         [variant]="'ghost'"
         [size]="'sm'"
         [icon]="'trash'"
@@ -351,7 +351,7 @@
                       class="text-blue-600 dark:text-blue-400"
                     />
                   </div>
-                  <span>File Name</span>
+                  <span>{{ languageService.t().TABLE.FILE_NAME }}</span>
                 </div>
               </th>
               <th
@@ -367,7 +367,7 @@
                       class="text-purple-600 dark:text-purple-400"
                     />
                   </div>
-                  <span>Style</span>
+                  <span>{{ languageService.t().TABLE.STYLE }}</span>
                 </div>
               </th>
               <th
@@ -383,7 +383,7 @@
                       class="text-orange-600 dark:text-orange-400"
                     />
                   </div>
-                  <span>Size</span>
+                  <span>{{ languageService.t().TABLE.SIZE }}</span>
                 </div>
               </th>
 
@@ -400,7 +400,7 @@
                       class="text-green-600 dark:text-green-400"
                     />
                   </div>
-                  <span>Relative Path</span>
+                  <span>{{ languageService.t().TABLE.RELATIVE_PATH }}</span>
                 </div>
               </th>
 
@@ -417,7 +417,7 @@
                       class="text-cyan-600 dark:text-cyan-400"
                     />
                   </div>
-                  <span>Short Path</span>
+                  <span>{{ languageService.t().TABLE.SHORT_PATH }}</span>
                 </div>
               </th>
 
@@ -434,7 +434,7 @@
                       class="text-indigo-600 dark:text-indigo-400"
                     />
                   </div>
-                  <span>Input Root</span>
+                  <span>{{ languageService.t().TABLE.INPUT_ROOT }}</span>
                 </div>
               </th>
               <th
@@ -450,7 +450,7 @@
                       class="text-emerald-600 dark:text-emerald-400"
                     />
                   </div>
-                  <span>Status</span>
+                  <span>{{ languageService.t().TABLE.STATUS }}</span>
                 </div>
               </th>
             </tr>

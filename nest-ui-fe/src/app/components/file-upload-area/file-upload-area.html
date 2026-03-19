@@ -72,7 +72,7 @@
           <div class="flex items-center gap-2">
             <div class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
             <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Files ready to process
+              {{ languageService.t().UPLOAD.FILES_READY }}
             </span>
             <!-- Badge con contador de archivos -->
             <app-badge [label]="validFilesCount().toString()" [variant]="'primary'" [size]="'md'" />
@@ -141,7 +141,7 @@
             (click)="clearAllFiles.emit(); $event.stopPropagation()"
             class="text-xs font-medium text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 transition-colors px-3 py-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
           >
-            Clear all
+            {{ languageService.t().UPLOAD.CLEAR_ALL }}
           </button>
         </div>
 
@@ -308,7 +308,7 @@
         />
 
         <app-button
-          [label]="'Browse Files'"
+          [label]="languageService.t().UPLOAD.BROWSE_FILES"
           [variant]="'white'"
           [size]="'md'"
           [icon]="'file'"
@@ -319,7 +319,7 @@
         />
 
         <app-button
-          [label]="'Browse Folders'"
+          [label]="languageService.t().UPLOAD.BROWSE_FOLDERS"
           [variant]="'white'"
           [size]="'md'"
           [icon]="'folder-open'"
@@ -331,7 +331,11 @@
         />
 
         <app-button
-          [label]="isProcessing() ? 'Processing...' : 'Start'"
+          [label]="
+            isProcessing()
+              ? languageService.t().UPLOAD.PROCESSING
+              : languageService.t().UPLOAD.START
+          "
           [variant]="'primary'"
           [size]="'md'"
           (clicked)="uploadFiles.emit()"
@@ -354,11 +358,11 @@
 
         <h2 class="text-base font-normal text-gray-700 dark:text-gray-300 mb-6">
           @if (isDragging()) {
-            <span class="text-blue-600 dark:text-blue-400 font-medium"
-              >Drop files or folders here</span
-            >
+            <span class="text-blue-600 dark:text-blue-400 font-medium">{{
+              languageService.t().UPLOAD.DROP_FILES
+            }}</span>
           } @else {
-            <span>Drag & Drop Files or Folders Here</span>
+            <span>{{ languageService.t().UPLOAD.DRAG_DROP }}</span>
           }
         </h2>
 
@@ -373,7 +377,7 @@
         <!-- Botones cuando NO hay archivos -->
         <div class="flex items-center justify-center gap-3">
           <app-button
-            [label]="'Browse Files'"
+            [label]="languageService.t().UPLOAD.BROWSE_FILES"
             [variant]="'white'"
             [size]="'md'"
             [icon]="'file'"
@@ -384,7 +388,7 @@
           />
 
           <app-button
-            [label]="'Browse Folders'"
+            [label]="languageService.t().UPLOAD.BROWSE_FOLDERS"
             [variant]="'white'"
             [size]="'md'"
             [icon]="'folder-open'"
@@ -396,7 +400,11 @@
           />
 
           <app-button
-            [label]="isProcessing() ? 'Processing...' : 'Start'"
+            [label]="
+              isProcessing()
+                ? languageService.t().UPLOAD.PROCESSING
+                : languageService.t().UPLOAD.START
+            "
             [variant]="'primary'"
             [size]="'md'"
             (clicked)="uploadFiles.emit()"

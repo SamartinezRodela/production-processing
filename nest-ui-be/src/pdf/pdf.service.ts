@@ -1,47 +1,32 @@
-import { Injectable } from '@nestjs/common';
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { Injectable, Logger } from '@nestjs/common';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import * as os from 'os';
-
-const execAsync = promisify(exec);
+import { PythonService } from 'src/python/python.service';
 
 @Injectable()
 export class PdfService {
+  private readonly logger = new Logger(PdfService.name);
   private readonly pythonScriptPath: string;
 
-  constructor() {
-    // Ruta al script Python (corregida para apuntar a nest-files-py)
-    this.pythonScriptPath = path.resolve(
-      __dirname,
-      '../../../nest-files-py/generate_pdf.py',
-    );
-    console.log('Python script path:', this.pythonScriptPath);
-  }
+  constructor(private readonly pythonService: PythonService) {}
 
   async verifyFolder(folderPath: string) {
     try {
-      const scriptPath = path.resolve(
-        __dirname,
-        '../../../nest-files-py/verify_folder.py',
+      this.logger.log(`Verifying folder: ${folderPath}`);
+
+      const stdout = await this.pythonService.executeScript(
+        'verify_folder.py',
+        [folderPath],
       );
-
-      const command = `py "${scriptPath}" "${folderPath}"`;
-      console.log('Verifying folder:', folderPath);
-
-      const { stdout, stderr } = await execAsync(command, {
-        timeout: 10000,
-      });
-
-      if (stderr) {
-        console.error('Python stderr:', stderr);
-      }
 
       const result = JSON.parse(stdout);
       return result;
-    } catch (error) {
-      console.error('Error verifying folder:', error);
+    } catch (error: any) {
+      this.logger.error(
+        `Error verifying folder: ${error.message}`,
+        error.stack,
+      );
       throw new Error(`Failed to verify folder: ${error.message}`);
     }
   }
@@ -62,21 +47,13 @@ export class PdfService {
       });
 
       await fs.writeFile(tempFilePath, jsonData, 'utf-8');
-      console.log('Temp file created:', tempFilePath);
+      this.logger.debug(`Temp file created: ${tempFilePath}`);
 
-      // Ejecutar script Python pasando la ruta del archivo temporal
-      const command = `py "${this.pythonScriptPath}" "${tempFilePath}"`;
-      console.log('Executing Python command:', command);
+      const stdout = await this.pythonService.executeScript('generate_pdf.py', [
+        tempFilePath,
+      ]);
 
-      const { stdout, stderr } = await execAsync(command, {
-        timeout: 30000, // 30 segundos timeout
-      });
-
-      if (stderr) {
-        console.error('Python stderr:', stderr);
-      }
-
-      console.log('Python stdout:', stdout);
+      this.logger.debug('Python execution completed successfully');
 
       // Parsear resultado
       const result = JSON.parse(stdout.trim());
@@ -86,17 +63,20 @@ export class PdfService {
       }
 
       return result;
-    } catch (error) {
-      console.error('Error executing Python script:', error);
+    } catch (error: any) {
+      this.logger.error(
+        `Error executing Python script: ${error.message}`,
+        error.stack,
+      );
       throw new Error(`Failed to generate PDFs: ${error.message}`);
     } finally {
       // Limpiar archivo temporal
       if (tempFilePath) {
         try {
           await fs.unlink(tempFilePath);
-          console.log('Temp file deleted:', tempFilePath);
+          this.logger.debug(`Temp file deleted: ${tempFilePath}`);
         } catch (err) {
-          console.error('Error deleting temp file:', err);
+          this.logger.warn(`Error deleting temp file: ${err.message}`);
         }
       }
     }
@@ -104,8 +84,7 @@ export class PdfService {
 
   async testPythonConnection() {
     try {
-      const { stdout } = await execAsync('py --version');
-      return { version: stdout.trim() };
+      return { version: 'Managed internally by python service' };
     } catch (error) {
       throw new Error('Python not found or not accessible');
     }

@@ -13,10 +13,10 @@ export const guestGuard: CanActivateFn = () => {
 
   // Verificar si el usuario NO está autenticado
   if (!authService.isUserLoggedIn()) {
-    return true; // ✅ Permitir acceso (usuario no logueado)
+    return true; // Permitir acceso (usuario no logueado)
   }
 
-  // ❌ Ya está autenticado - redirigir al home
+  // Ya está autenticado - redirigir al home
   console.warn('Already logged in. Redirecting to home...');
   router.navigate([ROUTES.HOME]);
   return false;

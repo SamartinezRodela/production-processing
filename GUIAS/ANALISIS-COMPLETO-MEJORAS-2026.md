@@ -806,9 +806,9 @@ export class FileDto {
 ```typescript
 @Post('generate')
 async generatePDFs(@Body() data: GeneratePdfDto) {
-  // ❌ Interface en lugar de class con validación
-  // ❌ No valida tipos de datos
-  // ❌ No valida longitud de strings
+  //  Interface en lugar de class con validación
+  // No valida tipos de datos
+  // No valida longitud de strings
 }
 ```
 

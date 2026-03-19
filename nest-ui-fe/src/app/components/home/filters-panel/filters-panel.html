@@ -4,7 +4,7 @@
   <div class="flex items-center gap-8 flex-1">
     <div class="flex items-center gap-3">
       <label class="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
-        Facility:
+        {{ languageService.t().FILTERS.FACILITY }}
       </label>
       <div class="w-64">
         <app-select
@@ -23,7 +23,7 @@
 
     <div class="flex items-center gap-3">
       <label class="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
-        Process Type:
+        {{ languageService.t().FILTERS.ORDER }}
       </label>
       <div class="w-64">
         <app-select
@@ -42,7 +42,7 @@
   </div>
 
   <!-- Botones de acción -->
-  <div class="flex items-center gap-2">
+  <!-- <div class="flex items-center gap-2">
     <app-button label="Hi!" (click)="testSaludar.emit()" variant="primary" />
     <app-button
       label="PDF"
@@ -61,5 +61,5 @@
       (click)="testGuardarPdf.emit()"
       [variant]="'primary'"
     />
-  </div>
+  </div> -->
 </div>

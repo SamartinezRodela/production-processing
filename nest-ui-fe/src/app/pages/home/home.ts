@@ -1,9 +1,12 @@
 // nest-ui-fe/src/app/pages/home/home.ts
-import { Component, signal, OnDestroy } from '@angular/core';
+import { Component, signal, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom, Subscription } from 'rxjs';
 import { Button } from '@shared/button/button';
 import { Icon } from '@shared/icon/icon';
+import { Modal } from '@shared/modal/modal';
 import { Select, SelectOption } from '@shared/select/select';
 import { Badge } from '@shared/badge/badge';
 import { Input } from '@shared/input/input';
@@ -32,12 +35,14 @@ import { ErrorLogService, FileError } from '@services/home/error-log.service';
 import { PdfGenerationService } from '@services/home/pdf-generation.service';
 import { FileUtilsService } from '@services/home/file-utils.service';
 import { SettingsService } from '@services/set-up/settings.service';
+import { PathConfigurationService } from '@app/service/home/PathConfiguration.service';
 import { AuthService } from '@services/auth.service';
+import { WebSocketService } from '@services/websocket.service';
+import { LanguageService } from '@services/language.service';
 
 import { DEFAULT_FACILITIES, DEFAULT_ORDERS } from '../constants/facilities.constants';
 import { ProcessingResult } from '@models/processing.types';
 import { OrderManagementService } from '@services/order-management.service';
-import { throws } from 'assert';
 
 @Component({
   selector: 'app-home',
@@ -53,17 +58,21 @@ import { throws } from 'assert';
     FiltersPanel,
     ProgressBars,
     ErrorLogPanel,
+    Modal,
   ],
   templateUrl: './home.html',
   styleUrl: './home.css',
 })
-export class Home implements OnDestroy {
+export class Home implements OnInit, OnDestroy {
   // Inject services
   themeService = inject(ThemeService);
   private router = inject(Router);
   private electronService = inject(ElectronService);
   private notificationService = inject(NotificationService);
   private authService = inject(AuthService);
+  private http = inject(HttpClient);
+  private webSocketService = inject(WebSocketService);
+  languageService = inject(LanguageService);
 
   orderService = inject(OrderManagementService);
 
@@ -77,6 +86,7 @@ export class Home implements OnDestroy {
   fileUtils = inject(FileUtilsService);
   pdfMetadataService = inject(PdfMetadataService);
   settingsService = inject(SettingsService);
+  pathService = inject(PathConfigurationService);
 
   // UI State
   isDragging = signal(false);
@@ -87,6 +97,10 @@ export class Home implements OnDestroy {
   showPathWarning = signal(false);
   pathWarningDismissed = signal(false);
   isPathEditorExpanded = signal(false);
+  showProcessConfirmModal = signal(false);
+
+  private pythonProgressSubscription!: Subscription;
+  private progressMap = new Map<string, number>();
 
   // Statistics
   statsResult = signal<any>(null);
@@ -115,6 +129,10 @@ export class Home implements OnDestroy {
 
   get formattedMaxFileSize(): string {
     return this.fileUtils.formatFileSize(this.maxFileSize);
+  }
+
+  get validFilesCount(): number {
+    return this.pdfContainer().files.filter((f) => f.Valid).length;
   }
 
   get remainingSpace(): number {
@@ -247,6 +265,38 @@ export class Home implements OnDestroy {
     this.loadSettingsAndCheckPaths();
   }
 
+  ngOnInit(): void {
+    // Conectar el WebSocket y luego empezar a escuchar el progreso
+    this.webSocketService.connect().then(() => {
+      this.listenForPythonProgress();
+    });
+  }
+
+  private listenForPythonProgress(): void {
+    this.pythonProgressSubscription = this.webSocketService
+      .listen('python-progress')
+      .subscribe((data: { progress: number; fileName: string }) => {
+        console.log(`📊 Progress received -> File: ${data.fileName} | ${data.progress}%`);
+        if (data && data.fileName && this.progressMap.has(data.fileName)) {
+          this.progressMap.set(data.fileName, data.progress);
+          this.recalculateOverallProgress();
+        }
+      });
+  }
+
+  private recalculateOverallProgress(): void {
+    if (this.progressMap.size === 0) {
+      this.fileProcessingService.progress.set(0);
+      return;
+    }
+    const totalProgress = Array.from(this.progressMap.values()).reduce(
+      (sum, current) => sum + current,
+      0,
+    );
+    const overallPercentage = totalProgress / this.progressMap.size;
+    this.fileProcessingService.progress.set(Math.round(overallPercentage));
+  }
+
   private async loadSettingsAndCheckPaths(): Promise<void> {
     // Cargar settings desde el backend
     await this.settingsService.loadSettingsFromBackend();
@@ -259,8 +309,9 @@ export class Home implements OnDestroy {
     try {
       // Obtener los default settings desde el backend
       const apiUrl = await this.settingsService['apiUrlService'].getApiUrl();
-      const response = await fetch(`${apiUrl}/settings/default`);
-      const defaultSettings = await response.json();
+      const defaultSettings = await firstValueFrom(
+        this.http.get<any>(`${apiUrl}/settings/default`),
+      );
 
       const basePath = this.settingsService.getBasePath();
       const outputPath = this.settingsService.getOutputPath();
@@ -288,24 +339,11 @@ export class Home implements OnDestroy {
   private async actualizarJsonMetadatos(data: any): Promise<void> {
     try {
       const apiUrl = await this.settingsService['apiUrlService'].getApiUrl();
-      const token = this.authService.getToken();
-      const response = await fetch(`${apiUrl}/python/save-metadata`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ data }),
-      });
-
-      if (!response.ok) {
-        const errText = await response.text();
-        console.error('Fallo en el backend al guardar JSON:', response.status, errText);
-      } else {
-        console.log('JSON de metadatos actualizado exitosamente');
-      }
+      await firstValueFrom(this.http.post(`${apiUrl}/python/save-metadata`, { data }));
+      console.log('JSON de metadatos actualizado exitosamente');
     } catch (error) {
-      console.error('Error guardando tabla_metadatos.json', error);
+      // console.error('Error guardando tabla_metadatos.json', error);
+      console.error('Error guardando tabla_metadatos.json o Fallo en el backend:', error);
     }
   }
 
@@ -597,13 +635,41 @@ export class Home implements OnDestroy {
 
     await this.fileProcessingService.loadFilesFromFolder(outputPath);
   }
+  async confirmProcessFiles(): Promise<void> {
+    try {
+      const apiUrl = await this.settingsService['apiUrlService'].getApiUrl();
+      const defaultSettings = await firstValueFrom(
+        this.http.get<any>(`${apiUrl}/settings/default`),
+      );
+      const basePath = this.settingsService.getBasePath();
+      const outputPath = this.settingsService.getOutputPath();
+
+      if (basePath === defaultSettings.basePath || outputPath === defaultSettings) {
+        this.notificationService.warning(
+          'Please configure your Base Path and Output Path before processing files.',
+        );
+        this.router.navigate(['/Set-Up']);
+        return;
+      }
+      if (this.validFilesCount === 0) {
+        this.notificationService.warning('No valid files to process');
+        return;
+      }
+
+      this.showProcessConfirmModal.set(true);
+    } catch (error) {
+      console.error('Error validating before process:', error);
+    }
+  }
 
   async uploadFiles(): Promise<ProcessingResult> {
     try {
+      this.showProcessConfirmModal.set(false);
       // Obtener los default settings desde el backend
       const apiUrl = await this.settingsService['apiUrlService'].getApiUrl();
-      const response = await fetch(`${apiUrl}/settings/default`);
-      const defaultSettings = await response.json();
+      const defaultSettings = await firstValueFrom(
+        this.http.get<any>(`${apiUrl}/settings/default`),
+      );
 
       // Validar paths antes de procesar
       const basePath = this.settingsService.getBasePath();
@@ -640,6 +706,10 @@ export class Home implements OnDestroy {
         };
       }
 
+      // Iniciar mapa de progreso
+      this.progressMap.clear();
+      validFiles.forEach((file) => this.progressMap.set(file.FileName, 0));
+
       // Iniciar procesamiento
       this.fileProcessingService.isProcessing.set(true);
       this.fileProcessingService.progress.set(0);
@@ -648,79 +718,104 @@ export class Home implements OnDestroy {
       const errors: FileError[] = [];
       let processedCount = 0;
       let failedCount = 0;
+      const successfulFileNames: string[] = [];
 
-      // Procesar cada archivo válido
-      for (let i = 0; i < validFiles.length; i++) {
-        const fileMetadata = validFiles[i];
+      const CONCURRENCY_LIMIT = 4; // Procesar hasta 4 archivos al mismo tiempo
+      const token = this.authService.getToken() || undefined;
 
-        try {
-          // Actualizar progreso
-          const progress = Math.round(((i + 1) / validFiles.length) * 100);
-          this.fileProcessingService.progress.set(progress);
+      // Procesar archivos en lotes (chunks)
+      for (let i = 0; i < validFiles.length; i += CONCURRENCY_LIMIT) {
+        const chunk = validFiles.slice(i, i + CONCURRENCY_LIMIT);
 
-          // 1. Tomar la ruta relativa completa
-          let relativePath = fileMetadata.RelativePath || '';
+        // Ejecutar los archivos del lote en paralelo
+        const chunkPromises = chunk.map(async (fileMetadata) => {
+          try {
+            let relativePath = fileMetadata.RelativePath || '';
+            if (!relativePath.endsWith(fileMetadata.FileName)) {
+              const separador = relativePath.includes('\\') ? '\\' : '/';
+              relativePath = relativePath
+                ? `${relativePath}${separador}${fileMetadata.FileName}`
+                : fileMetadata.FileName;
+            }
 
-          // 2. Si el RelativePath solo era la ruta de las carpetas y no incluye el archivo, se lo agregamos:
-          if (!relativePath.endsWith(fileMetadata.FileName)) {
-            const separador = relativePath.includes('\\') ? '\\' : '/';
-            relativePath = relativePath
-              ? `${relativePath}${separador}${fileMetadata.FileName}`
-              : fileMetadata.FileName;
+            let inputPath = fileMetadata.SystemPath;
+            if (!inputPath) {
+              const separadorBase = basePath.includes('\\') ? '\\' : '/';
+              inputPath = basePath.endsWith(separadorBase)
+                ? `${basePath}${relativePath}`
+                : `${basePath}${separadorBase}${relativePath}`;
+            }
+
+            const datos = {
+              output_path: outputPath,
+              relative_path: relativePath,
+              input_path: inputPath,
+            };
+
+            const result = await firstValueFrom(
+              this.http.post<any>(`${apiUrl}/python/guardar-pdf-relativo`, datos),
+            );
+
+            // Actualizar localmente al 100% al terminar para asegurar la sincronía
+            this.progressMap.set(fileMetadata.FileName, 100);
+            this.recalculateOverallProgress();
+
+            return { success: result.success, error: result.error, fileMetadata, result };
+          } catch (error: any) {
+            // Forzar actualización incluso si falla, para que la barra no se atasque
+            this.progressMap.set(fileMetadata.FileName, 100);
+            this.recalculateOverallProgress();
+
+            return { success: false, error: error.message, fileMetadata, result: null };
           }
+        });
 
-          // 3. Determinar el input_path (Ruta absoluta original del archivo)
-          let inputPath = fileMetadata.SystemPath;
-          if (!inputPath) {
-            const separadorBase = basePath.includes('\\') ? '\\' : '/';
-            inputPath = basePath.endsWith(separadorBase)
-              ? `${basePath}${relativePath}`
-              : `${basePath}${separadorBase}${relativePath}`;
-          }
+        // Esperar a que terminen todos los archivos de este lote antes de pasar a los siguientes 4
+        const chunkResults = await Promise.all(chunkPromises);
 
-          // Preparar datos para el script de Python
-          const datos = {
-            output_path: outputPath,
-            relative_path: relativePath,
-            input_path: inputPath,
-          };
-
-          console.log(`Processing file ${i + 1}/${validFiles.length}:`, datos);
-
-          // Llamar al script de Python
-          const token = this.authService.getToken() || undefined;
-          const result = await this.electronService.pythonGuardarPdfRelativo(datos, token);
-
-          if (result.success) {
+        // Contabilizar los resultados
+        for (const res of chunkResults) {
+          if (res.success) {
             processedCount++;
-            console.log(` File processed successfully:`, result);
+            successfulFileNames.push(res.fileMetadata.FileName);
+            console.log(` File processed successfully:`, res.result);
           } else {
             failedCount++;
             errors.push({
-              fileName: fileMetadata.FileName,
-              error: result.error,
+              fileName: res.fileMetadata.FileName,
+              error: res.error,
               timestamp: new Date(),
             });
-            console.error(`Error processing file:`, result);
+            console.error(`Error processing file:`, res.error);
           }
-        } catch (error: any) {
-          failedCount++;
-          errors.push({
-            fileName: fileMetadata.FileName,
-            error: error.message,
-            timestamp: new Date(),
-          });
-          console.error(`Exception processing file:`, error);
         }
+
+        // ⏳ Darle un respiro al navegador para que la animación CSS de la barra se vea fluida
+        await new Promise((resolve) => setTimeout(resolve, 150));
       }
 
       // Finalizar procesamiento
-      this.fileProcessingService.isProcessing.set(false);
-      this.fileProcessingService.progress.set(0);
+      this.fileProcessingService.progress.set(100);
       this.fileProcessingService.processingState.set('complete');
 
-      // Limpiar la interfaz (Tabla visual) y el JSON interno
-      this.clearAllFiles();
+      // ⏳ Esperar medio segundo para que el usuario alcance a ver la barra llena
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      this.fileProcessingService.isProcessing.set(false);
+
+      // Limpiar la interfaz removiendo SOLO los archivos procesados con éxito
+      if (failedCount === 0) {
+        this.clearAllFiles();
+      } else if (successfulFileNames.length > 0) {
+        successfulFileNames.forEach((fileName) => {
+          this.pdfMetadataService.removeFileByName(fileName);
+          const currentFiles = this.selectedFiles();
+          const index = currentFiles.findIndex((f) => f.name === fileName);
+          if (index !== -1) {
+            this.fileService.removeFile(index);
+          }
+        });
+        this.actualizarJsonMetadatos(this.pdfMetadataService.getValidFiles());
+      }
 
       // Notificar resultado
       if (processedCount > 0 && failedCount === 0) {
@@ -755,71 +850,6 @@ export class Home implements OnDestroy {
         errors: [{ fileName: 'System', error: error.message, timestamp: new Date() }],
         timestamp: new Date(),
       };
-    }
-  }
-
-  // PDF Generation
-  openPDFModal(): void {
-    this.pdfService.openModal();
-  }
-
-  closePDFModal(): void {
-    this.pdfService.closeModal();
-  }
-
-  setPDFGenerationType(type: 'single' | 'multiple'): void {
-    this.pdfService.setGenerationType(type);
-  }
-
-  addPDFName(): void {
-    this.pdfService.addPDFName();
-  }
-
-  removePDFName(index: number): void {
-    this.pdfService.removePDFName(index);
-  }
-
-  async prorbarGenerarPDF(): Promise<void> {
-    const datos = {
-      titulo: 'Iforme de actividad de Alex',
-      contenido: 'Este es un informe generado por el sistema de Alex con python',
-      autor: 'Sistem de nest ui testing',
-      nombre_archivo: 'Informe de actividades.pdf',
-    };
-    await this.pdfService.generatePDF(datos);
-  }
-
-  async prorbarGenerarPathPDF(): Promise<void> {
-    try {
-      // Obtener los default settings desde el backend
-      const apiUrl = await this.settingsService['apiUrlService'].getApiUrl();
-      const response = await fetch(`${apiUrl}/settings/default`);
-      const defaultSettings = await response.json();
-
-      const outputPath = this.settingsService.getOutputPath();
-
-      // Validar si es el path por defecto
-      const isDefaultOutputPath = outputPath === defaultSettings.outputPath;
-
-      if (isDefaultOutputPath) {
-        this.notificationService.warning(
-          'Please configure your Output Path before generating PDFs.',
-        );
-        this.router.navigate(['/Set-Up']);
-        return;
-      }
-
-      const datos = {
-        titulo: 'Iforme de actividad de Alex',
-        contenido: 'Este es un informe generado por el sistema de Alex con python',
-        autor: 'Sistem de nest ui testing',
-        nombre_archivo: 'Informe de actividades.pdf',
-      };
-      const token = this.authService.getToken(); // ✅ Obtener token
-      await this.pdfService.generatePDFWithPath(datos, outputPath, token || undefined);
-    } catch (error) {
-      console.error('Error validating output path:', error);
-      this.notificationService.error('Error validating output path');
     }
   }
 
@@ -988,128 +1018,62 @@ export class Home implements OnDestroy {
   }
 
   async browsePath(): Promise<void> {
-    try {
-      //console.log('Opening folder selector for Base Path...');
-      const result = await this.electronService.selectFolder();
-
-      if (!result.canceled && result.path) {
-        //console.log('Selected path:', result.path);
-        //console.log('Validating Base Path (read permissions)...');
-
-        // Validar el path antes de guardarlo
-        const validation = await this.validatePath(result.path, 'read');
-
-        //console.log('Validation result:', validation);
-
-        if (!validation.valid) {
-          console.error('Base Path validation failed:', validation.error);
-          this.notificationService.error(
-            `Invalid Base Path: ${validation.error}. Please select a folder with read permissions.`,
-          );
-          return;
-        }
-
-        //console.log('Base Path validation passed!');
-        this.settingsService.setBasePath(result.path);
-        await this.savePathSettings();
-        this.notificationService.success(`Base Path updated: ${result.path}`);
-
-        // Recargar folder watcher si es necesario
-        await this.initializeFolderWatcher();
-      } else {
-        //console.log('Folder selection cancelled');
-      }
-    } catch (error) {
-      console.error('Error selecting folder:', error);
-      this.notificationService.error(`Error selecting folder: ${error}`);
-    }
+    await this.pathService.browsePath(() => {
+      this.initializeFolderWatcher();
+      this.checkPathConfiguration();
+    });
   }
 
   async browseOutputPath(): Promise<void> {
-    try {
-      //console.log('Opening folder selector for Output Path...');
-      const result = await this.electronService.selectFolder();
-
-      if (!result.canceled && result.path) {
-        //console.log('Selected path:', result.path);
-        //console.log('Validating Output Path (write permissions)...');
-
-        // Validar el path antes de guardarlo
-        const validation = await this.validatePath(result.path, 'write');
-
-        //console.log('Validation result:', validation);
-
-        if (!validation.valid) {
-          console.error('Output Path validation failed:', validation.error);
-          this.notificationService.error(
-            `Invalid Output Path: ${validation.error}. Please select a folder with write permissions.`,
-          );
-          return;
-        }
-
-        //console.log('Output Path validation passed!');
-        this.settingsService.setOutputPath(result.path);
-        await this.savePathSettings();
-        this.notificationService.success(`Output Path updated: ${result.path}`);
-
-        // Recargar folder watcher con el nuevo path
-        await this.initializeFolderWatcher();
-      } else {
-        //console.log('Folder selection cancelled');
-      }
-    } catch (error) {
-      console.error('Error selecting folder:', error);
-      this.notificationService.error(`Error selecting folder: ${error}`);
-    }
+    await this.pathService.browseOutputPath(() => {
+      this.initializeFolderWatcher();
+      this.checkPathConfiguration();
+    });
   }
 
   async onBasePathBlur(): Promise<void> {
-    const path = this.settingsService.basePath().trim();
-
-    if (!path) {
-      return; // No validar si está vacío
-    }
-
-    //console.log('Validating Base Path on blur:', path);
-
-    const validation = await this.validatePath(path, 'read');
-
-    if (!validation.valid) {
-      console.error('Base Path validation failed:', validation.error);
-      this.notificationService.error(
-        `Invalid Base Path: ${validation.error}. Please select a folder with read permissions.`,
-      );
-    } else {
-      //console.log('Base Path validation passed!');
-      await this.savePathSettings();
-      this.notificationService.success('Base Path validated and saved');
-    }
+    const isValid = await this.pathService.onBasePathBlur();
+    if (isValid) this.checkPathConfiguration();
   }
 
   async onOutputPathBlur(): Promise<void> {
-    const path = this.settingsService.outputPath().trim();
-
-    if (!path) {
-      return; // No validar si está vacío
-    }
-
-    //console.log('Validating Output Path on blur:', path);
-
-    const validation = await this.validatePath(path, 'write');
-
-    if (!validation.valid) {
-      console.error('Output Path validation failed:', validation.error);
-      this.notificationService.error(
-        `Invalid Output Path: ${validation.error}. Please select a folder with write permissions.`,
-      );
-    } else {
-      //console.log('Output Path validation passed!');
-      await this.savePathSettings();
-      this.notificationService.success('Output Path validated and saved');
-    }
+    const isValid = await this.pathService.onOutputPathBlur();
+    if (isValid) this.checkPathConfiguration();
   }
 
   ///////
+
+  async prorbarGenerarPathPDF(): Promise<void> {
+    try {
+      // Obtener los default settings desde el backend
+      const apiUrl = await this.settingsService['apiUrlService'].getApiUrl();
+      const defaultSettings = await firstValueFrom(
+        this.http.get<any>(`${apiUrl}/settings/default`),
+      );
+
+      const outputPath = this.settingsService.getOutputPath();
+
+      if (outputPath === defaultSettings.outputPath) {
+        this.notificationService.warning(
+          'Please configure your Output Path before generating PDFs.',
+        );
+        this.router.navigate(['/Set-Up']);
+        return;
+      }
+
+      const datos = {
+        titulo: 'Informe de actividad de Alex',
+        contenido: 'Este es un informe generado por el sistema de Alex con python',
+        autor: 'Sistema de nest ui testing',
+        nombre_archivo: 'Informe de actividades.pdf',
+      };
+      const token = this.authService.getToken() || undefined;
+      await this.pdfService.generatePDFWithPath(datos, outputPath, token);
+    } catch (error) {
+      console.error('Error validating output path:', error);
+      this.notificationService.error('Error validating output path');
+    }
+  }
 
   async probarGuardarPdfRelativo(): Promise<void> {
     try {
@@ -1157,7 +1121,11 @@ export class Home implements OnDestroy {
           input_path: inputPath,
         };
         console.log(`Enviando a procesar: ${file.FileName}`, payload);
-        const result = await this.electronService.pythonGuardarPdfRelativo(payload, token);
+
+        const apiUrl = await this.settingsService['apiUrlService'].getApiUrl();
+        const result = await firstValueFrom(
+          this.http.post<any>(`${apiUrl}/python/guardar-pdf-relativo`, payload),
+        );
 
         if (result.success) {
           this.notificationService.success(`Guardado en: ${result.ruta_absoluta}`);
@@ -1172,47 +1140,6 @@ export class Home implements OnDestroy {
   }
 
   ////////
-
-  private async validatePath(
-    path: string,
-    type: 'read' | 'write' | 'both',
-  ): Promise<{ valid: boolean; error?: string }> {
-    try {
-      //console.log('Sending validation request to backend...');
-      const apiUrl = await this.settingsService['apiUrlService'].getApiUrl();
-      const result = await fetch(`${apiUrl}/settings/validate-path`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path, type }),
-      }).then((res) => res.json());
-
-      //console.log('Received validation response from backend:', result);
-      return result;
-    } catch (error) {
-      console.error('Error validating path:', error);
-      return { valid: false, error: 'Failed to validate path' };
-    }
-  }
-
-  private async savePathSettings(): Promise<void> {
-    try {
-      const apiUrl = await this.settingsService['apiUrlService'].getApiUrl();
-      await fetch(`${apiUrl}/settings`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          basePath: this.settingsService.basePath(),
-          outputPath: this.settingsService.outputPath(),
-          os: this.settingsService.operatingSystem(),
-        }),
-      });
-
-      // Actualizar el warning si es necesario
-      this.checkPathConfiguration();
-    } catch (error) {
-      console.error('Error saving path settings:', error);
-    }
-  }
 
   // Form handlers
   onProccessChange(value: string | number): void {
@@ -1231,6 +1158,10 @@ export class Home implements OnDestroy {
     }
     if (this.dragWatchdogTimeout) {
       clearTimeout(this.dragWatchdogTimeout);
+    }
+
+    if (this.pythonProgressSubscription) {
+      this.pythonProgressSubscription.unsubscribe();
     }
 
     this.fileProcessingService.cleanup();

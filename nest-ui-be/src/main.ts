@@ -16,10 +16,11 @@ async function bootstrap() {
       },
     }),
   );
-
+  const isProduction = process.env.NODE_ENV === 'production';
   // Habilitar CORS para que Electron pueda hacer peticiones
   app.enableCors({
-    origin: '*', // En producción, especifica el origen de Electron
+    // origin: '*', // En producción, especifica el origen de Electron
+    origin: isProduction ? ['http://localhost', 'file://'] : '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });

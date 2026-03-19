@@ -170,63 +170,53 @@ export class FileDropService {
     const reader = directoryEntry.createReader();
     let filesFound = 0;
 
-    const readAllEntries = async (): Promise<FileSystemEntry[]> => {
-      const allEntries: FileSystemEntry[] = [];
-
+    try {
       while (true) {
         const entries = await new Promise<FileSystemEntry[]>((resolve, reject) => {
           reader.readEntries(resolve, reject);
         });
 
         if (entries.length === 0) break;
-        allEntries.push(...entries);
-      }
 
-      return allEntries;
-    };
+        for (let i = 0; i < entries.length; i++) {
+          const entry = entries[i];
 
-    try {
-      const entries = await readAllEntries();
-      //console.log(`Found ${entries.length} entries in ${directoryEntry.name}`);
+          if (entry.isFile) {
+            const fileEntry = entry as FileSystemFileEntry;
+            const file = await this.getFileFromEntry(fileEntry);
+            if (file) {
+              // Obtener el separador correcto según el OS
+              const separator = this.getPathSeparator();
 
-      for (let i = 0; i < entries.length; i++) {
-        const entry = entries[i];
+              // El InputRoot es la carpeta que se arrastró (el primer segmento del entry.fullPath)
+              const entrySegments = entry.fullPath.split('/').filter((s: string) => s);
+              const finalInputRoot = entrySegments.length > 0 ? entrySegments[0] : inputRoot;
 
-        if (entry.isFile) {
-          const fileEntry = entry as FileSystemFileEntry;
-          const file = await this.getFileFromEntry(fileEntry);
-          if (file) {
-            // Obtener el separador correcto según el OS
-            const separator = this.getPathSeparator();
+              // Construir el fullPath usando los segmentos del entry (ruta relativa desde el drag)
+              const pathWithoutSlash = entry.fullPath.startsWith('/')
+                ? entry.fullPath.substring(1)
+                : entry.fullPath;
+              const relativeFullPath = pathWithoutSlash.replace(/\//g, separator);
 
-            // El InputRoot es la carpeta que se arrastró (el primer segmento del entry.fullPath)
-            const entrySegments = entry.fullPath.split('/').filter((s: string) => s);
-            const finalInputRoot = entrySegments.length > 0 ? entrySegments[0] : inputRoot;
+              this.validateAndAddFiles([file], finalInputRoot, relativeFullPath);
+              filesFound++;
 
-            // Construir el fullPath usando los segmentos del entry (ruta relativa desde el drag)
-            const pathWithoutSlash = entry.fullPath.startsWith('/')
-              ? entry.fullPath.substring(1)
-              : entry.fullPath;
-            const relativeFullPath = pathWithoutSlash.replace(/\//g, separator);
-
-            this.validateAndAddFiles([file], finalInputRoot, relativeFullPath);
-            filesFound++;
-
-            if (isRoot) {
-              this.folderReadingProgress.update((p) => ({
-                ...p,
-                current: filesFound,
-                total: entries.length,
-              }));
+              if (isRoot) {
+                this.folderReadingProgress.update((p) => ({
+                  ...p,
+                  current: filesFound,
+                  total: p.total + 1, // Se actualiza dinámicamente conforme descubrimos archivos
+                }));
+              }
             }
+          } else if (entry.isDirectory) {
+            const subFilesCount = await this.readDirectory(
+              entry as FileSystemDirectoryEntry,
+              inputRoot,
+              false,
+            );
+            filesFound += subFilesCount;
           }
-        } else if (entry.isDirectory) {
-          const subFilesCount = await this.readDirectory(
-            entry as FileSystemDirectoryEntry,
-            inputRoot,
-            false,
-          );
-          filesFound += subFilesCount;
         }
       }
 
@@ -267,6 +257,17 @@ export class FileDropService {
     const invalid: Array<{ file: File; error: string }> = [];
 
     files.forEach((file) => {
+      // Detectar archivos de 0 bytes (común en placeholders de OneDrive/iCloud o archivos corruptos)
+      if (file.size === 0) {
+        const filePath = relativePath || file.name;
+        this.pdfMetadataService.addExcludedFile(
+          file.name,
+          filePath,
+          'File is Empty Or Not Downloaded locally (OneDrive/Cloud PlaceHolder)',
+        );
+        invalid.push({ file, error: 'File is empty or cloud-only' });
+        return;
+      }
       // Verificar si es PDF
       if (file.type !== 'application/pdf') {
         // Registrar archivo excluido (no-PDF)
@@ -391,6 +392,11 @@ export class FileDropService {
           current: i + 1,
           total: files.length,
         }));
+
+        // Liberar el hilo principal (Event Loop) cada 50 archivos para evitar que la UI se congele
+        if (i > 0 && i % 50 === 0) {
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        }
 
         // Crear un objeto File simulado desde la información del archivo
         const file = new File([], fileInfo.name, {

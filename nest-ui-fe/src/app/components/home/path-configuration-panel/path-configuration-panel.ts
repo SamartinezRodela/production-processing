@@ -1,9 +1,10 @@
-import { Component, input, output, model } from '@angular/core';
+import { Component, input, output, model, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Icon } from '@shared/icon/icon';
 import { Badge } from '@shared/badge/badge';
 import { Button } from '@shared/button/button';
 import { Input } from '@shared/input/input';
+import { LanguageService } from '@services/language.service';
 
 @Component({
   selector: 'app-path-configuration-panel',
@@ -13,6 +14,8 @@ import { Input } from '@shared/input/input';
   styleUrl: './path-configuration-panel.css',
 })
 export class PathConfigurationPanel {
+  languageService = inject(LanguageService);
+
   // Inputs
   basePath = model.required<string>();
   outputPath = model.required<string>();

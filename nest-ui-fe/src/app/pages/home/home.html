@@ -4,12 +4,14 @@
     class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-3 flex items-center justify-between"
   >
     <div class="flex items-center gap-3">
-      <h1 class="text-lg font-semibold text-gray-800 dark:text-gray-100">Auto Nesting</h1>
+      <h1 class="text-lg font-semibold text-gray-800 dark:text-gray-100">
+        {{ languageService.t().HOME.TITLE }}
+      </h1>
 
       <!-- Badge de estado de procesamiento -->
       @if (isProcessing()) {
         <app-badge
-          [label]="'Processing'"
+          [label]="languageService.t().HOME.PROCESSING"
           [variant]="'warning'"
           [icon]="'loader'"
           [dot]="true"
@@ -17,7 +19,7 @@
         />
       } @else if (selectedFiles().length > 0) {
         <app-badge
-          [label]="selectedFiles().length + ' files ready'"
+          [label]="selectedFiles().length + ' ' + languageService.t().HOME.FILES_READY"
           [variant]="'primary'"
           [size]="'sm'"
         />
@@ -25,11 +27,24 @@
     </div>
 
     <div class="flex items-center gap-2">
+      <!-- Language Toggle -->
+      <button
+        type="button"
+        (click)="languageService.toggleLanguage()"
+        class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors text-sm font-bold text-gray-700 dark:text-gray-400 uppercase"
+      >
+        {{ languageService.currentLang() }}
+      </button>
+
       <!-- Dark Mode Toggle -->
       <button
         type="button"
         (click)="themeService.toggleTheme()"
-        [title]="themeService.isDarkMode() ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
+        [title]="
+          themeService.isDarkMode()
+            ? languageService.t().HOME.THEME_TOOLTIP_LIGHT
+            : languageService.t().HOME.THEME_TOOLTIP_DARK
+        "
         class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
       >
         <app-icon
@@ -72,14 +87,13 @@
         />
         <div class="flex-1">
           <h3 class="text-sm font-semibold text-yellow-900 dark:text-yellow-100 mb-1">
-            Configure Paths Required
+            {{ languageService.t().HOME.WARNING_PATHS_TITLE }}
           </h3>
           <p class="text-sm text-yellow-800 dark:text-yellow-200 mb-2">
-            Please configure your Base Path and Output Path in Settings before processing files. The
-            current paths are set to default values.
+            {{ languageService.t().HOME.WARNING_PATHS_DESC }}
           </p>
           <app-button
-            [label]="'Go to Settings'"
+            [label]="languageService.t().HOME.BTN_GO_SETTINGS"
             [variant]="'white'"
             [size]="'sm'"
             [icon]="'settings'"
@@ -152,7 +166,7 @@
       (clearAllFiles)="clearAllFiles()"
       (triggerFileInput)="triggerFileInput()"
       (browseFolderRecursive)="browseFolderRecursive()"
-      (uploadFiles)="uploadFiles()"
+      (uploadFiles)="confirmProcessFiles()"
     />
 
     <!-- Progress Bars -->
@@ -179,5 +193,62 @@
       (clearMetadata)="clearMetadata()"
       (openFileLocation)="openFileLocation($event)"
     />
+
+    <!-- Confirm Process Modal -->
+    <app-modal
+      [isOpen]="showProcessConfirmModal()"
+      [title]="languageService.t().HOME.MODAL_CONFIRM_TITLE"
+      size="md"
+      (closed)="showProcessConfirmModal.set(false)"
+    >
+      <div class="p-4 space-y-4">
+        <p class="text-gray-600 dark:text-gray-300">
+          {{ languageService.t().HOME.MODAL_CONFIRM_DESC }}
+        </p>
+
+        <div
+          class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg space-y-3 border border-gray-200 dark:border-gray-700"
+        >
+          <div class="flex justify-between items-center">
+            <span class="font-medium text-gray-700 dark:text-gray-300">{{
+              languageService.t().HOME.MODAL_FILES_COUNT
+            }}</span>
+            <span class="text-blue-600 font-bold text-lg">{{ validFilesCount }}</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="font-medium text-gray-700 dark:text-gray-300">{{
+              languageService.t().HOME.MODAL_EST_SPACE
+            }}</span>
+            <span class="text-gray-600 dark:text-gray-400 font-medium">{{
+              formattedTotalValidFilesSize
+            }}</span>
+          </div>
+          <div class="flex flex-col mt-2">
+            <span class="font-medium text-gray-700 dark:text-gray-300 mb-1">{{
+              languageService.t().HOME.MODAL_OUTPUT_PATH
+            }}</span>
+            <span
+              class="text-sm text-gray-500 dark:text-gray-400 break-all bg-white dark:bg-gray-900 p-2 rounded border border-gray-200 dark:border-gray-700"
+            >
+              {{ settingsService.getOutputPath() }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div footer class="flex justify-end gap-3 w-full">
+        <app-button
+          [label]="languageService.t().HOME.BTN_CANCEL"
+          variant="ghost"
+          (clicked)="showProcessConfirmModal.set(false)"
+        ></app-button>
+        <app-button
+          [label]="languageService.t().HOME.BTN_START_PROC"
+          variant="primary"
+          icon="check"
+          (clicked)="uploadFiles()"
+        ></app-button>
+      </div>
+    </app-modal>
   </div>
 </div>

@@ -1,8 +1,11 @@
 import { net } from "electron";
 
-const API_BASE_URL = "http://localhost:3000";
+let API_BASE_URL = "http://localhost:3000";
 
 export class ApiClient {
+  static setPort(port: number) {
+    API_BASE_URL = `http://localhost:${port}`;
+  }
   /**
    * Obtiene el token JWT del localStorage del renderer process
    * Nota: Esto requiere que el token esté disponible en el contexto de Electron

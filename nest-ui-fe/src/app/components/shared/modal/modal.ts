@@ -5,6 +5,7 @@ import {
   effect,
   ElementRef,
   ChangeDetectionStrategy,
+  HostListener,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Button } from '@shared/button/button';
@@ -61,6 +62,13 @@ export class Modal {
 
   onBackdropClick(event: MouseEvent) {
     if (event.target === event.currentTarget) {
+      this.close();
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  onKeydownHandler() {
+    if (this.isOpen()) {
       this.close();
     }
   }

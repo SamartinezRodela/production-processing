@@ -9,6 +9,7 @@ import {
 import * as fs from 'fs';
 import * as path from 'path';
 import * as chokidar from 'chokidar';
+import * as crypto from 'crypto';
 import {
   Database,
   DatabaseSettings,
@@ -49,7 +50,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
    * Inicia el file watcher para detectar cambios en database.json
    */
   private startFileWatcher(): void {
-    this.logger.log(' Starting file watcher for database.json');
+    this.logger.log('Starting file watcher for database.json');
 
     this.watcher = chokidar.watch(this.dbPath, {
       persistent: true,
@@ -61,17 +62,17 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     });
 
     this.watcher.on('change', (path) => {
-      this.logger.log(` Database file changed: ${path}`);
+      this.logger.log(`Database file changed: ${path}`);
       this.reloadDatabase();
       // ✅ NUEVO: Notificar a todos los clientes conectados
       this.databaseGateway.notifyDatabaseChange();
     });
 
     this.watcher.on('error', (error) => {
-      this.logger.error(' File watcher error:', error);
+      this.logger.error('File watcher error:', error);
     });
 
-    this.logger.log(' File watcher started successfully');
+    this.logger.log('File watcher started successfully');
   }
 
   /**
@@ -92,10 +93,10 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     this.dbPath = this.getDatabasePath();
 
     this.logger.log('='.repeat(60));
-    this.logger.log('📂 INICIALIZANDO BASE DE DATOS');
+    this.logger.log('INITIALIZING DATABASE');
     this.logger.log('='.repeat(60));
-    this.logger.log(`Ruta de base de datos: ${this.dbPath}`);
-    this.logger.log(`Archivo existe: ${fs.existsSync(this.dbPath)}`);
+    this.logger.log(`Database path: ${this.dbPath}`);
+    this.logger.log(`File exists: ${fs.existsSync(this.dbPath)}`);
 
     const isProduction =
       process.env.NODE_ENV === 'production' ||
@@ -112,7 +113,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     if (fs.existsSync(this.dbPath)) {
       this.loadDatabase();
     } else {
-      this.logger.warn('⚠️  Base de datos no encontrada, creando nueva...');
+      this.logger.warn('Database not found, creating a new one...');
       this.createDefaultDatabase();
     }
   }
@@ -151,7 +152,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       // Crear carpeta si no existe
       if (!fs.existsSync(appFolder)) {
         fs.mkdirSync(appFolder, { recursive: true });
-        this.logger.log(`✅ Carpeta de datos creada: ${appFolder}`);
+        this.logger.log(`Data folder created: ${appFolder}`);
       }
 
       const userDbPath = path.join(appFolder, 'database.json');
@@ -192,12 +193,12 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
 
         if (fs.existsSync(templatePath)) {
           fs.copyFileSync(templatePath, targetPath);
-          this.logger.log(` Template database copied from: ${templatePath}`);
+          this.logger.log(`Template database copied from: ${templatePath}`);
           return;
         }
       }
 
-      this.logger.log('ℹNo template database found, will create default');
+      this.logger.log('No template database found, will create default');
     } catch (error) {
       this.logger.warn(`Could not copy template database: ${error.message}`);
     }
@@ -210,7 +211,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     try {
       const data = fs.readFileSync(this.dbPath, 'utf8');
       this.database = JSON.parse(data);
-      this.logger.log(' Database loaded successfully');
+      this.logger.log('Database loaded successfully');
     } catch (error) {
       this.logger.error('Error loading database:', error);
       this.createDefaultDatabase();
@@ -277,7 +278,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     };
 
     this.saveDatabase();
-    this.logger.log(' Default database created');
+    this.logger.log('Default database created');
   }
 
   /**
@@ -287,20 +288,33 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     try {
       this.database.lastModified = new Date().toISOString();
 
-      this.logger.log(`💾 Guardando base de datos en: ${this.dbPath}`);
+      this.logger.log(`Saving database to: ${this.dbPath}`);
+      const tempPath = `${this.dbPath}.tmp`;
 
       fs.writeFileSync(
-        this.dbPath,
+        // this.dbPath,
+        tempPath,
         JSON.stringify(this.database, null, 2),
         'utf8',
       );
 
-      this.logger.log('✅ Base de datos guardada exitosamente');
-      this.logger.log(`   Ruta: ${this.dbPath}`);
-      this.logger.log(`   Tamaño: ${fs.statSync(this.dbPath).size} bytes`);
-    } catch (error) {
-      this.logger.error(`❌ Error guardando base de datos: ${error.message}`);
-      this.logger.error(`   Ruta intentada: ${this.dbPath}`);
+      fs.renameSync(tempPath, this.dbPath);
+
+      this.logger.log('Database saved successfully');
+      this.logger.debug(`Path: ${this.dbPath}`);
+      this.logger.debug(`Size: ${fs.statSync(this.dbPath).size} bytes`);
+    } catch (error: any) {
+      if (error.code === 'ENOSPC') {
+        this.logger.error(
+          `CRITICAL ERROR: No space left on device. Cannot save database: ${this.dbPath}`,
+        );
+
+        throw new Error(
+          'Disk Full: No hay suficiente espacio en disco para guardar los datos.',
+        );
+      }
+      this.logger.error(`Error saving database: ${error.message}`);
+      this.logger.error(`Attempted path: ${this.dbPath}`);
       throw error;
     }
   }
@@ -334,7 +348,9 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
    * Crea una nueva facility
    */
   createFacility(name: string): Facility {
-    const newId = (this.database.facilities.length + 1).toString();
+    // const newId = (this.database.facilities.length + 1).toString();
+    const newId = crypto.randomUUID();
+
     const now = new Date().toISOString();
 
     const newFacility: Facility = {
@@ -424,7 +440,9 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     facilityId?: string,
     status: 'active' | 'inactive' | 'completed' = 'active',
   ): Order {
-    const newId = (this.database.orders.length + 1).toString();
+    // const newId = (this.database.orders.length + 1).toString();
+    const newId = crypto.randomUUID();
+
     const now = new Date().toISOString();
 
     const newOrder: Order = {
@@ -541,7 +559,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
    * Útil cuando se edita manualmente el JSON
    */
   reloadDatabase(): Database {
-    this.logger.log('🔄 Reloading database from file...');
+    this.logger.log('Reloading database from file...');
     this.loadDatabase();
     return this.database;
   }
@@ -555,7 +573,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       `.backup.${Date.now()}.json`,
     );
     fs.copyFileSync(this.dbPath, backupPath);
-    this.logger.log(`✅ Backup created: ${backupPath}`);
+    this.logger.log(`Backup created: ${backupPath}`);
     return backupPath;
   }
 

@@ -7,6 +7,7 @@ import { findAvailablePort } from "./port-finder";
 
 let mainWindow: BrowserWindow | null = null;
 let BACKEND_PORT = 3000; // Ya no es constante, será dinámico
+require("./api-client").ApiClient.setPort(BACKEND_PORT);
 // Detectar si está empaquetado correctamente
 const isDev = !app.isPackaged;
 

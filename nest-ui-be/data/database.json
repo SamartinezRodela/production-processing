@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastModified": "2026-03-17T18:44:08.571Z",
+  "lastModified": "2026-03-19T14:25:34.721Z",
   "facilities": [
     {
       "id": "1",
@@ -11,12 +11,6 @@
     {
       "id": "2",
       "name": "Merida",
-      "createdAt": "2026-03-09T14:12:11.809Z",
-      "updatedAt": "2026-03-09T14:12:11.809Z"
-    },
-    {
-      "id": "3",
-      "name": "San Luis",
       "createdAt": "2026-03-09T14:12:11.809Z",
       "updatedAt": "2026-03-09T14:12:11.809Z"
     }
@@ -47,12 +41,10 @@
     "notifications": true
   },
   "settings": {
-    "selectedFacilityId": "1",
     "basePath": "C:\\Users\\samartinez\\Documents\\BasePath",
     "outputPath": "C:\\Users\\samartinez\\Documents\\OutputPath",
     "os": "windows",
-    "theme": "light",
-    "autoSave": false,
-    "notifications": true
+    "selectedFacilityId": "1",
+    "theme": "dark"
   }
 }

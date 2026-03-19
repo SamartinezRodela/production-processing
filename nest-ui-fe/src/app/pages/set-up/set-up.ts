@@ -20,6 +20,7 @@ import { FacilityManagementService } from '@services/set-up/facility-management.
 import { ModalStateService } from '@services/set-up/modal-state.service';
 import { AuthService } from '@services/auth.service';
 import { PythonTestService } from '@services/python-test.service';
+import { LanguageService } from '@services/language.service';
 
 import { OrderManagementService } from '@services/order-management.service';
 
@@ -53,6 +54,7 @@ export class SetUp {
   modalService = inject(ModalStateService);
   private authService = inject(AuthService);
   private pythonTestService = inject(PythonTestService);
+  languageService = inject(LanguageService);
 
   // Estado de pruebas Python
   pythonTestsRunning = false;

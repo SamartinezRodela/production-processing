@@ -10,10 +10,14 @@
     <div class="flex items-center gap-2">
       <app-icon [name]="'folder-cog'" [size]="16" class="text-gray-500 dark:text-gray-400" />
       <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-        Quick Path Configuration
+        {{ languageService.t().PATHS.QUICK_CONFIG }}
       </span>
       @if (showWarning()) {
-        <app-badge [label]="'Configure'" [variant]="'warning'" [size]="'sm'" />
+        <app-badge
+          [label]="languageService.t().PATHS.CONFIGURE"
+          [variant]="'warning'"
+          [size]="'sm'"
+        />
       }
     </div>
     <app-icon
@@ -29,7 +33,7 @@
       <div class="space-y-3">
         <!-- Base
  Path -->
-        <div class="flex items-start gap-2">
+        <!-- <div class="flex items-start gap-2">
           <app-icon
             [name]="'folder-heart'"
             [size]="16"
@@ -67,7 +71,7 @@
               />
             </div>
           </div>
-        </div>
+        </div> -->
 
         <!-- Output Path -->
         <div class="flex items-start gap-2">
@@ -79,7 +83,7 @@
           />
           <div class="flex-1 min-w-0">
             <label class="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">
-              Output Path (Generated Files)
+              {{ languageService.t().PATHS.OUTPUT_PATH }}
             </label>
             <div class="flex items-center gap-2">
               <div class="flex-1 relative group">

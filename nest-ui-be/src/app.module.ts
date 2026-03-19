@@ -8,6 +8,7 @@ import { DatabaseModule } from './database/database.module';
 import { FacilitiesModule } from './facilities/facilities.module';
 import { OrdersModule } from './orders/orders.module';
 import { SettingsModule } from './settings/settings.module';
+import { ConfigModule } from '@nestjs/config';
 
 // ⚠️ TypeORM deshabilitado temporalmente durante la migración
 // Descomentar cuando estemos listos para migrar completamente
@@ -27,6 +28,7 @@ import { SettingsModule } from './settings/settings.module';
     //   synchronize: true,
     //   logging: process.env.NODE_ENV !== 'production',
     // }),
+    ConfigModule.forRoot({ isGlobal: true }),
     PythonModule,
     PdfModule,
     AuthModule,

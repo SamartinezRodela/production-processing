@@ -6,6 +6,7 @@ import { Icon } from '../shared/icon/icon';
 import { Badge } from '../shared/badge/badge';
 import { PDFContainer } from '@app/models/pdf-metadata.types';
 import { FileUtilsService } from '@app/service/home/file-utils.service';
+import { LanguageService } from '@services/language.service';
 
 @Component({
   selector: 'app-pdf-metadata-table',
@@ -17,6 +18,7 @@ import { FileUtilsService } from '@app/service/home/file-utils.service';
 export class PdfMetadataTable {
   //Services
   fileUtils = inject(FileUtilsService);
+  languageService = inject(LanguageService);
 
   //Input (datos que recibe del componente padre)
   pdfContainer = input.required<PDFContainer>();

@@ -4,19 +4,23 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as crypto from 'crypto';
 import { SettingsService } from '../settings/settings.service';
+import { PythonGateway } from './python.gateway';
 
 @Injectable()
 export class PythonService {
   private readonly logger = new Logger(PythonService.name);
 
   /**
-   * 🔒 WHITELIST DE HASHES SHA-256
+   * WHITELIST DE HASHES SHA-256
    * Estos hashes verifican la integridad de los archivos .pyc
    * Se cargan desde python-hashes.json generado durante el build
    */
   private HASHES_WHITELIST: Record<string, string> = {};
 
-  constructor(private readonly settingsService: SettingsService) {
+  constructor(
+    private readonly settingsService: SettingsService,
+    private readonly pythonGateway: PythonGateway,
+  ) {
     this.loadHashesWhitelist();
   }
 
@@ -43,21 +47,21 @@ export class PythonService {
       if (fs.existsSync(hashesPath)) {
         const hashesData = fs.readFileSync(hashesPath, 'utf8');
         this.HASHES_WHITELIST = JSON.parse(hashesData);
-        this.logger.log(`✅ SEGURIDAD: Verificación de integridad ACTIVA`);
-        this.logger.log(`   Hashes cargados desde: ${hashesPath}`);
+        this.logger.log(`SEGURIDAD: Verificación de integridad ACTIVA`);
+        this.logger.log(`Hashes cargados desde: ${hashesPath}`);
         this.logger.log(
           `   Archivos protegidos: ${Object.keys(this.HASHES_WHITELIST).length}`,
         );
       } else {
-        this.logger.warn(`⚠️  SEGURIDAD: python-hashes.json no encontrado`);
-        this.logger.warn(`   Ruta buscada: ${hashesPath}`);
+        this.logger.warn(`SEGURIDAD: python-hashes.json no encontrado`);
+        this.logger.warn(`Ruta buscada: ${hashesPath}`);
         this.logger.warn(
           `   Verificación de integridad DESHABILITADA (modo desarrollo)`,
         );
       }
     } catch (error) {
-      this.logger.error(`❌ Error cargando hashes: ${error.message}`);
-      this.logger.warn(`   Verificación de integridad DESHABILITADA`);
+      this.logger.error(`Error cargando hashes: ${error.message}`);
+      this.logger.warn(`Verificación de integridad DESHABILITADA`);
     }
   }
 
@@ -121,34 +125,34 @@ export class PythonService {
       const settings = this.settingsService.getSettings();
       const outputPath = settings.outputPath;
 
-      this.logger.log(`📁 Checking outputPath: ${outputPath}`);
+      this.logger.log(`Checking outputPath: ${outputPath}`);
 
       // Validar que outputPath esté configurado
       if (!outputPath || outputPath.trim() === '') {
         const error =
           'OutputPath is not configured. Please configure it in Settings before running tests that generate files.';
-        this.logger.error(`❌ ${error}`);
+        this.logger.error(`${error}`);
         throw new Error(error);
       }
 
       // Validar que outputPath exista
       if (!fs.existsSync(outputPath)) {
         const error = `OutputPath does not exist: ${outputPath}. Please create the directory or update the path in Settings.`;
-        this.logger.error(`❌ ${error}`);
+        this.logger.error(`${error}`);
         throw new Error(error);
       }
 
       const fullPath = path.join(outputPath, fileName);
-      this.logger.log(`✅ Output file will be saved to: ${fullPath}`);
+      this.logger.log(`Output file will be saved to: ${fullPath}`);
       return fullPath;
     } catch (error) {
-      this.logger.error(`❌ Error building output path: ${error.message}`);
+      this.logger.error(`Error building output path: ${error.message}`);
       throw error;
     }
   }
 
   /**
-   * 🔒 Verifica la integridad de un archivo .pyc
+   * Verifica la integridad de un archivo .pyc
    * Calcula el hash SHA-256 y lo compara con la whitelist
    *
    * MODO DINÁMICO:
@@ -163,7 +167,7 @@ export class PythonService {
 
     // Verificar que el archivo existe
     if (!fs.existsSync(filePath)) {
-      this.logger.error(`❌ INTEGRIDAD: Archivo no encontrado: ${fileName}`);
+      this.logger.error(`INTEGRIDAD: Archivo no encontrado: ${fileName}`);
       this.logger.error(`   Ruta esperada: ${filePath}`);
       return false;
     }
@@ -171,21 +175,17 @@ export class PythonService {
     // Si no hay whitelist cargada, permitir ejecución (modo desarrollo)
     if (Object.keys(this.HASHES_WHITELIST).length === 0) {
       this.logger.warn(
-        `⚠️  MODO SIN VERIFICACIÓN: python-hashes.json no encontrado`,
+        `MODO SIN VERIFICACIÓN: python-hashes.json no encontrado`,
       );
-      this.logger.warn(
-        `   Permitiendo ejecución sin verificación de integridad`,
-      );
+      this.logger.warn(`Permitiendo ejecución sin verificación de integridad`);
       return true;
     }
 
     // Verificar que tenemos el hash en la whitelist
     if (!this.HASHES_WHITELIST[fileName]) {
+      this.logger.warn(`INTEGRIDAD: Archivo no está en whitelist: ${fileName}`);
       this.logger.warn(
-        `⚠️  INTEGRIDAD: Archivo no está en whitelist: ${fileName}`,
-      );
-      this.logger.warn(
-        `   Permitiendo ejecución (archivo no listado en python-hashes.json)`,
+        `Permitiendo ejecución (archivo no listado en python-hashes.json)`,
       );
       return true; // Permitir archivos no listados
     }
@@ -197,14 +197,14 @@ export class PythonService {
       const expectedHash = this.HASHES_WHITELIST[fileName];
 
       if (hash !== expectedHash) {
-        this.logger.error(`❌ INTEGRIDAD COMPROMETIDA: ${fileName}`);
-        this.logger.error(`   Hash esperado: ${expectedHash}`);
-        this.logger.error(`   Hash actual:   ${hash}`);
-        this.logger.error(`   ⚠️  El archivo ha sido modificado o reemplazado`);
+        this.logger.error(`INTEGRIDAD COMPROMETIDA: ${fileName}`);
+        this.logger.error(`Hash esperado: ${expectedHash}`);
+        this.logger.error(`Hash actual:   ${hash}`);
+        this.logger.error(`El archivo ha sido modificado o reemplazado`);
         return false;
       }
 
-      this.logger.log(`✅ INTEGRIDAD OK: ${fileName}`);
+      this.logger.log(`INTEGRIDAD OK: ${fileName}`);
       return true;
     } catch (error) {
       this.logger.error(
@@ -253,22 +253,22 @@ export class PythonService {
         process.env.RESOURCES_PATH || (process as any).resourcesPath;
       const isProduction = !!resourcesPath;
 
-      // 🔒 PASO 1: Convertir .py a .pyc si es necesario (solo en producción)
+      // PASO 1: Convertir .py a .pyc si es necesario (solo en producción)
       let finalScriptName = scriptName;
       if (isProduction && scriptName.endsWith('.py')) {
         finalScriptName = scriptName.replace('.py', '.pyc');
-        this.logger.log(`🔄 Convirtiendo ${scriptName} → ${finalScriptName}`);
+        this.logger.log(`Convirtiendo ${scriptName} → ${finalScriptName}`);
       }
 
-      // 🔒 PASO 2: Verificar integridad del archivo (solo en producción)
+      // PASO 2: Verificar integridad del archivo (solo en producción)
       if (isProduction && !this.verifyFileIntegrity(finalScriptName)) {
         const error = {
           error: 'Integrity check failed',
           message: 'El archivo ha sido modificado o no existe',
           fileName: finalScriptName,
-          hint: '🔒 Error de integridad del sistema. Por favor reinstala la aplicación.',
+          hint: 'Error de integridad del sistema. Por favor reinstala la aplicación.',
         };
-        this.logger.error(`🚫 EJECUCIÓN BLOQUEADA: ${finalScriptName}`);
+        this.logger.error(` EJECUCIÓN BLOQUEADA: ${finalScriptName}`);
         reject(error);
         return;
       }
@@ -286,11 +286,45 @@ export class PythonService {
 
       const pythonProcess = spawn(pythonExe, [scriptPath, ...args]);
 
+      const TIMEOUT_MS = 60000;
+      const timeoutId = setTimeout(() => {
+        this.logger.error(
+          `TIMEOUT: El script ${finalScriptName} excedió el límite de ${TIMEOUT_MS / 1000}s. Matando proceso...`,
+        );
+        pythonProcess.kill('SIGKILL');
+
+        reject({
+          error: 'Timeout exceeded',
+          message: `El proceso excedió el tiempo límite de ${TIMEOUT_MS / 1000} segundos y fue cancelado.`,
+        });
+      }, TIMEOUT_MS);
+
       let dataString = '';
       let errorString = '';
+      let stdoutBuffer = '';
 
       pythonProcess.stdout.on('data', (data) => {
-        dataString += data.toString();
+        stdoutBuffer += data.toString();
+        const lines = stdoutBuffer.split('\n');
+
+        // Mantiene la última línea en el buffer si está incompleta (no termina en \n)
+        stdoutBuffer = lines.pop() || '';
+
+        for (const line of lines) {
+          // Buscar marcador de progreso: ej. PROGRESS:50:some-file.pdf
+          const progressMatch = line.match(/PROGRESS:(\d+):(.+)/);
+          if (progressMatch) {
+            const progressValue = parseInt(progressMatch[1], 10);
+            const fileName = progressMatch[2].trim();
+            this.pythonGateway.emitProgress(progressValue, {
+              scriptName: finalScriptName,
+              fileName: fileName,
+            });
+          } else {
+            // Si no es un mensaje de progreso, acumularlo para el JSON final
+            dataString += line + '\n';
+          }
+        }
       });
 
       pythonProcess.stderr.on('data', (data) => {
@@ -299,6 +333,23 @@ export class PythonService {
       });
 
       pythonProcess.on('close', (code) => {
+        clearTimeout(timeoutId); // Limpiar timeout si terminó a tiempo
+
+        // Procesar cualquier dato restante en el buffer
+        if (stdoutBuffer) {
+          const progressMatch = stdoutBuffer.match(/PROGRESS:(\d+):(.+)/);
+          if (progressMatch) {
+            const progressValue = parseInt(progressMatch[1], 10);
+            const fileName = progressMatch[2].trim();
+            this.pythonGateway.emitProgress(progressValue, {
+              scriptName: finalScriptName,
+              fileName: fileName,
+            });
+          } else {
+            dataString += stdoutBuffer;
+          }
+        }
+
         if (code !== 0) {
           this.logger.error(`Python script salió con código ${code}`);
           this.logger.error(`Error: ${errorString}`);
@@ -306,7 +357,7 @@ export class PythonService {
           // Mensaje específico para Python embebido no encontrado
           const hint =
             code === 9009 || errorString.includes('not found')
-              ? '💡 Python embebido no encontrado. Verifica que nest-files-py-embedded esté correctamente configurado.'
+              ? ' Python embebido no encontrado. Verifica que nest-files-py-embedded esté correctamente configurado.'
               : 'Error ejecutando el script Python';
 
           this.logger.error(hint);
@@ -336,9 +387,10 @@ export class PythonService {
       });
 
       pythonProcess.on('error', (error) => {
+        clearTimeout(timeoutId); // Limpiar timeout si falló
         this.logger.error(`Error ejecutando Python: ${error.message}`);
         this.logger.error(
-          '💡 Verifica que Python embebido esté correctamente configurado en nest-files-py-embedded',
+          'Verifica que Python embebido esté correctamente configurado en nest-files-py-embedded',
         );
         reject({
           error: 'Failed to start Python process',
@@ -350,7 +402,7 @@ export class PythonService {
   }
 
   // ==========================================
-  // AGREGA TUS MÉTODOS AQUÍ ⬇️
+  // AGREGA TUS MÉTODOS AQUÍ
   // ==========================================
 
   // Ejemplo:
@@ -462,6 +514,18 @@ export class PythonService {
 
       const exeProcess = spawn(exePath, args);
 
+      const TIMEOUT_MS = 60000;
+      const timeoutId = setTimeout(() => {
+        this.logger.error(
+          `⏳ TIMEOUT: El ejecutable ${exeName} excedió el límite de ${TIMEOUT_MS / 1000}s. Matando proceso...`,
+        );
+        exeProcess.kill('SIGKILL');
+        reject({
+          error: 'Timeout exceeded',
+          message: `El proceso excedió el tiempo límite de ${TIMEOUT_MS / 1000} segundos y fue cancelado.`,
+        });
+      }, TIMEOUT_MS);
+
       let dataString = '';
       let errorString = '';
 
@@ -475,13 +539,15 @@ export class PythonService {
       });
 
       exeProcess.on('close', (code) => {
+        clearTimeout(timeoutId); // Limpiar timeout si terminó a tiempo
+
         if (code !== 0) {
           this.logger.error(`Ejecutable salió con código ${code}`);
           this.logger.error(`Error: ${errorString}`);
 
           const hint =
             code === 9009 || errorString.includes('not found')
-              ? '💡 Ejecutable no encontrado. Verifica que el archivo .exe esté en la carpeta executables.'
+              ? 'Ejecutable no encontrado. Verifica que el archivo .exe esté en la carpeta executables.'
               : 'Error ejecutando el ejecutable';
 
           this.logger.error(hint);
@@ -511,9 +577,11 @@ export class PythonService {
       });
 
       exeProcess.on('error', (error) => {
+        clearTimeout(timeoutId); // Limpiar timeout si falló
+
         this.logger.error(`Error ejecutando ejecutable: ${error.message}`);
         this.logger.error(
-          '💡 Verifica que el archivo .exe esté en la carpeta executables y tenga permisos de ejecución',
+          'Verifica que el archivo .exe esté en la carpeta executables y tenga permisos de ejecución',
         );
         reject({
           error: 'Failed to start executable process',

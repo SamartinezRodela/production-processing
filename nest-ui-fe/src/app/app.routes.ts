@@ -19,17 +19,20 @@ export const routes: Routes = [
     path: '',
     loadComponent: () => import('./pages/home/home').then((m) => m.Home),
     canActivate: [authGuard],
+    data: { preload: true },
   },
   {
     path: 'Set-Up',
     loadComponent: () => import('./pages/set-up/set-up').then((m) => m.SetUp),
     canActivate: [authGuard],
+    data: { preload: true },
   },
   {
     path: 'python-tests',
     loadComponent: () =>
       import('./pages/python-tests/python-tests.component').then((m) => m.PythonTestsComponent),
     canActivate: [authGuard],
+    data: { preload: true },
   },
 
   // ============================================

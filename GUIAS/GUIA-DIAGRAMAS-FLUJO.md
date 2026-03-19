@@ -261,7 +261,7 @@ Backend detecta cambio en database.json
 
 ---
 
-## 🚀 Flujo de Build y Deployment (GitHub Actions) - DETALLADO
+## Flujo de Build y Deployment (GitHub Actions) - DETALLADO
 
 ### Configuración Inicial de GitHub Actions
 

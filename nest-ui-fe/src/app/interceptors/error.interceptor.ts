@@ -4,36 +4,42 @@ import { catchError, throwError } from 'rxjs';
 import { NotificationService } from '@services/notification.service';
 import { Router } from '@angular/router';
 import { ROUTES } from '@config/app.constants';
+import { AuthService } from '@services/auth.service';
+import { LanguageService } from '@services/language.service';
 
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   const notificationService = inject(NotificationService);
   const router = inject(Router);
+  const authService = inject(AuthService);
+  const languageService = inject(LanguageService);
 
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
-      let errorMessage = 'An error occurred';
+      const t = languageService.t().HTTP_ERRORS;
+      let errorMessage: string = t.OCCURRED;
 
       if (error.error instanceof ErrorEvent) {
         // Error del cliente
-        errorMessage = `Error: ${error.error.message}`;
+        errorMessage = `${t.ERROR} ${error.error.message}`;
       } else {
         // Error del servidor
         switch (error.status) {
           case 401:
-            errorMessage = 'Unauthorized. Please login again.';
+            errorMessage = t.UNAUTHORIZED;
+            authService.logout();
             router.navigate([ROUTES.LOGIN]);
             break;
           case 403:
-            errorMessage = 'Access forbidden';
+            errorMessage = t.FORBIDDEN;
             break;
           case 404:
-            errorMessage = 'Resource not found';
+            errorMessage = t.NOT_FOUND;
             break;
           case 500:
-            errorMessage = 'Internal server error';
+            errorMessage = t.INTERNAL;
             break;
           default:
-            errorMessage = error.error?.message || `Error: ${error.status}`;
+            errorMessage = error.error?.message || `${t.ERROR} ${error.status}`;
         }
       }
 
