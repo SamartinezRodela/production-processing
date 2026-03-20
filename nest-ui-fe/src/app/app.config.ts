@@ -4,6 +4,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 
 import { errorInterceptor } from '@interceptors/error.interceptor';
 import { jwtInterceptor } from '@interceptors/jwt.interceptor';
+import { loadingInterceptor } from '@interceptors/loading.interceptor';
 import { SelectivePreloadingStrategyService } from './selective-preloading-strategy';
 
 import { routes } from './app.routes';
@@ -13,6 +14,7 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(
       withInterceptors([
         jwtInterceptor, // Agregar token JWT a requests
+        loadingInterceptor, // Mostrar spinner/estado de carga global
         errorInterceptor, // Manejar todos los errores HTTP
       ]),
     ),

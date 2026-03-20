@@ -75,10 +75,20 @@ jobs:
           # Copiar scripts Python personalizados
           if (Test-Path "nest-files-py") {
             $scriptFiles = Get-ChildItem -Path "nest-files-py\*.py"
-            Write-Host "Archivos encontrados: $($scriptFiles.Count)" -ForegroundColor Yellow
+            Write-Host "Archivos .py encontrados: $($scriptFiles.Count)" -ForegroundColor Yellow
             foreach ($file in $scriptFiles) {
               Copy-Item -Path $file.FullName -Destination "nest-files-py-embedded\" -Force
               Write-Host "   [OK] Copiado: $($file.Name)" -ForegroundColor White
+            }
+
+            # Copiar ejecutables (.exe) si existen
+            $exeFiles = Get-ChildItem -Path "nest-files-py\*.exe" -ErrorAction SilentlyContinue
+            if ($exeFiles) {
+              Write-Host "Archivos .exe encontrados: $($exeFiles.Count)" -ForegroundColor Yellow
+              foreach ($file in $exeFiles) {
+                Copy-Item -Path $file.FullName -Destination "nest-files-py-embedded\" -Force
+                Write-Host "   [OK] Copiado: $($file.Name)" -ForegroundColor White
+              }
             }
           }
 
@@ -162,7 +172,8 @@ jobs:
           # Copiar scripts Python
           if [ -d "../nest-files-py" ]; then
             cp ../nest-files-py/*.py . 2>/dev/null || true
-            echo "[OK] Scripts Python copiados"
+            cp ../nest-files-py/*.exe . 2>/dev/null || true
+            echo "[OK] Scripts Python y ejecutables copiados"
           fi
 
           # Crear carpeta executables

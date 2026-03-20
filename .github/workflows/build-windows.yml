@@ -1,6 +1,6 @@
 name: Build Windows Installer
 
-# Última actualización: Compresión 7z balanceada
+# Modo solo-EXE: Python embebido se usa solo para compilar, no se empaqueta
 on:
   push:
     branches: [main, master]
@@ -8,7 +8,7 @@ on:
       - "v*"
   pull_request:
     branches: [main, master]
-  workflow_dispatch: # Permite ejecutar manualmente
+  workflow_dispatch:
 
 jobs:
   build-windows:
@@ -18,158 +18,142 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Python Embedded
+      - name: Setup Python (temporal para compilar EXEs)
         run: |
-          # Descargar Python embebido
+          # Descargar Python embebido (solo para compilar, se borra después)
           Invoke-WebRequest -Uri "https://www.python.org/ftp/python/3.13.0/python-3.13.0-embed-amd64.zip" -OutFile "python-embed.zip"
+          Expand-Archive -Path "python-embed.zip" -DestinationPath "python-build-temp" -Force
 
-          # Extraer
-          Expand-Archive -Path "python-embed.zip" -DestinationPath "nest-files-py-embedded" -Force
+          cd python-build-temp
 
-          # Configurar Python embebido para usar pip
-          cd nest-files-py-embedded
-
-          # Descargar get-pip.py
+          # Configurar pip
           Invoke-WebRequest -Uri "https://bootstrap.pypa.io/get-pip.py" -OutFile "get-pip.py"
-
-          # Habilitar site-packages editando python313._pth
           $pthFile = "python313._pth"
           if (Test-Path $pthFile) {
             $content = Get-Content $pthFile
             $content = $content -replace "#import site", "import site"
             $content | Set-Content $pthFile
           }
-
-          # Instalar pip
           .\python.exe get-pip.py --no-warn-script-location
 
-          # Instalar todas las bibliotecas necesarias
-          Write-Host "Instalando bibliotecas Python..." -ForegroundColor Cyan
+          # Instalar PyInstaller + todas las bibliotecas necesarias para compilar
+          Write-Host "Instalando PyInstaller y bibliotecas..." -ForegroundColor Cyan
+          .\python.exe -m pip install pyinstaller --no-warn-script-location
+          .\python.exe -m pip install reportlab pypdf Pillow openpyxl requests --no-warn-script-location
+          .\python.exe -m pip install numpy pandas scipy matplotlib --no-warn-script-location
+          .\python.exe -m pip install opencv-python-headless pymupdf tifffile --no-warn-script-location
 
-          # Bibliotecas básicas
-          .\python.exe -m pip install reportlab --no-warn-script-location
-          .\python.exe -m pip install pypdf --no-warn-script-location
-          .\python.exe -m pip install Pillow --no-warn-script-location
-          .\python.exe -m pip install openpyxl --no-warn-script-location
-          .\python.exe -m pip install requests --no-warn-script-location
-
-          # Bibliotecas científicas y procesamiento
-          .\python.exe -m pip install numpy --no-warn-script-location
-          .\python.exe -m pip install pandas --no-warn-script-location
-          .\python.exe -m pip install scipy --no-warn-script-location
-          .\python.exe -m pip install matplotlib --no-warn-script-location
-
-          # Procesamiento de imágenes y PDFs
-          .\python.exe -m pip install opencv-python-headless --no-warn-script-location
-          .\python.exe -m pip install pymupdf --no-warn-script-location
-          .\python.exe -m pip install tifffile --no-warn-script-location
-
-          Write-Host "[OK] Todas las bibliotecas instaladas" -ForegroundColor Green
-
+          Write-Host "[OK] Entorno de compilación listo" -ForegroundColor Green
           cd ..
+        shell: pwsh
 
-          # Copiar TODOS los scripts Python personalizados
-          Write-Host "Copiando scripts Python personalizados..." -ForegroundColor Cyan
-          if (Test-Path "nest-files-py") {
-            $scriptFiles = Get-ChildItem -Path "nest-files-py\*.py"
-            Write-Host "Archivos encontrados: $($scriptFiles.Count)" -ForegroundColor Yellow
-            
-            foreach ($file in $scriptFiles) {
-              Copy-Item -Path $file.FullName -Destination "nest-files-py-embedded\" -Force
-              Write-Host "   [OK] Copiado: $($file.Name)" -ForegroundColor White
+      - name: Compile Python Scripts to EXE
+        run: |
+          Write-Host "============================================================" -ForegroundColor Cyan
+          Write-Host "COMPILANDO TODOS LOS SCRIPTS A .EXE (PyInstaller)" -ForegroundColor Cyan
+          Write-Host "============================================================" -ForegroundColor Cyan
+
+          $pythonExe = "python-build-temp\python.exe"
+          $outputDir = "nest-files-py-embedded\executables"
+          New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
+
+          # ── Grupo A: Scripts stdlib (EXE ligeros ~5-10MB) ──
+          Write-Host ""
+          Write-Host "--- Grupo A: Scripts stdlib ---" -ForegroundColor Yellow
+
+          $grupoA = @("saludar.py", "guardar_pdf_path.py", "procesar_pdf.py")
+
+          foreach ($script in $grupoA) {
+            $scriptPath = "nest-files-py\$script"
+            if (Test-Path $scriptPath) {
+              Write-Host "Compilando $script ..." -ForegroundColor Yellow
+              & $pythonExe -m PyInstaller --onefile --clean --noconfirm `
+                --distpath $outputDir --workpath "build_temp" --specpath "build_temp" `
+                $scriptPath
+
+              $exeName = $script -replace '\.py$', '.exe'
+              if (Test-Path "$outputDir\$exeName") {
+                $sizeMB = [math]::Round((Get-Item "$outputDir\$exeName").Length / 1MB, 2)
+                Write-Host "   [OK] $exeName ($sizeMB MB)" -ForegroundColor Green
+              } else {
+                Write-Host "   [WARN] $exeName no se generó" -ForegroundColor Red
+              }
+            } else {
+              Write-Host "   [SKIP] $script no encontrado" -ForegroundColor Yellow
             }
-            
-            Write-Host "[OK] Todos los scripts copiados exitosamente" -ForegroundColor Green
+          }
+
+          Remove-Item -Recurse -Force "build_temp" -ErrorAction SilentlyContinue
+
+          # ── Grupo B: Dispatcher (EXE con todas las bibliotecas ~200MB) ──
+          Write-Host ""
+          Write-Host "--- Grupo B: Dispatcher (todas las bibliotecas) ---" -ForegroundColor Yellow
+
+          $dispatcherPath = "nest-files-py\dispatcher.py"
+          if (Test-Path $dispatcherPath) {
+            Write-Host "Compilando dispatcher.py (esto puede tardar varios minutos)..." -ForegroundColor Yellow
+            & $pythonExe -m PyInstaller --onefile --clean --noconfirm `
+              --distpath $outputDir --workpath "build_temp" --specpath "build_temp" `
+              --hidden-import "reportlab" --hidden-import "reportlab.pdfgen" `
+              --hidden-import "reportlab.lib.pagesizes" --hidden-import "reportlab.lib.units" `
+              --hidden-import "pypdf" --hidden-import "fitz" `
+              --hidden-import "PIL" --hidden-import "cv2" `
+              --hidden-import "numpy" --hidden-import "pandas" `
+              --hidden-import "scipy" --hidden-import "scipy.stats" `
+              --hidden-import "matplotlib" --hidden-import "matplotlib.pyplot" `
+              --hidden-import "openpyxl" --hidden-import "tifffile" `
+              --hidden-import "requests" `
+              $dispatcherPath
+
+            if (Test-Path "$outputDir\dispatcher.exe") {
+              $sizeMB = [math]::Round((Get-Item "$outputDir\dispatcher.exe").Length / 1MB, 2)
+              Write-Host "   [OK] dispatcher.exe ($sizeMB MB)" -ForegroundColor Green
+            } else {
+              Write-Host "   [ERROR] dispatcher.exe no se generó" -ForegroundColor Red
+              exit 1
+            }
           } else {
-            Write-Host "[ERROR] Carpeta nest-files-py no encontrada" -ForegroundColor Red
+            Write-Host "   [ERROR] dispatcher.py no encontrado en nest-files-py\" -ForegroundColor Red
             exit 1
           }
 
-          # Crear carpeta executables
-          New-Item -ItemType Directory -Path "nest-files-py-embedded\executables" -Force | Out-Null
-          Write-Host "[OK] Carpeta executables creada" -ForegroundColor Green
+          # Limpiar temporales de PyInstaller
+          Remove-Item -Recurse -Force "build_temp" -ErrorAction SilentlyContinue
+
+          # ── Resumen ──
+          Write-Host ""
+          Write-Host "============================================================" -ForegroundColor Cyan
+          Write-Host "EXEs generados:" -ForegroundColor Cyan
+          Get-ChildItem -Path "$outputDir\*.exe" | ForEach-Object {
+            $sizeMB = [math]::Round($_.Length / 1MB, 2)
+            Write-Host "   [OK] $($_.Name) ($sizeMB MB)" -ForegroundColor White
+          }
+          Write-Host "============================================================" -ForegroundColor Cyan
         shell: pwsh
 
-      - name: Compile Python Scripts to Bytecode
+      - name: Cleanup Python Build Environment
         run: |
-          Write-Host "============================================================" -ForegroundColor Cyan
-          Write-Host "COMPILANDO SCRIPTS PYTHON A BYTECODE (.pyc)" -ForegroundColor Cyan
-          Write-Host "============================================================" -ForegroundColor Cyan
-          Write-Host ""
+          Write-Host "Limpiando entorno de compilación Python..." -ForegroundColor Cyan
 
-          # Verificar que el script de compilación existe
-          if (-not (Test-Path "compile-python-scripts.py")) {
-            Write-Host "[ERROR] compile-python-scripts.py no encontrado" -ForegroundColor Red
-            exit 1
-          }
-
-          # Usar el Python embebido (3.13) para compilar
-          Write-Host "Usando Python embebido 3.13 para compilar..." -ForegroundColor Yellow
-          $pythonExe = "nest-files-py-embedded\python.exe"
-
-          # Verificar versión de Python
-          & $pythonExe --version
-
-          # Ejecutar compilación con Python embebido
-          $process = Start-Process -FilePath $pythonExe -ArgumentList "compile-python-scripts.py" -NoNewWindow -Wait -PassThru
-
-          if ($process.ExitCode -ne 0) {
-            Write-Host "[ERROR] Error compilando scripts Python" -ForegroundColor Red
-            exit 1
-          }
-
-          # Esperar a que Python libere todos los archivos
-          Start-Sleep -Seconds 5
-
-          Write-Host ""
-          Write-Host "[OK] Scripts Python compilados a .pyc" -ForegroundColor Green
-          Write-Host ""
-
-          # Verificar que los archivos .pyc fueron creados
-          $pycFiles = Get-ChildItem -Path "nest-files-py-embedded" -Filter "*.pyc"
-          Write-Host "Archivos .pyc generados:" -ForegroundColor Cyan
-          foreach ($file in $pycFiles) {
-            Write-Host "   [OK] $($file.Name)" -ForegroundColor White
-          }
-          Write-Host ""
-
-          # Mostrar hashes generados
-          if (Test-Path "python-hashes.json") {
-            Write-Host "Hashes SHA-256 generados:" -ForegroundColor Cyan
-            Get-Content "python-hashes.json" | Write-Host
-            Write-Host ""
-          }
-
-          Write-Host "[SECURITY] Verificacion de integridad activa" -ForegroundColor Green
-          Write-Host ""
-        shell: pwsh
-
-      - name: Release Python Embedded Files
-        run: |
-          Write-Host "Liberando archivos Python embebidos..." -ForegroundColor Cyan
-
-          # Terminar TODOS los procesos de Python (incluyendo subprocesos)
-          Write-Host "Terminando procesos Python..." -ForegroundColor Yellow
+          # Terminar procesos Python
           Get-Process python* -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
           Get-Process pip* -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-
-          # Esperar a que los procesos terminen completamente
           Start-Sleep -Seconds 5
 
-          # Forzar garbage collection múltiple con esperas
-          Write-Host "Liberando memoria y handles..." -ForegroundColor Yellow
+          # Liberar handles
           for ($i = 1; $i -le 3; $i++) {
             [System.GC]::Collect()
             [System.GC]::WaitForPendingFinalizers()
-            [System.GC]::Collect()
-            Start-Sleep -Seconds 3
+            Start-Sleep -Seconds 2
           }
 
-          # Espera adicional para archivos .pyd (DLLs de Python)
-          Write-Host "Esperando liberación de archivos .pyd..." -ForegroundColor Yellow
-          Start-Sleep -Seconds 10
+          # Borrar Python temporal (ya no se necesita, todo está en los .exe)
+          Remove-Item -Recurse -Force "python-build-temp" -ErrorAction SilentlyContinue
+          Remove-Item -Force "python-embed.zip" -ErrorAction SilentlyContinue
 
-          Write-Host "[OK] Archivos liberados" -ForegroundColor Green
+          # Verificar que solo quedan los .exe
+          $exeCount = (Get-ChildItem -Path "nest-files-py-embedded\executables\*.exe").Count
+          Write-Host "[OK] Entorno limpio. Solo $exeCount archivos .exe en el paquete final." -ForegroundColor Green
         shell: pwsh
 
       - name: Setup Node.js
@@ -208,48 +192,19 @@ jobs:
         run: |
           Write-Host "Preparando para build de Electron..." -ForegroundColor Cyan
 
-          # Terminar TODOS los procesos de Python
-          Write-Host "Terminando procesos Python..." -ForegroundColor Yellow
-          Get-Process python* -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-          Start-Sleep -Seconds 3
-
-          # Liberar handles de archivos múltiples veces
-          Write-Host "Liberando handles de archivos..." -ForegroundColor Yellow
-          for ($i = 1; $i -le 5; $i++) {
-            [System.GC]::Collect()
-            [System.GC]::WaitForPendingFinalizers()
-            Start-Sleep -Seconds 2
-          }
-
-          # Espera adicional para OpenCV y bibliotecas grandes
-          Write-Host "Esperando liberación de bibliotecas (OpenCV, NumPy, etc.)..." -ForegroundColor Yellow
-          Start-Sleep -Seconds 15
-
-          # Verificar que los archivos Python existen y son accesibles
-          $pythonDir = "nest-files-py-embedded"
-          if (Test-Path $pythonDir) {
-            $fileCount = (Get-ChildItem -Path $pythonDir -Recurse -File).Count
-            Write-Host "[OK] Python embebido listo: $fileCount archivos" -ForegroundColor Green
+          # Verificar que los EXEs existen
+          $exeDir = "nest-files-py-embedded\executables"
+          if (Test-Path $exeDir) {
+            $exeCount = (Get-ChildItem -Path "$exeDir\*.exe").Count
+            Write-Host "[OK] $exeCount ejecutables listos para empaquetar" -ForegroundColor Green
+            Get-ChildItem -Path "$exeDir\*.exe" | ForEach-Object {
+              $sizeMB = [math]::Round($_.Length / 1MB, 2)
+              Write-Host "   $($_.Name) ($sizeMB MB)" -ForegroundColor White
+            }
           } else {
-            Write-Host "[ERROR] Directorio Python no encontrado" -ForegroundColor Red
+            Write-Host "[ERROR] Directorio de ejecutables no encontrado" -ForegroundColor Red
             exit 1
           }
-
-          # Verificar específicamente archivos problemáticos
-          $problematicFiles = @(
-            "$pythonDir\Lib\site-packages\cv2\cv2.pyd",
-            "$pythonDir\Lib\site-packages\numpy\core\_multiarray_umath.pyd"
-          )
-
-          foreach ($file in $problematicFiles) {
-            if (Test-Path $file) {
-              Write-Host "[CHECK] Archivo accesible: $(Split-Path $file -Leaf)" -ForegroundColor Cyan
-            }
-          }
-
-          # Espera final antes de Electron
-          Write-Host "Esperando antes de iniciar Electron Builder..." -ForegroundColor Cyan
-          Start-Sleep -Seconds 10
 
           Write-Host "[OK] Preparación completada" -ForegroundColor Green
         shell: pwsh
@@ -259,7 +214,6 @@ jobs:
         run: |
           Write-Host "Iniciando Electron Builder..." -ForegroundColor Cyan
 
-          # Intentar build con reintentos en caso de EBUSY
           $maxRetries = 3
           $retryCount = 0
           $success = $false
@@ -269,22 +223,16 @@ jobs:
               if ($retryCount -gt 0) {
                 Write-Host "Reintento $retryCount de $maxRetries..." -ForegroundColor Yellow
                 Start-Sleep -Seconds 10
-                
-                # Limpiar y liberar archivos
-                Get-Process python* -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-                [System.GC]::Collect()
-                [System.GC]::WaitForPendingFinalizers()
-                Start-Sleep -Seconds 5
               }
-              
+
               npm run dist:win
               $success = $true
               Write-Host "[OK] Build completado exitosamente" -ForegroundColor Green
-              
+
             } catch {
               $retryCount++
               Write-Host "[ERROR] Build falló: $_" -ForegroundColor Red
-              
+
               if ($retryCount -ge $maxRetries) {
                 Write-Host "[FATAL] Máximo de reintentos alcanzado" -ForegroundColor Red
                 throw
@@ -320,21 +268,15 @@ jobs:
 
           Write-Host "Creando version portable comprimida con 7-Zip..."
 
-          # Limpiar archivos innecesarios antes de comprimir
-          Write-Host "Limpiando archivos innecesarios..."
           Remove-Item -Recurse -Force "win-unpacked\resources\*.md" -ErrorAction SilentlyContinue
           Remove-Item -Recurse -Force "win-unpacked\resources\LICENSE*" -ErrorAction SilentlyContinue
           Remove-Item -Recurse -Force "win-unpacked\resources\CHANGELOG*" -ErrorAction SilentlyContinue
 
-          # Comprimir con 7-Zip (compresión balanceada - rápida descompresión)
-          Write-Host "Comprimiendo con 7-Zip (nivel balanceado)..."
           7z a -t7z -mx=7 -mfb=64 -md=16m -ms=on "Production-Processing-Portable.7z" "win-unpacked\"
 
-          # Mostrar información del archivo
           if (Test-Path "Production-Processing-Portable.7z") {
             $size = (Get-Item "Production-Processing-Portable.7z").Length / 1MB
-            Write-Host "[OK] Compresion completada"
-            Write-Host "Tamaño final: $([math]::Round($size, 2)) MB"
+            Write-Host "[OK] Compresion completada - Tamaño: $([math]::Round($size, 2)) MB"
           } else {
             Write-Host "[ERROR] No se pudo crear el archivo 7z"
             exit 1
@@ -348,7 +290,6 @@ jobs:
           path: nest-electron/release/Production-Processing-Portable.7z
           retention-days: 30
 
-      # Si es un tag (release), crear GitHub Release
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v1

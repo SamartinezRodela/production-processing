@@ -1,0 +1,195 @@
+name: Build Windows Installer
+
+# BACKUP - Versión con Python embebido + .pyc + bibliotecas
+# Guardado antes de migrar a modo solo-EXE
+on:
+  push:
+    branches: [main, master]
+    tags:
+      - "v*"
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python Embedded
+        run: |
+          Invoke-WebRequest -Uri "https://www.python.org/ftp/python/3.13.0/python-3.13.0-embed-amd64.zip" -OutFile "python-embed.zip"
+          Expand-Archive -Path "python-embed.zip" -DestinationPath "nest-files-py-embedded" -Force
+          cd nest-files-py-embedded
+          Invoke-WebRequest -Uri "https://bootstrap.pypa.io/get-pip.py" -OutFile "get-pip.py"
+          $pthFile = "python313._pth"
+          if (Test-Path $pthFile) {
+            $content = Get-Content $pthFile
+            $content = $content -replace "#import site", "import site"
+            $content | Set-Content $pthFile
+          }
+          .\python.exe get-pip.py --no-warn-script-location
+          Write-Host "Instalando bibliotecas Python..." -ForegroundColor Cyan
+          .\python.exe -m pip install reportlab --no-warn-script-location
+          .\python.exe -m pip install pypdf --no-warn-script-location
+          .\python.exe -m pip install Pillow --no-warn-script-location
+          .\python.exe -m pip install openpyxl --no-warn-script-location
+          .\python.exe -m pip install requests --no-warn-script-location
+          .\python.exe -m pip install numpy --no-warn-script-location
+          .\python.exe -m pip install pandas --no-warn-script-location
+          .\python.exe -m pip install scipy --no-warn-script-location
+          .\python.exe -m pip install matplotlib --no-warn-script-location
+          .\python.exe -m pip install opencv-python-headless --no-warn-script-location
+          .\python.exe -m pip install pymupdf --no-warn-script-location
+          .\python.exe -m pip install tifffile --no-warn-script-location
+          Write-Host "[OK] Todas las bibliotecas instaladas" -ForegroundColor Green
+          cd ..
+          if (Test-Path "nest-files-py") {
+            $scriptFiles = Get-ChildItem -Path "nest-files-py\*.py"
+            foreach ($file in $scriptFiles) {
+              Copy-Item -Path $file.FullName -Destination "nest-files-py-embedded\" -Force
+            }
+            $exeFiles = Get-ChildItem -Path "nest-files-py\*.exe" -ErrorAction SilentlyContinue
+            if ($exeFiles) {
+              foreach ($file in $exeFiles) {
+                Copy-Item -Path $file.FullName -Destination "nest-files-py-embedded\" -Force
+              }
+            }
+          }
+          New-Item -ItemType Directory -Path "nest-files-py-embedded\executables" -Force | Out-Null
+        shell: pwsh
+
+      - name: Compile Python Scripts to Bytecode
+        run: |
+          if (-not (Test-Path "compile-python-scripts.py")) { exit 1 }
+          $pythonExe = "nest-files-py-embedded\python.exe"
+          & $pythonExe --version
+          $process = Start-Process -FilePath $pythonExe -ArgumentList "compile-python-scripts.py" -NoNewWindow -Wait -PassThru
+          if ($process.ExitCode -ne 0) { exit 1 }
+          Start-Sleep -Seconds 5
+        shell: pwsh
+
+      - name: Release Python Embedded Files
+        run: |
+          Get-Process python* -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+          Get-Process pip* -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+          Start-Sleep -Seconds 5
+          for ($i = 1; $i -le 3; $i++) {
+            [System.GC]::Collect()
+            [System.GC]::WaitForPendingFinalizers()
+            Start-Sleep -Seconds 3
+          }
+          Start-Sleep -Seconds 10
+        shell: pwsh
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies (root)
+        run: npm install
+      - name: Install dependencies (backend)
+        working-directory: nest-ui-be
+        run: npm install
+      - name: Install dependencies (frontend)
+        working-directory: nest-ui-fe
+        run: npm install
+      - name: Install dependencies (electron)
+        working-directory: nest-electron
+        run: npm install
+
+      - name: Build Backend
+        working-directory: nest-ui-be
+        run: npm run build
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_EXPIRATION: "12h"
+
+      - name: Build Frontend
+        working-directory: nest-ui-fe
+        run: npm run build
+
+      - name: Prepare for Electron Build
+        run: |
+          Get-Process python* -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+          Start-Sleep -Seconds 3
+          for ($i = 1; $i -le 5; $i++) {
+            [System.GC]::Collect()
+            [System.GC]::WaitForPendingFinalizers()
+            Start-Sleep -Seconds 2
+          }
+          Start-Sleep -Seconds 15
+          $pythonDir = "nest-files-py-embedded"
+          if (Test-Path $pythonDir) {
+            $fileCount = (Get-ChildItem -Path $pythonDir -Recurse -File).Count
+            Write-Host "[OK] Python embebido listo: $fileCount archivos"
+          }
+          Start-Sleep -Seconds 10
+        shell: pwsh
+
+      - name: Build Electron App (Windows)
+        working-directory: nest-electron
+        run: |
+          $maxRetries = 3; $retryCount = 0; $success = $false
+          while (-not $success -and $retryCount -lt $maxRetries) {
+            try {
+              if ($retryCount -gt 0) { Start-Sleep -Seconds 10 }
+              npm run dist:win
+              $success = $true
+            } catch {
+              $retryCount++
+              if ($retryCount -ge $maxRetries) { throw }
+            }
+          }
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_EXPIRATION: "12h"
+          NODE_ENV: "production"
+        shell: pwsh
+
+      - name: Upload Windows Installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: |
+            nest-electron/release/*.exe
+            nest-electron/release/*.blockmap
+          retention-days: 30
+
+      - name: Upload Portable Version
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-portable
+          path: nest-electron/release/win-unpacked/
+          retention-days: 30
+
+      - name: Create Compressed Portable (7z)
+        run: |
+          cd nest-electron/release
+          Remove-Item -Recurse -Force "win-unpacked\resources\*.md" -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force "win-unpacked\resources\LICENSE*" -ErrorAction SilentlyContinue
+          7z a -t7z -mx=7 -mfb=64 -md=16m -ms=on "Production-Processing-Portable.7z" "win-unpacked\"
+        shell: pwsh
+
+      - name: Upload Portable Compressed (7z)
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-portable-compressed
+          path: nest-electron/release/Production-Processing-Portable.7z
+          retention-days: 30
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            nest-electron/release/*.exe
+            nest-electron/release/*.blockmap
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

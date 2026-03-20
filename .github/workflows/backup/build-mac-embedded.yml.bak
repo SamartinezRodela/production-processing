@@ -1,0 +1,129 @@
+name: Build Mac Installer
+
+# BACKUP - Versión con Python embebido + .pyc + bibliotecas
+# Guardado antes de migrar a modo solo-EXE
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: |
+            nest-ui-fe/package-lock.json
+            nest-ui-be/package-lock.json
+            nest-electron/package-lock.json
+
+      - name: Prepare Python Embedded for Mac
+        run: |
+          mkdir -p nest-files-py-embedded-mac
+          cd nest-files-py-embedded-mac
+          PYTHON_VERSION="3.11.9"
+          PYTHON_BUILD="20240713"
+          PYTHON_URL="https://github.com/indygreg/python-build-standalone/releases/download/${PYTHON_BUILD}/cpython-${PYTHON_VERSION}+${PYTHON_BUILD}-aarch64-apple-darwin-install_only.tar.gz"
+          curl -L -o python.tar.gz "$PYTHON_URL"
+          tar -xzf python.tar.gz
+          rm python.tar.gz
+          mv python python-runtime
+          python-runtime/bin/pip3 install reportlab pypdf Pillow openpyxl requests
+          python-runtime/bin/pip3 install numpy pandas scipy matplotlib
+          python-runtime/bin/pip3 install opencv-python-headless pymupdf tifffile
+          if [ -d "../nest-files-py" ]; then
+            for file in ../nest-files-py/*.py; do
+              [ -f "$file" ] && cp "$file" .
+            done
+          fi
+          mkdir -p executables
+          cd ..
+
+      - name: Compile Python Scripts to Bytecode (Mac)
+        run: |
+          PYTHON_EXE="nest-files-py-embedded-mac/python-runtime/bin/python3"
+          $PYTHON_EXE --version
+          $PYTHON_EXE compile-python-scripts.py nest-files-py-embedded-mac
+
+      - name: Verify Python embedded exists
+        run: |
+          if [ -d "nest-files-py-embedded-mac" ]; then
+            ls -la nest-files-py-embedded-mac/
+          fi
+
+      - name: Install Frontend dependencies
+        working-directory: nest-ui-fe
+        run: npm ci
+      - name: Build Frontend
+        working-directory: nest-ui-fe
+        run: npm run build
+      - name: Install Backend dependencies
+        working-directory: nest-ui-be
+        run: npm ci
+      - name: Build Backend
+        working-directory: nest-ui-be
+        run: npm run build
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_EXPIRATION: "12h"
+      - name: Install Electron dependencies
+        working-directory: nest-electron
+        run: npm install
+      - name: Build Electron
+        working-directory: nest-electron
+        run: npm run build
+
+      - name: Create Mac App with electron-packager
+        working-directory: nest-electron
+        run: npm run dist:mac-simple
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_EXPIRATION: "12h"
+          NODE_ENV: "production"
+
+      - name: Copy resources to Mac App
+        run: |
+          APP_PATH=$(find nest-electron/release -name "Production Processing-darwin-*" -type d | head -n 1)
+          RESOURCES_DIR="$APP_PATH/Production Processing.app/Contents/Resources"
+          cp -r nest-ui-fe/dist/nest-ui-fe/browser "$RESOURCES_DIR/frontend"
+          mkdir -p "$RESOURCES_DIR/backend"
+          cp -r nest-ui-be/dist "$RESOURCES_DIR/backend/"
+          cp -r nest-ui-be/node_modules "$RESOURCES_DIR/backend/"
+          cp nest-ui-be/package.json "$RESOURCES_DIR/backend/"
+          [ -d "nest-ui-be/data" ] && cp -r nest-ui-be/data "$RESOURCES_DIR/backend/data" || mkdir -p "$RESOURCES_DIR/backend/data"
+          [ -f "python-hashes.json" ] && cp python-hashes.json "$RESOURCES_DIR/backend/python-hashes.json"
+          JWT_SECRET="${JWT_SECRET:-default-secret-change-in-production-min-32-chars}"
+          JWT_EXPIRATION="${JWT_EXPIRATION:-12h}"
+          cat > "$RESOURCES_DIR/backend/.env" << EOF
+          JWT_SECRET=${JWT_SECRET}
+          JWT_EXPIRATION=${JWT_EXPIRATION}
+          NODE_ENV=production
+          PORT=3000
+          EOF
+          [ -d "nest-files-py-embedded-mac" ] && cp -r nest-files-py-embedded-mac "$RESOURCES_DIR/python"
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_EXPIRATION: "12h"
+
+      - name: Compress Mac App
+        run: |
+          APP_PATH=$(find nest-electron/release -name "Production Processing-darwin-*" -type d | head -n 1)
+          cd nest-electron/release
+          FOLDER_NAME=$(basename "$APP_PATH")
+          zip -r "Production-Processing-Mac.zip" "$FOLDER_NAME"
+
+      - name: Upload Mac App (ZIP)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Production-Processing-Mac-App
+          path: nest-electron/release/Production-Processing-Mac.zip
+          retention-days: 30
+          if-no-files-found: error

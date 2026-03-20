@@ -356,43 +356,82 @@ ipcMain.handle("python:procesarPDF", async (event, datos) => {
   try {
     console.log("[IPC] python:procesarPDF llamado con:", datos);
 
-    // Construir la ruta correcta del script
-    let scriptPath: string;
+    // Construir la ruta del ejecutable
+    const isMac = process.platform === "darwin";
+    const exeName = isMac ? "procesar_pdf" : "procesar_pdf.exe";
+    let exePath: string;
+
     if (isDev) {
-      // En desarrollo: usar ruta relativa desde el directorio del proyecto
-      scriptPath = path.join(__dirname, "../../nest-files-py/procesar_pdf.py");
+      // En desarrollo: buscar en nest-files-py-embedded/executables/
+      exePath = path.join(
+        __dirname,
+        "../../nest-files-py-embedded/executables",
+        exeName,
+      );
+      // Fallback a .py si no existe el .exe en desarrollo
+      if (!fs.existsSync(exePath)) {
+        const scriptPath = path.join(
+          __dirname,
+          "../../nest-files-py/procesar_pdf.py",
+        );
+        const pythonExe = isMac
+          ? path.join(
+              __dirname,
+              "../../nest-files-py-embedded-mac/python-runtime/bin/python3",
+            )
+          : path.join(__dirname, "../../nest-files-py-embedded/python.exe");
+
+        console.log("[IPC] EXE no encontrado, fallback a .py:", scriptPath);
+        const datosJson = JSON.stringify(datos);
+
+        return new Promise((resolve) => {
+          exec(
+            `"${pythonExe}" "${scriptPath}" "${datosJson.replace(/"/g, '\\"')}"`,
+            { maxBuffer: 1024 * 1024 * 10 },
+            (error, stdout, stderr) => {
+              if (error) {
+                resolve({ success: false, error: error.message });
+                return;
+              }
+              try {
+                resolve(JSON.parse(stdout));
+              } catch (e: any) {
+                resolve({
+                  success: false,
+                  error: "Invalid JSON response",
+                  raw: stdout,
+                });
+              }
+            },
+          );
+        });
+      }
     } else {
-      // En producción: usar ruta desde resources
-      scriptPath = path.join(
+      // En producción: usar ruta desde resources/python/executables/
+      exePath = path.join(
         process.resourcesPath,
-        "nest-files-py",
-        "procesar_pdf.py",
+        "python",
+        "executables",
+        exeName,
       );
     }
 
-    console.log("[IPC] Script path:", scriptPath);
+    console.log("[IPC] Ejecutable path:", exePath);
 
-    // Verificar que el archivo existe
-    if (!fs.existsSync(scriptPath)) {
-      console.error("[IPC] Script no encontrado:", scriptPath);
-      return { success: false, error: `Script not found: ${scriptPath}` };
+    if (!fs.existsSync(exePath)) {
+      console.error("[IPC] Ejecutable no encontrado:", exePath);
+      return { success: false, error: `Executable not found: ${exePath}` };
     }
 
-    // Convertir datos a JSON y escapar comillas
-    const datosJson = JSON.stringify(datos).replace(/"/g, '\\"');
+    const datosJson = JSON.stringify(datos);
 
-    // Construir comando con rutas entre comillas
-    const command = `py "${scriptPath}" "${datosJson}"`;
-    console.log("[IPC] Ejecutando comando:", command);
-
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       exec(
-        command,
+        `"${exePath}" "${datosJson.replace(/"/g, '\\"')}"`,
         { maxBuffer: 1024 * 1024 * 10 },
         (error, stdout, stderr) => {
           if (error) {
-            console.error("[IPC] Error ejecutando script:", error.message);
-            console.error("[IPC] stderr:", stderr);
+            console.error("[IPC] Error ejecutando:", error.message);
             resolve({ success: false, error: error.message });
             return;
           }
@@ -401,15 +440,12 @@ ipcMain.handle("python:procesarPDF", async (event, datos) => {
             console.warn("[IPC] stderr:", stderr);
           }
 
-          console.log("[IPC] stdout:", stdout);
-
           try {
             const result = JSON.parse(stdout);
-            console.log("[IPC] Resultado parseado:", result);
+            console.log("[IPC] Resultado:", result);
             resolve(result);
           } catch (e: any) {
             console.error("[IPC] Error parseando JSON:", e.message);
-            console.error("[IPC] stdout raw:", stdout);
             resolve({
               success: false,
               error: "Invalid JSON response",

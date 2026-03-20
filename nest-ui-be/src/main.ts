@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -25,7 +25,8 @@ async function bootstrap() {
     credentials: true,
   });
 
-  await app.listen(process.env.PORT ?? 3000);
-  console.log(`Backend corriendo en: http://localhost:3000`);
+  const port = process.env.PORT ?? 3000;
+  await app.listen(port);
+  Logger.log(`Backend corriendo en: http://localhost:${port}`, 'Bootstrap');
 }
 bootstrap();

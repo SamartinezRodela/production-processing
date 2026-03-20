@@ -411,7 +411,7 @@ export class PythonService {
   // }
 
   async saludar(nombre: string): Promise<any> {
-    return this.executeScript('saludar.py', [nombre]);
+    return this.executeFileWithFallback('saludar', [nombre]);
   }
 
   async generarPDF(datos: {
@@ -421,7 +421,7 @@ export class PythonService {
     nombre_archivo: string;
   }): Promise<any> {
     const datosJson = JSON.stringify(datos);
-    return this.executeScript('generar_pdf.py', [datosJson]);
+    return this.executeDispatcher('generar_pdf', [datosJson]);
   }
 
   async guardarPdfRelativo(datos: {
@@ -430,7 +430,7 @@ export class PythonService {
     input_path: string;
   }): Promise<any> {
     const datosJson = JSON.stringify(datos);
-    return this.executeScript('guardar_pdf_path.py', [datosJson]);
+    return this.executeFileWithFallback('guardar_pdf_path', [datosJson]);
   }
 
   async generarPathPDF(datos: {
@@ -441,7 +441,7 @@ export class PythonService {
     ruta_salida: string;
   }): Promise<any> {
     const datosJson = JSON.stringify(datos);
-    return this.executeScript('generar_pdf_path.py', [datosJson]);
+    return this.executeDispatcher('generar_pdf_path', [datosJson]);
   }
 
   async saveMetadata(data: any): Promise<any> {
@@ -505,13 +505,28 @@ export class PythonService {
    */
   async executeExecutable(exeName: string, args: string[] = []): Promise<any> {
     return new Promise((resolve, reject) => {
-      const executablesPath = path.join(this.scriptsPath, 'executables');
-      const exePath = path.join(executablesPath, exeName);
+      // Buscar el .exe primero en la raíz de scripts, luego en executables/
+      let exePath = path.join(this.scriptsPath, exeName);
+      if (!fs.existsSync(exePath)) {
+        const executablesPath = path.join(this.scriptsPath, 'executables');
+        exePath = path.join(executablesPath, exeName);
+      }
 
-      this.logger.log(`Executables path: ${executablesPath}`);
       this.logger.log(`Ejecutable completo: ${exePath}`);
       this.logger.log(`Ejecutando: ${exePath} con args: ${args.join(' ')}`);
 
+      if (!fs.existsSync(exePath)) {
+        reject({
+          error: 'Executable not found',
+          message: `No se encontró el ejecutable: ${exeName}`,
+          searchedPaths: [
+            path.join(this.scriptsPath, exeName),
+            path.join(this.scriptsPath, 'executables', exeName),
+          ],
+          hint: 'Verifica que el archivo .exe esté en la carpeta de scripts o en executables/',
+        });
+        return;
+      }
       const exeProcess = spawn(exePath, args);
 
       const TIMEOUT_MS = 60000;
@@ -528,9 +543,30 @@ export class PythonService {
 
       let dataString = '';
       let errorString = '';
+      let stdoutBuffer = '';
 
       exeProcess.stdout.on('data', (data) => {
-        dataString += data.toString();
+        stdoutBuffer += data.toString();
+        const lines = stdoutBuffer.split('\n');
+
+        // Mantiene la última línea en el buffer si está incompleta (no termina en \n)
+        stdoutBuffer = lines.pop() || '';
+
+        for (const line of lines) {
+          // Buscar marcador de progreso: ej. PROGRESS:50:some-file.pdf
+          const progressMatch = line.match(/PROGRESS:(\d+):(.+)/);
+          if (progressMatch) {
+            const progressValue = parseInt(progressMatch[1], 10);
+            const fileName = progressMatch[2].trim();
+            this.pythonGateway.emitProgress(progressValue, {
+              scriptName: exeName,
+              fileName: fileName,
+            });
+          } else {
+            // Si no es un mensaje de progreso, acumularlo para el JSON final
+            dataString += line + '\n';
+          }
+        }
       });
 
       exeProcess.stderr.on('data', (data) => {
@@ -540,6 +576,21 @@ export class PythonService {
 
       exeProcess.on('close', (code) => {
         clearTimeout(timeoutId); // Limpiar timeout si terminó a tiempo
+
+        // Procesar cualquier dato restante en el buffer
+        if (stdoutBuffer) {
+          const progressMatch = stdoutBuffer.match(/PROGRESS:(\d+):(.+)/);
+          if (progressMatch) {
+            const progressValue = parseInt(progressMatch[1], 10);
+            const fileName = progressMatch[2].trim();
+            this.pythonGateway.emitProgress(progressValue, {
+              scriptName: exeName,
+              fileName: fileName,
+            });
+          } else {
+            dataString += stdoutBuffer;
+          }
+        }
 
         if (code !== 0) {
           this.logger.error(`Ejecutable salió con código ${code}`);
@@ -599,6 +650,119 @@ export class PythonService {
    * @param args - Array de argumentos para pasar al archivo
    * @returns Promise con el resultado parseado como JSON
    */
+  /**
+   * Ejecuta un archivo intentando primero .exe (standalone) y si no existe, lanza error.
+   * Grupo A: Scripts que solo usan stdlib, compilados a .exe con PyInstaller.
+   *
+   * @param baseName - Nombre base sin extensión (ej: 'saludar', 'guardar_pdf_path')
+   * @param args - Array de argumentos
+   * @returns Promise con el resultado parseado como JSON
+   */
+  async executeFileWithFallback(
+    baseName: string,
+    args: string[] = [],
+  ): Promise<any> {
+    const isMac = process.platform === 'darwin';
+    const exeName = isMac ? baseName : `${baseName}.exe`;
+
+    // Buscar .exe en raíz de scripts y en executables/
+    const exePathRoot = path.join(this.scriptsPath, exeName);
+    const exePathExecutables = path.join(
+      this.scriptsPath,
+      'executables',
+      exeName,
+    );
+
+    if (fs.existsSync(exePathRoot)) {
+      this.logger.log(`[EXE] Ejecutando ${exeName} desde raíz`);
+      return this.executeExecutable(exeName, args);
+    }
+
+    if (fs.existsSync(exePathExecutables)) {
+      this.logger.log(`[EXE] Ejecutando ${exeName} desde executables/`);
+      return this.executeExecutable(exeName, args);
+    }
+
+    // En desarrollo: fallback a .py con Python embebido
+    const pyName = `${baseName}.py`;
+    const pyPath = path.join(this.scriptsPath, pyName);
+    if (fs.existsSync(pyPath)) {
+      this.logger.log(
+        `[DEV Fallback] ${exeName} no encontrado, ejecutando ${pyName}`,
+      );
+      return this.executeScript(pyName, args);
+    }
+
+    throw new Error(
+      `Ejecutable no encontrado: ${exeName}. Buscado en: ${exePathRoot}, ${exePathExecutables}`,
+    );
+  }
+
+  /**
+   * Ejecuta un comando a través del dispatcher (Grupo B).
+   * El dispatcher es un .exe único que contiene todas las bibliotecas.
+   * Si el dispatcher no existe, cae al script .py individual con Python embebido.
+   *
+   * @param comando - Nombre del comando (ej: 'generar_pdf', 'test_numpy_pandas')
+   * @param args - Array de argumentos para el comando
+   * @returns Promise con el resultado parseado como JSON
+   */
+  async executeDispatcher(comando: string, args: string[] = []): Promise<any> {
+    const isMac = process.platform === 'darwin';
+    const dispatcherName = isMac ? 'dispatcher' : 'dispatcher.exe';
+
+    // Buscar dispatcher en executables/
+    const dispatcherPath = path.join(
+      this.scriptsPath,
+      'executables',
+      dispatcherName,
+    );
+
+    if (fs.existsSync(dispatcherPath)) {
+      this.logger.log(
+        `[Dispatcher] Ejecutando: ${dispatcherName} ${comando} ${args.join(' ')}`,
+      );
+      return this.executeExecutable(dispatcherName, [comando, ...args]);
+    }
+
+    // Fallback: mapear comando a script .py individual
+    const scriptMap: Record<string, string> = {
+      generar_pdf: 'generar_pdf.py',
+      generar_pdf_path: 'generar_pdf_path.py',
+      verify_folder: 'verify_folder.py',
+      generate_pdf: 'generate_pdf.py',
+      test_imports: 'test_imports.py',
+      test_all_libraries: 'test_all_libraries.py',
+      test_numpy_pandas: 'test_numpy_pandas.py',
+      test_reportlab: 'test_reportlab.py',
+      test_matplotlib: 'test_matplotlib.py',
+      test_opencv: 'test_opencv.py',
+      test_pillow: 'test_pillow.py',
+      test_scipy: 'test_scipy.py',
+      test_pypdf: 'test_pypdf.py',
+      test_pymupdf: 'test_pymupdf.py',
+      quick_test: 'quick_test.py',
+      ejemplo_bibliotecas: 'ejemplo_bibliotecas.py',
+    };
+
+    const scriptName = scriptMap[comando];
+    if (!scriptName) {
+      throw new Error(`Comando dispatcher desconocido: ${comando}`);
+    }
+
+    const scriptPath = path.join(this.scriptsPath, scriptName);
+    if (fs.existsSync(scriptPath)) {
+      this.logger.log(
+        `[DEV Fallback] dispatcher no encontrado, ejecutando ${scriptName}`,
+      );
+      return this.executeScript(scriptName, args);
+    }
+
+    throw new Error(
+      `Dispatcher no encontrado en: ${dispatcherPath}. Script fallback tampoco existe: ${scriptPath}`,
+    );
+  }
+
   async executeFile(fileName: string, args: string[] = []): Promise<any> {
     const extension = path.extname(fileName).toLowerCase();
 
@@ -813,28 +977,28 @@ export class PythonService {
    * Verifica que todas las bibliotecas estén instaladas
    */
   async testAllLibraries(): Promise<any> {
-    return this.executeScript('test_all_libraries.py', []);
+    return this.executeDispatcher('test_all_libraries', []);
   }
 
   /**
    * Prueba NumPy
    */
   async testNumpy(): Promise<any> {
-    return this.executeScript('test_numpy_pandas.py', []);
+    return this.executeDispatcher('test_numpy_pandas', []);
   }
 
   /**
    * Prueba Pandas
    */
   async testPandas(): Promise<any> {
-    return this.executeScript('test_numpy_pandas.py', ['pandas']);
+    return this.executeDispatcher('test_numpy_pandas', ['pandas']);
   }
 
   /**
    * Prueba NumPy y Pandas combinados
    */
   async testNumpyPandasCombined(): Promise<any> {
-    return this.executeScript('test_numpy_pandas.py', ['combinado']);
+    return this.executeDispatcher('test_numpy_pandas', ['combinado']);
   }
 
   /**
@@ -842,7 +1006,7 @@ export class PythonService {
    */
   async testReportlab(outputPath: string): Promise<any> {
     const fullPath = this.buildOutputPath(outputPath);
-    return this.executeScript('test_reportlab.py', [fullPath]);
+    return this.executeDispatcher('test_reportlab', [fullPath]);
   }
 
   /**
@@ -852,7 +1016,7 @@ export class PythonService {
    */
   async testMatplotlib(tipo: string, outputPath: string): Promise<any> {
     const fullPath = this.buildOutputPath(outputPath);
-    return this.executeScript('test_matplotlib.py', [tipo, fullPath]);
+    return this.executeDispatcher('test_matplotlib', [tipo, fullPath]);
   }
 
   /**
@@ -860,7 +1024,7 @@ export class PythonService {
    */
   async testOpenCV(outputPath: string): Promise<any> {
     const fullPath = this.buildOutputPath(outputPath);
-    return this.executeScript('test_opencv.py', [fullPath]);
+    return this.executeDispatcher('test_opencv', [fullPath]);
   }
 
   /**
@@ -868,14 +1032,14 @@ export class PythonService {
    */
   async testPillow(outputPath: string): Promise<any> {
     const fullPath = this.buildOutputPath(outputPath);
-    return this.executeScript('test_pillow.py', [fullPath]);
+    return this.executeDispatcher('test_pillow', [fullPath]);
   }
 
   /**
    * Prueba funciones estadísticas de SciPy
    */
   async testScipy(): Promise<any> {
-    return this.executeScript('test_scipy.py', []);
+    return this.executeDispatcher('test_scipy', []);
   }
 
   /**
@@ -933,7 +1097,7 @@ export class PythonService {
       throw new Error(error);
     }
 
-    return this.executeScript('test_pypdf.py', [fullPath]);
+    return this.executeDispatcher('test_pypdf', [fullPath]);
   }
 
   /**
@@ -989,13 +1153,13 @@ export class PythonService {
       throw new Error(`PDF file not found: ${fullPath}`);
     }
 
-    return this.executeScript('test_pymupdf.py', [fullPath]);
+    return this.executeDispatcher('test_pymupdf', [fullPath]);
   }
 
   /**
    * Ejecuta la prueba rápida de todas las bibliotecas
    */
   async quickTest(): Promise<any> {
-    return this.executeScript('quick_test.py', []);
+    return this.executeDispatcher('quick_test', []);
   }
 }

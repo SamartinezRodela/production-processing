@@ -12,12 +12,15 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 
 @Controller('auth')
+@UseGuards(ThrottlerGuard)
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('login')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   async login(@Body() loginDto: LoginDto) {
     try {
       return await this.authService.login(loginDto);
@@ -37,6 +40,7 @@ export class AuthController {
 
   @Post('register')
   @UseGuards(JwtAuthGuard) // Solo usuarios autenticados pueden registrar nuevos usuarios
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   async register(@Body() registerDto: RegisterDto) {
     try {
       return await this.authService.register(registerDto);

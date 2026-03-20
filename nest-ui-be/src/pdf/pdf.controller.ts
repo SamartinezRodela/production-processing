@@ -5,6 +5,7 @@ import {
   HttpException,
   HttpStatus,
   UseGuards,
+  Logger,
 } from '@nestjs/common';
 import { PdfService } from './pdf.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -24,12 +25,16 @@ interface GeneratePdfDto {
 @Controller('pdf')
 @UseGuards(JwtAuthGuard) // ✅ Proteger todas las rutas de PDF
 export class PdfController {
+  private readonly logger = new Logger(PdfController.name);
+
   constructor(private readonly pdfService: PdfService) {}
 
   @Post('generate')
   async generatePDFs(@Body() data: GeneratePdfDto) {
     try {
-      console.log('Received PDF generation request:', data);
+      this.logger.log(
+        `Received PDF generation request for: ${data.names?.join(', ') || 'no names'}`,
+      );
 
       if (!data.names || data.names.length === 0) {
         throw new HttpException(
@@ -48,7 +53,10 @@ export class PdfController {
         ...result,
       };
     } catch (error) {
-      console.error('Error generating PDFs:', error);
+      this.logger.error(
+        `Error generating PDFs: ${error.message || error}`,
+        error?.stack,
+      );
       throw new HttpException(
         error.message || 'Failed to generate PDFs',
         HttpStatus.INTERNAL_SERVER_ERROR,

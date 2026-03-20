@@ -9,25 +9,16 @@ import { FacilitiesModule } from './facilities/facilities.module';
 import { OrdersModule } from './orders/orders.module';
 import { SettingsModule } from './settings/settings.module';
 import { ConfigModule } from '@nestjs/config';
-
-// ⚠️ TypeORM deshabilitado temporalmente durante la migración
-// Descomentar cuando estemos listos para migrar completamente
-// import { TypeOrmModule } from '@nestjs/typeorm';
-// import { Facility } from './database/entities/facility.entity';
-// import { Order } from './database/entities/order.entity';
-// import { Settings } from './database/entities/settings.entity';
-// import * as path from 'path';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
   imports: [
-    // ✅ TypeORM deshabilitado temporalmente
-    // TypeOrmModule.forRoot({
-    //   type: 'better-sqlite3',
-    //   database: getDatabasePath(),
-    //   entities: [Facility, Order, Settings],
-    //   synchronize: true,
-    //   logging: process.env.NODE_ENV !== 'production',
-    // }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 100,
+      },
+    ]),
     ConfigModule.forRoot({ isGlobal: true }),
     PythonModule,
     PdfModule,
@@ -41,32 +32,3 @@ import { ConfigModule } from '@nestjs/config';
   providers: [AppService],
 })
 export class AppModule {}
-
-// function getDatabasePath(): string {
-//   const isProduction =
-//     process.env.NODE_ENV === 'production' ||
-//     (process as any).resourcesPath !== undefined;
-
-//   if (isProduction) {
-//     let userDataPath: string;
-
-//     if (process.platform === 'darwin') {
-//       userDataPath = path.join(
-//         process.env.HOME || '~',
-//         'Library',
-//         'Application Support',
-//       );
-//     } else if (process.platform === 'win32') {
-//       userDataPath =
-//         process.env.APPDATA ||
-//         path.join(process.env.HOME || '~', 'AppData', 'Roaming');
-//     } else {
-//       userDataPath = path.join(process.env.HOME || '~', '.config');
-//     }
-
-//     const appFolder = path.join(userDataPath, 'Production Processing');
-//     return path.join(appFolder, 'database.sqlite');
-//   } else {
-//     return path.join(process.cwd(), 'data', 'database.sqlite');
-//   }
-// }

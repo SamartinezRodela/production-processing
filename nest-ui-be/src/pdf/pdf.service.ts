@@ -15,12 +15,11 @@ export class PdfService {
     try {
       this.logger.log(`Verifying folder: ${folderPath}`);
 
-      const stdout = await this.pythonService.executeScript(
-        'verify_folder.py',
+      const result = await this.pythonService.executeDispatcher(
+        'verify_folder',
         [folderPath],
       );
 
-      const result = JSON.parse(stdout);
       return result;
     } catch (error: any) {
       this.logger.error(
@@ -49,14 +48,12 @@ export class PdfService {
       await fs.writeFile(tempFilePath, jsonData, 'utf-8');
       this.logger.debug(`Temp file created: ${tempFilePath}`);
 
-      const stdout = await this.pythonService.executeScript('generate_pdf.py', [
-        tempFilePath,
-      ]);
+      const result = await this.pythonService.executeDispatcher(
+        'generate_pdf',
+        [tempFilePath],
+      );
 
       this.logger.debug('Python execution completed successfully');
-
-      // Parsear resultado
-      const result = JSON.parse(stdout.trim());
 
       if (result.error) {
         throw new Error(result.error);

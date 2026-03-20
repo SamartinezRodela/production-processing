@@ -40,7 +40,7 @@ import { AuthService } from '@services/auth.service';
 import { WebSocketService } from '@services/websocket.service';
 import { LanguageService } from '@services/language.service';
 
-import { DEFAULT_FACILITIES, DEFAULT_ORDERS } from '../constants/facilities.constants';
+import { DEFAULT_FACILITIES, DEFAULT_ORDERS } from '@app/pages/constants/facilities.constants';
 import { ProcessingResult } from '@models/processing.types';
 import { OrderManagementService } from '@services/order-management.service';
 
@@ -92,15 +92,15 @@ export class Home implements OnInit, OnDestroy {
   isDragging = signal(false);
   selectedFacility = signal<string>('1');
   ProcessType = signal<string>('1');
-  private dragLeaveTimeout: any = null;
-  private dragWatchdogTimeout: any = null; // Timeout de seguridad
+  // private dragLeaveTimeout: any = null;
+  // private dragWatchdogTimeout: any = null; // Timeout de seguridad
   showPathWarning = signal(false);
   pathWarningDismissed = signal(false);
   isPathEditorExpanded = signal(false);
   showProcessConfirmModal = signal(false);
 
-  private pythonProgressSubscription!: Subscription;
-  private progressMap = new Map<string, number>();
+  // private pythonProgressSubscription!: Subscription;
+  // private progressMap = new Map<string, number>();
 
   // Statistics
   statsResult = signal<any>(null);
@@ -260,42 +260,44 @@ export class Home implements OnInit, OnDestroy {
 
   constructor() {
     this.initializeFolderWatcher();
-    this.preventDefaultDragBehavior();
-    this.setupKeyboardListeners();
+    // this.preventDefaultDragBehavior();
+    // this.setupKeyboardListeners();
+    this.fileDropService.initGlobalDragDropListeners(this.isDragging);
     this.loadSettingsAndCheckPaths();
   }
 
   ngOnInit(): void {
     // Conectar el WebSocket y luego empezar a escuchar el progreso
     this.webSocketService.connect().then(() => {
-      this.listenForPythonProgress();
+      // this.listenForPythonProgress();
+      this.fileProcessingService.listenForPythonProgress();
     });
   }
 
-  private listenForPythonProgress(): void {
-    this.pythonProgressSubscription = this.webSocketService
-      .listen('python-progress')
-      .subscribe((data: { progress: number; fileName: string }) => {
-        console.log(`📊 Progress received -> File: ${data.fileName} | ${data.progress}%`);
-        if (data && data.fileName && this.progressMap.has(data.fileName)) {
-          this.progressMap.set(data.fileName, data.progress);
-          this.recalculateOverallProgress();
-        }
-      });
-  }
+  // private listenForPythonProgress(): void {
+  //   this.pythonProgressSubscription = this.webSocketService
+  //     .listen('python-progress')
+  //     .subscribe((data: { progress: number; fileName: string }) => {
+  //       console.log(`📊 Progress received -> File: ${data.fileName} | ${data.progress}%`);
+  //       if (data && data.fileName && this.progressMap.has(data.fileName)) {
+  //         this.progressMap.set(data.fileName, data.progress);
+  //         this.recalculateOverallProgress();
+  //       }
+  //     });
+  // }
 
-  private recalculateOverallProgress(): void {
-    if (this.progressMap.size === 0) {
-      this.fileProcessingService.progress.set(0);
-      return;
-    }
-    const totalProgress = Array.from(this.progressMap.values()).reduce(
-      (sum, current) => sum + current,
-      0,
-    );
-    const overallPercentage = totalProgress / this.progressMap.size;
-    this.fileProcessingService.progress.set(Math.round(overallPercentage));
-  }
+  // private recalculateOverallProgress(): void {
+  //   if (this.progressMap.size === 0) {
+  //     this.fileProcessingService.progress.set(0);
+  //     return;
+  //   }
+  //   const totalProgress = Array.from(this.progressMap.values()).reduce(
+  //     (sum, current) => sum + current,
+  //     0,
+  //   );
+  //   const overallPercentage = totalProgress / this.progressMap.size;
+  //   this.fileProcessingService.progress.set(Math.round(overallPercentage));
+  // }
 
   private async loadSettingsAndCheckPaths(): Promise<void> {
     // Cargar settings desde el backend
@@ -379,147 +381,24 @@ export class Home implements OnInit, OnDestroy {
     }
   }
 
-  // Configurar listeners de teclado
-  private setupKeyboardListeners(): void {
-    // Detectar cuando el usuario presiona ESC para cancelar el drag
-    window.addEventListener('keydown', (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && this.isDragging()) {
-        this.isDragging.set(false);
-        //console.log('Drag cancelled with ESC');
-      }
-    });
-  }
-
-  // Prevenir comportamiento por defecto del navegador para drag & drop
-  private preventDefaultDragBehavior(): void {
-    // Prevenir que el navegador abra archivos arrastrados
-    window.addEventListener(
-      'dragover',
-      (e: DragEvent) => {
-        e.preventDefault();
-      },
-      false,
-    );
-
-    window.addEventListener(
-      'drop',
-      (e: DragEvent) => {
-        e.preventDefault();
-      },
-      false,
-    );
-
-    // Detectar cuando el drag termina globalmente (incluso fuera del área)
-    window.addEventListener(
-      'dragend',
-      () => {
-        this.isDragging.set(false);
-        //console.log('Drag ended globally');
-      },
-      false,
-    );
-
-    // Detectar cuando el mouse sale de la ventana completamente
-    window.addEventListener(
-      'dragleave',
-      (e: DragEvent) => {
-        // Si el relatedTarget es null, significa que salió de la ventana
-        if (!e.relatedTarget) {
-          this.isDragging.set(false);
-          //console.log('Drag left window');
-        }
-      },
-      false,
-    );
-  }
-
   // Drag & Drop handlers
   onDragOver(event: DragEvent): void {
-    event.preventDefault();
-    event.stopPropagation();
-
-    // Cancelar el timeout de dragLeave si existe
-    if (this.dragLeaveTimeout) {
-      clearTimeout(this.dragLeaveTimeout);
-      this.dragLeaveTimeout = null;
-    }
-
-    if (event.dataTransfer) {
-      event.dataTransfer.dropEffect = 'copy'; // Forzar 'copy' siempre
-      const hasValidFiles = this.fileDropService.checkDraggedFiles(event.dataTransfer);
-      this.isDragging.set(hasValidFiles);
-    }
+    this.fileDropService.handleDragOver(event, this.isDragging);
   }
 
   onDragEnter(event: DragEvent): void {
-    event.preventDefault();
-    event.stopPropagation();
-
-    if (event.dataTransfer) {
-      event.dataTransfer.dropEffect = 'copy'; // Forzar 'copy' siempre
-      const hasValidFiles = this.fileDropService.checkDraggedFiles(event.dataTransfer);
-      if (hasValidFiles) {
-        this.isDragging.set(true);
-        console.log('Dragging activated - files detected!');
-
-        // Iniciar watchdog: si después de 5 segundos aún está dragging, forzar desactivación
-        if (this.dragWatchdogTimeout) {
-          clearTimeout(this.dragWatchdogTimeout);
-        }
-        this.dragWatchdogTimeout = setTimeout(() => {
-          if (this.isDragging()) {
-            this.isDragging.set(false);
-            console.warn('Drag watchdog: Forced deactivation after 5s');
-          }
-        }, 5000); // 5 segundos
-      }
-    }
+    this.fileDropService.handleDragEnter(event, this.isDragging);
   }
 
   onDragLeave(event: DragEvent): void {
-    event.preventDefault();
-    event.stopPropagation();
-
-    // Limpiar timeout anterior si existe
-    if (this.dragLeaveTimeout) {
-      clearTimeout(this.dragLeaveTimeout);
-    }
-
-    // Capturar los valores ANTES del timeout (porque se pierden después)
-    const currentTarget = event.currentTarget as HTMLElement;
-    const relatedTarget = event.relatedTarget as HTMLElement;
-
-    // Usar timeout más corto para respuesta más rápida
-    this.dragLeaveTimeout = setTimeout(() => {
-      // Verificar que currentTarget no sea null
-      if (!currentTarget) {
-        this.isDragging.set(false);
-        //console.log('Drag left (no currentTarget)');
-        return;
-      }
-
-      // Si no hay relatedTarget o el relatedTarget no está dentro del currentTarget
-      if (!relatedTarget || !currentTarget.contains(relatedTarget)) {
-        this.isDragging.set(false);
-        //console.log('Drag left the area');
-      }
-    }, 10);
+    this.fileDropService.handleDragLeave(event, this.isDragging);
   }
 
   async onDrop(event: DragEvent): Promise<void> {
     event.preventDefault();
     event.stopPropagation();
 
-    // Limpiar timeouts si existen
-    if (this.dragLeaveTimeout) {
-      clearTimeout(this.dragLeaveTimeout);
-      this.dragLeaveTimeout = null;
-    }
-    if (this.dragWatchdogTimeout) {
-      clearTimeout(this.dragWatchdogTimeout);
-      this.dragWatchdogTimeout = null;
-    }
-
+    this.fileDropService.clearTimeouts();
     this.isDragging.set(false);
 
     if (event.dataTransfer?.items) {
@@ -527,27 +406,6 @@ export class Home implements OnInit, OnDestroy {
       const result = await this.fileDropService.processDroppedItems(items);
 
       // Manejar errores de validación
-      result.invalid.forEach(({ file, error }) => {
-        this.errorLogService.addError(file.name, error);
-      });
-
-      // Notificar al usuario
-      if (result.valid.length > 0 && result.invalid.length > 0) {
-        this.notificationService.warning(
-          `Added ${result.valid.length} valid files. ${result.invalid.length} files excluded (invalid name format).`,
-        );
-      } else if (result.valid.length > 0) {
-        this.notificationService.success(`Added ${result.valid.length} valid files.`);
-      } else if (result.invalid.length > 0) {
-        this.notificationService.error(
-          `All ${result.invalid.length} files were excluded (invalid name format).`,
-        );
-      }
-      this.actualizarJsonMetadatos(this.pdfMetadataService.getValidFiles());
-    } else if (event.dataTransfer?.files) {
-      const files = Array.from(event.dataTransfer.files);
-      const result = this.fileDropService.validateAndAddFiles(files);
-
       result.invalid.forEach(({ file, error }) => {
         this.errorLogService.addError(file.name, error);
       });
@@ -644,7 +502,7 @@ export class Home implements OnInit, OnDestroy {
       const basePath = this.settingsService.getBasePath();
       const outputPath = this.settingsService.getOutputPath();
 
-      if (basePath === defaultSettings.basePath || outputPath === defaultSettings) {
+      if (basePath === defaultSettings.basePath || outputPath === defaultSettings.outputPath) {
         this.notificationService.warning(
           'Please configure your Base Path and Output Path before processing files.',
         );
@@ -662,151 +520,45 @@ export class Home implements OnInit, OnDestroy {
     }
   }
 
-  async uploadFiles(): Promise<ProcessingResult> {
+  async uploadFiles(): Promise<ProcessingResult | void> {
     try {
       this.showProcessConfirmModal.set(false);
-      // Obtener los default settings desde el backend
+
+      // Validar paths antes de procesar
       const apiUrl = await this.settingsService['apiUrlService'].getApiUrl();
       const defaultSettings = await firstValueFrom(
         this.http.get<any>(`${apiUrl}/settings/default`),
       );
-
-      // Validar paths antes de procesar
       const basePath = this.settingsService.getBasePath();
       const outputPath = this.settingsService.getOutputPath();
 
-      const isDefaultBasePath = basePath === defaultSettings.basePath;
-      const isDefaultOutputPath = outputPath === defaultSettings.outputPath;
-
-      if (isDefaultBasePath || isDefaultOutputPath) {
+      if (basePath === defaultSettings.basePath || outputPath === defaultSettings.outputPath) {
         this.notificationService.warning(
           'Please configure your Base Path and Output Path before processing files.',
         );
         this.router.navigate(['/Set-Up']);
-        return {
-          success: false,
-          processedCount: 0,
-          failedCount: 0,
-          errors: [],
-          timestamp: new Date(),
-        };
+        return;
       }
 
-      // Obtener solo archivos válidos del contenedor de metadatos
       const validFiles = this.pdfMetadataService.getValidFiles();
 
       if (validFiles.length === 0) {
         this.notificationService.warning('No valid files to process');
-        return {
-          success: false,
-          processedCount: 0,
-          failedCount: 0,
-          errors: [],
-          timestamp: new Date(),
-        };
+        return;
       }
 
-      // Iniciar mapa de progreso
-      this.progressMap.clear();
-      validFiles.forEach((file) => this.progressMap.set(file.FileName, 0));
-
-      // Iniciar procesamiento
-      this.fileProcessingService.isProcessing.set(true);
-      this.fileProcessingService.progress.set(0);
-      this.fileProcessingService.processingState.set('processing');
-
-      const errors: FileError[] = [];
-      let processedCount = 0;
-      let failedCount = 0;
-      const successfulFileNames: string[] = [];
-
-      const CONCURRENCY_LIMIT = 4; // Procesar hasta 4 archivos al mismo tiempo
-      const token = this.authService.getToken() || undefined;
-
-      // Procesar archivos en lotes (chunks)
-      for (let i = 0; i < validFiles.length; i += CONCURRENCY_LIMIT) {
-        const chunk = validFiles.slice(i, i + CONCURRENCY_LIMIT);
-
-        // Ejecutar los archivos del lote en paralelo
-        const chunkPromises = chunk.map(async (fileMetadata) => {
-          try {
-            let relativePath = fileMetadata.RelativePath || '';
-            if (!relativePath.endsWith(fileMetadata.FileName)) {
-              const separador = relativePath.includes('\\') ? '\\' : '/';
-              relativePath = relativePath
-                ? `${relativePath}${separador}${fileMetadata.FileName}`
-                : fileMetadata.FileName;
-            }
-
-            let inputPath = fileMetadata.SystemPath;
-            if (!inputPath) {
-              const separadorBase = basePath.includes('\\') ? '\\' : '/';
-              inputPath = basePath.endsWith(separadorBase)
-                ? `${basePath}${relativePath}`
-                : `${basePath}${separadorBase}${relativePath}`;
-            }
-
-            const datos = {
-              output_path: outputPath,
-              relative_path: relativePath,
-              input_path: inputPath,
-            };
-
-            const result = await firstValueFrom(
-              this.http.post<any>(`${apiUrl}/python/guardar-pdf-relativo`, datos),
-            );
-
-            // Actualizar localmente al 100% al terminar para asegurar la sincronía
-            this.progressMap.set(fileMetadata.FileName, 100);
-            this.recalculateOverallProgress();
-
-            return { success: result.success, error: result.error, fileMetadata, result };
-          } catch (error: any) {
-            // Forzar actualización incluso si falla, para que la barra no se atasque
-            this.progressMap.set(fileMetadata.FileName, 100);
-            this.recalculateOverallProgress();
-
-            return { success: false, error: error.message, fileMetadata, result: null };
-          }
-        });
-
-        // Esperar a que terminen todos los archivos de este lote antes de pasar a los siguientes 4
-        const chunkResults = await Promise.all(chunkPromises);
-
-        // Contabilizar los resultados
-        for (const res of chunkResults) {
-          if (res.success) {
-            processedCount++;
-            successfulFileNames.push(res.fileMetadata.FileName);
-            console.log(` File processed successfully:`, res.result);
-          } else {
-            failedCount++;
-            errors.push({
-              fileName: res.fileMetadata.FileName,
-              error: res.error,
-              timestamp: new Date(),
-            });
-            console.error(`Error processing file:`, res.error);
-          }
-        }
-
-        // ⏳ Darle un respiro al navegador para que la animación CSS de la barra se vea fluida
-        await new Promise((resolve) => setTimeout(resolve, 150));
-      }
-
-      // Finalizar procesamiento
-      this.fileProcessingService.progress.set(100);
-      this.fileProcessingService.processingState.set('complete');
-
-      // ⏳ Esperar medio segundo para que el usuario alcance a ver la barra llena
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      this.fileProcessingService.isProcessing.set(false);
+      // Delegar todo el procesamiento al servicio
+      const result = await this.fileProcessingService.processValidFiles(
+        validFiles,
+        basePath,
+        outputPath,
+      );
 
       // Limpiar la interfaz removiendo SOLO los archivos procesados con éxito
-      if (failedCount === 0) {
+      if (result.failedCount === 0) {
         this.clearAllFiles();
-      } else if (successfulFileNames.length > 0) {
-        successfulFileNames.forEach((fileName) => {
+      } else if (result.successfulFileNames && result.successfulFileNames.length > 0) {
+        result.successfulFileNames.forEach((fileName: string) => {
           this.pdfMetadataService.removeFileByName(fileName);
           const currentFiles = this.selectedFiles();
           const index = currentFiles.findIndex((f) => f.name === fileName);
@@ -817,39 +569,10 @@ export class Home implements OnInit, OnDestroy {
         this.actualizarJsonMetadatos(this.pdfMetadataService.getValidFiles());
       }
 
-      // Notificar resultado
-      if (processedCount > 0 && failedCount === 0) {
-        this.notificationService.success(`All ${processedCount} files processed successfully!`);
-      } else if (processedCount > 0 && failedCount > 0) {
-        this.notificationService.warning(
-          `Processed ${processedCount} files. ${failedCount} files failed.`,
-        );
-      } else {
-        this.notificationService.error(`All ${failedCount} files failed to process.`);
-      }
-
-      return {
-        success: processedCount > 0,
-        processedCount,
-        failedCount,
-        errors,
-        timestamp: new Date(),
-      };
+      return result;
     } catch (error: any) {
       console.error('Error processing files:', error);
-      this.fileProcessingService.isProcessing.set(false);
-      this.fileProcessingService.progress.set(0);
-      this.fileProcessingService.processingState.set('error');
-
       this.notificationService.error(`Error: ${error.message}`);
-
-      return {
-        success: false,
-        processedCount: 0,
-        failedCount: 0,
-        errors: [{ fileName: 'System', error: error.message, timestamp: new Date() }],
-        timestamp: new Date(),
-      };
     }
   }
 
@@ -1152,19 +875,8 @@ export class Home implements OnInit, OnDestroy {
 
   // Cleanup
   ngOnDestroy(): void {
-    // Limpiar timeouts si existen
-    if (this.dragLeaveTimeout) {
-      clearTimeout(this.dragLeaveTimeout);
-    }
-    if (this.dragWatchdogTimeout) {
-      clearTimeout(this.dragWatchdogTimeout);
-    }
-
-    if (this.pythonProgressSubscription) {
-      this.pythonProgressSubscription.unsubscribe();
-    }
+    this.fileDropService.clearTimeouts();
 
     this.fileProcessingService.cleanup();
-    this.folderWatcher.stopWatching();
   }
 }

@@ -15,12 +15,21 @@ export class SettingsController {
   ) {}
 
   // Ruta pública - necesaria antes del login
+  @Get('public')
+  getPublicSettings() {
+    const defaults = this.settingsService.getDefaultSettings() as any;
+    return {
+      theme: defaults?.theme || 'light',
+      language: defaults?.language || 'en',
+    };
+  }
+  // Rutas protegidas
+  @UseGuards(JwtAuthGuard)
   @Get('default')
   getDefaultSettings() {
     return this.settingsService.getDefaultSettings();
   }
 
-  // Rutas protegidas
   @UseGuards(JwtAuthGuard)
   @Get()
   getSettings() {

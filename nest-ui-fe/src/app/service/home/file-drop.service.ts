@@ -1,4 +1,4 @@
-import { Injectable, signal, inject } from '@angular/core';
+import { Injectable, signal, inject, WritableSignal } from '@angular/core';
 import { FileService } from '@services/file.service';
 import { NotificationService } from '@services/notification.service';
 import { APP_CONFIG } from '@config/app.constants';
@@ -25,6 +25,9 @@ export class FileDropService {
     folderName: '',
   });
 
+  private dragLeaveTimeout: any = null;
+  private dragWatchdogTimeout: any = null;
+
   constructor(
     private fileService: FileService,
     private notificationService: NotificationService,
@@ -38,6 +41,88 @@ export class FileDropService {
   private getPathSeparator(): string {
     return this.settingsService.operatingSystem() === 'windows' ? '\\' : '/';
   }
+
+  /**
+   * Configura los listeners globales para prevenir comportamientos por defecto
+   * y cancelar el drag con Escape.
+   */
+
+  initGlobalDragDropListeners(isDragging: WritableSignal<boolean>): void {
+    //Detectar cuando el usuario presiona ESC
+    window.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isDragging()) isDragging.set(false);
+    });
+
+    // Prevenir que el navegador abra archivos arrastrados
+    window.addEventListener('dragover', (e: DragEvent) => e.preventDefault(), false);
+    window.addEventListener('drop', (e: DragEvent) => e.preventDefault(), false);
+
+    // Detectar fin global del drag
+
+    window.addEventListener('dragend', () => isDragging.set(false), false);
+    window.addEventListener(
+      'dragleave',
+      (e: DragEvent) => {
+        if (!e.relatedTarget) isDragging.set(false);
+      },
+      false,
+    );
+  }
+
+  handleDragOver(event: DragEvent, isDragging: WritableSignal<boolean>): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (this.dragLeaveTimeout) {
+      clearTimeout(this.dragLeaveTimeout);
+      this.dragLeaveTimeout = null;
+    }
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'copy';
+      const hasValidFiles = this.checkDraggedFiles(event.dataTransfer);
+      isDragging.set(hasValidFiles);
+    }
+  }
+
+  handleDragEnter(event: DragEvent, isDragging: WritableSignal<boolean>): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'copy';
+      const hasValidFiles = this.checkDraggedFiles(event.dataTransfer);
+      if (hasValidFiles) {
+        isDragging.set(true);
+        if (this.dragWatchdogTimeout) clearTimeout(this.dragWatchdogTimeout);
+        this.dragWatchdogTimeout = setTimeout(() => {
+          if (isDragging()) isDragging.set(false);
+        }, 500);
+      }
+    }
+  }
+
+  handleDragLeave(event: DragEvent, isDragging: WritableSignal<boolean>): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (this.dragLeaveTimeout) clearTimeout(this.dragLeaveTimeout);
+
+    const currentTarget = event.currentTarget as HTMLElement;
+    const relatedTarget = event.relatedTarget as HTMLElement;
+
+    this.dragLeaveTimeout = setTimeout(() => {
+      if (!currentTarget) {
+        isDragging.set(false);
+        return;
+      }
+      if (!relatedTarget || !currentTarget.contains(relatedTarget)) {
+        isDragging.set(false);
+      }
+    }, 10);
+  }
+
+  clearTimeouts(): void {
+    if (this.dragLeaveTimeout) clearTimeout(this.dragLeaveTimeout);
+    if (this.dragWatchdogTimeout) clearTimeout(this.dragWatchdogTimeout);
+  }
+
   async processDroppedItems(
     items: DataTransferItem[],
     inputRoot: string = '',

@@ -1,9 +1,10 @@
 name: Build Mac Installer
 
+# Modo solo-EXE: Python se usa solo para compilar, no se empaqueta
 on:
   push:
     branches: [main]
-  workflow_dispatch: # Permite ejecutar manualmente desde GitHub
+  workflow_dispatch:
 
 jobs:
   build-mac:
@@ -23,121 +24,113 @@ jobs:
             nest-ui-be/package-lock.json
             nest-electron/package-lock.json
 
-      - name: Prepare Python Embedded for Mac
+      - name: Setup Python (temporal para compilar binarios)
         run: |
-          echo "🐍 Descargando Python standalone portable para Mac..."
-          mkdir -p nest-files-py-embedded-mac
-          cd nest-files-py-embedded-mac
+          echo "Descargando Python standalone (solo para compilar)..."
+          mkdir -p python-build-temp
+          cd python-build-temp
 
-          # Descargar Python standalone de indygreg (portable, sin dependencias del sistema)
           PYTHON_VERSION="3.11.9"
           PYTHON_BUILD="20240713"
           PYTHON_URL="https://github.com/indygreg/python-build-standalone/releases/download/${PYTHON_BUILD}/cpython-${PYTHON_VERSION}+${PYTHON_BUILD}-aarch64-apple-darwin-install_only.tar.gz"
 
-          echo "Descargando Python portable..."
           curl -L -o python.tar.gz "$PYTHON_URL"
-
-          echo "Extrayendo Python..."
           tar -xzf python.tar.gz
           rm python.tar.gz
-
-          # Renombrar carpeta a python-runtime
           mv python python-runtime
 
-          echo "Instalando dependencias..."
-
-          # Bibliotecas básicas
+          # Instalar PyInstaller + todas las bibliotecas
+          echo "Instalando PyInstaller y bibliotecas..."
+          python-runtime/bin/pip3 install pyinstaller
           python-runtime/bin/pip3 install reportlab pypdf Pillow openpyxl requests
-
-          # Bibliotecas científicas y procesamiento
           python-runtime/bin/pip3 install numpy pandas scipy matplotlib
-
-          # Procesamiento de imágenes y PDFs
           python-runtime/bin/pip3 install opencv-python-headless pymupdf tifffile
 
-          echo "✅ Todas las bibliotecas instaladas"
-
-          # Copiar TODOS los scripts Python
-          echo "Copiando scripts Python personalizados..."
-          if [ -d "../nest-files-py" ]; then
-            script_count=$(ls -1 ../nest-files-py/*.py 2>/dev/null | wc -l)
-            echo "Archivos encontrados: $script_count"
-            
-            for file in ../nest-files-py/*.py; do
-              if [ -f "$file" ]; then
-                cp "$file" .
-                echo "   [OK] Copiado: $(basename $file)"
-              fi
-            done
-            
-            echo "✅ Todos los scripts copiados exitosamente"
-          else
-            echo "⚠️ Carpeta nest-files-py no encontrada"
-          fi
-
-          # Crear carpeta executables
-          mkdir -p executables
-
+          echo "[OK] Entorno de compilación listo"
           cd ..
-          echo "✅ Python standalone portable listo"
 
-      - name: Compile Python Scripts to Bytecode (Mac)
+      - name: Compile Python Scripts to Binaries
         run: |
           echo "============================================================"
-          echo "COMPILANDO SCRIPTS PYTHON A BYTECODE (.pyc) - MAC"
+          echo "COMPILANDO TODOS LOS SCRIPTS A BINARIOS (PyInstaller)"
           echo "============================================================"
+
+          PYTHON_EXE="python-build-temp/python-runtime/bin/python3"
+          OUTPUT_DIR="nest-files-py-embedded-mac/executables"
+          mkdir -p "$OUTPUT_DIR"
+
+          # ── Grupo A: Scripts stdlib ──
           echo ""
+          echo "--- Grupo A: Scripts stdlib ---"
 
-          # Verificar que el script de compilación existe
-          if [ ! -f "compile-python-scripts.py" ]; then
-            echo "[ERROR] compile-python-scripts.py no encontrado"
-            exit 1
-          fi
+          GRUPO_A=("saludar.py" "guardar_pdf_path.py" "procesar_pdf.py")
 
-          # Usar el Python embebido (3.11) para compilar
-          echo "Usando Python embebido 3.11 para compilar..."
-          PYTHON_EXE="nest-files-py-embedded-mac/python-runtime/bin/python3"
+          for script in "${GRUPO_A[@]}"; do
+            SCRIPT_PATH="nest-files-py/$script"
+            if [ -f "$SCRIPT_PATH" ]; then
+              echo "Compilando $script ..."
+              $PYTHON_EXE -m PyInstaller --onefile --clean --noconfirm \
+                --distpath "$OUTPUT_DIR" --workpath "build_temp" --specpath "build_temp" \
+                "$SCRIPT_PATH"
 
-          # Verificar versión de Python
-          $PYTHON_EXE --version
-
-          # Ejecutar compilación con Python embebido
-          $PYTHON_EXE compile-python-scripts.py nest-files-py-embedded-mac
-
-          if [ $? -ne 0 ]; then
-            echo "[ERROR] Error compilando scripts Python"
-            exit 1
-          fi
-
-          echo ""
-          echo "[OK] Scripts Python compilados a .pyc (Mac)"
-          echo ""
-
-          # Verificar que los archivos .pyc fueron creados
-          echo "Archivos .pyc generados:"
-          find nest-files-py-embedded-mac -name "*.pyc" -type f | while read file; do
-            echo "   [OK] $(basename $file)"
+              BIN_NAME="${script%.py}"
+              if [ -f "$OUTPUT_DIR/$BIN_NAME" ]; then
+                echo "   [OK] $BIN_NAME creado"
+              else
+                echo "   [WARN] $BIN_NAME no se generó"
+              fi
+            else
+              echo "   [SKIP] $script no encontrado"
+            fi
           done
+
+          rm -rf build_temp
+
+          # ── Grupo B: Dispatcher ──
           echo ""
+          echo "--- Grupo B: Dispatcher (todas las bibliotecas) ---"
 
-          # Mostrar hashes generados
-          if [ -f "python-hashes.json" ]; then
-            echo "Hashes SHA-256 generados:"
-            cat python-hashes.json
-            echo ""
-          fi
+          DISPATCHER_PATH="nest-files-py/dispatcher.py"
+          if [ -f "$DISPATCHER_PATH" ]; then
+            echo "Compilando dispatcher.py (esto puede tardar)..."
+            $PYTHON_EXE -m PyInstaller --onefile --clean --noconfirm \
+              --distpath "$OUTPUT_DIR" --workpath "build_temp" --specpath "build_temp" \
+              --hidden-import "reportlab" --hidden-import "reportlab.pdfgen" \
+              --hidden-import "reportlab.lib.pagesizes" --hidden-import "reportlab.lib.units" \
+              --hidden-import "pypdf" --hidden-import "fitz" \
+              --hidden-import "PIL" --hidden-import "cv2" \
+              --hidden-import "numpy" --hidden-import "pandas" \
+              --hidden-import "scipy" --hidden-import "scipy.stats" \
+              --hidden-import "matplotlib" --hidden-import "matplotlib.pyplot" \
+              --hidden-import "openpyxl" --hidden-import "tifffile" \
+              --hidden-import "requests" \
+              "$DISPATCHER_PATH"
 
-          echo "[SECURITY] Verificacion de integridad activa"
-          echo ""
-
-      - name: Verify Python embedded exists
-        run: |
-          if [ -d "nest-files-py-embedded-mac" ]; then
-            echo "✅ Python embebido para Mac encontrado"
-            ls -la nest-files-py-embedded-mac/
+            if [ -f "$OUTPUT_DIR/dispatcher" ]; then
+              echo "   [OK] dispatcher creado"
+            else
+              echo "   [ERROR] dispatcher no se generó"
+              exit 1
+            fi
           else
-            echo "⚠️ Python embebido para Mac no encontrado"
+            echo "   [ERROR] dispatcher.py no encontrado"
+            exit 1
           fi
+
+          rm -rf build_temp
+
+          # ── Resumen ──
+          echo ""
+          echo "============================================================"
+          echo "Binarios generados:"
+          ls -lh "$OUTPUT_DIR/"
+          echo "============================================================"
+
+      - name: Cleanup Python Build Environment
+        run: |
+          echo "Limpiando entorno de compilación Python..."
+          rm -rf python-build-temp
+          echo "[OK] Entorno limpio. Solo binarios en el paquete final."
 
       - name: Install Frontend dependencies
         working-directory: nest-ui-fe
@@ -169,9 +162,9 @@ jobs:
       - name: Create Mac App with electron-packager
         working-directory: nest-electron
         run: |
-          echo "📦 Usando electron-packager (sin firma)..."
+          echo "Usando electron-packager (sin firma)..."
           npm run dist:mac-simple
-          echo "✅ App creada exitosamente"
+          echo "[OK] App creada exitosamente"
         env:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           JWT_EXPIRATION: "12h"
@@ -179,9 +172,8 @@ jobs:
 
       - name: Copy resources to Mac App
         run: |
-          echo "📁 Copiando recursos..."
+          echo "Copiando recursos..."
 
-          # Encontrar la carpeta de la app
           APP_PATH=$(find nest-electron/release -name "Production Processing-darwin-*" -type d | head -n 1)
           echo "App path: $APP_PATH"
 
@@ -189,68 +181,57 @@ jobs:
 
           # Copiar frontend
           cp -r nest-ui-fe/dist/nest-ui-fe/browser "$RESOURCES_DIR/frontend"
-          echo "✅ Frontend copiado"
+          echo "[OK] Frontend copiado"
 
           # Copiar backend
           mkdir -p "$RESOURCES_DIR/backend"
           cp -r nest-ui-be/dist "$RESOURCES_DIR/backend/"
           cp -r nest-ui-be/node_modules "$RESOURCES_DIR/backend/"
           cp nest-ui-be/package.json "$RESOURCES_DIR/backend/"
-          echo "✅ Backend copiado"
+          echo "[OK] Backend copiado"
 
-          # Copiar carpeta data del backend (base de datos JSON, etc.)
+          # Copiar carpeta data del backend
           if [ -d "nest-ui-be/data" ]; then
             cp -r nest-ui-be/data "$RESOURCES_DIR/backend/data"
-            echo "✅ Carpeta data del backend copiada"
+            echo "[OK] Carpeta data copiada"
           else
-            echo "⚠️ Carpeta data del backend no encontrada, creando vacía..."
             mkdir -p "$RESOURCES_DIR/backend/data"
           fi
 
-          # Copiar python-hashes.json al backend (verificación de integridad)
-          if [ -f "python-hashes.json" ]; then
-            cp python-hashes.json "$RESOURCES_DIR/backend/python-hashes.json"
-            echo "✅ python-hashes.json copiado al backend"
-          else
-            echo "⚠️ python-hashes.json no encontrado"
-          fi
-
-          # Crear archivo .env para JWT en producción
-          echo "Creando .env para backend en producción..."
+          # Crear .env para JWT en producción
           JWT_SECRET="${JWT_SECRET:-default-secret-change-in-production-min-32-chars}"
           JWT_EXPIRATION="${JWT_EXPIRATION:-12h}"
           cat > "$RESOURCES_DIR/backend/.env" << EOF
-          # JWT Configuration
           JWT_SECRET=${JWT_SECRET}
           JWT_EXPIRATION=${JWT_EXPIRATION}
-
-          # Application
           NODE_ENV=production
           PORT=3000
           EOF
-          echo "✅ .env creado para backend"
+          echo "[OK] .env creado"
 
-          # Copiar Python embebido
-          if [ -d "nest-files-py-embedded-mac" ]; then
-            cp -r nest-files-py-embedded-mac "$RESOURCES_DIR/python"
-            echo "✅ Python embebido copiado"
+          # Copiar solo los ejecutables compilados (NO Python embebido)
+          mkdir -p "$RESOURCES_DIR/python/executables"
+          if [ -d "nest-files-py-embedded-mac/executables" ]; then
+            cp -r nest-files-py-embedded-mac/executables/* "$RESOURCES_DIR/python/executables/"
+            echo "[OK] Ejecutables copiados (sin Python embebido)"
+            ls -lh "$RESOURCES_DIR/python/executables/"
           else
-            echo "⚠️ Python embebido no encontrado"
+            echo "[ERROR] Directorio de ejecutables no encontrado"
+            exit 1
           fi
 
-          echo "✅ Todos los recursos copiados"
+          echo "[OK] Todos los recursos copiados"
         env:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           JWT_EXPIRATION: "12h"
 
       - name: Compress Mac App
         run: |
-          echo "📦 Comprimiendo app..."
+          echo "Comprimiendo app..."
           APP_PATH=$(find nest-electron/release -name "Production Processing-darwin-*" -type d | head -n 1)
-          echo "App encontrada en: $APP_PATH"
 
           if [ -z "$APP_PATH" ]; then
-            echo "❌ No se encontró la app"
+            echo "[ERROR] No se encontró la app"
             exit 1
           fi
 
@@ -258,7 +239,7 @@ jobs:
           FOLDER_NAME=$(basename "$APP_PATH")
           zip -r "Production-Processing-Mac.zip" "$FOLDER_NAME"
           ls -lh Production-Processing-Mac.zip
-          echo "✅ App comprimida exitosamente"
+          echo "[OK] App comprimida exitosamente"
 
       - name: Upload Mac App (ZIP)
         uses: actions/upload-artifact@v4
@@ -270,13 +251,7 @@ jobs:
 
       - name: Display Download Instructions
         run: |
-          echo "✅ Compilación exitosa!"
-          echo "📦 Aplicación Mac creada"
-          echo ""
-          echo "Para descargar:"
-          echo "1. Ve a la pestaña 'Actions' en GitHub"
-          echo "2. Selecciona este workflow"
-          echo "3. Descarga 'Production-Processing-Mac-App'"
+          echo "[OK] Compilación exitosa - Modo solo-EXE (sin Python embebido)"
           echo ""
           echo "Para instalar en Mac:"
           echo "1. Descomprime el ZIP"

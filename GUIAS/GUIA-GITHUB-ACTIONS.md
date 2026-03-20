@@ -28,10 +28,13 @@ git init
 git add .
 
 # Hacer commit
-git commit -m "Initial commit"
+#//// 03-19-2026
+git commit -m "Mejora para electron y angular"
 
 # Conectar con GitHub (reemplaza con tu URL)
 git remote add origin https://github.com/TU-USUARIO/NEST-UI-V2.git
+
+git remote add origin https://github.com/SamartinezRodela/production-processing.git
 
 # Subir a GitHub
 git branch -M main

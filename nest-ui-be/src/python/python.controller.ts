@@ -7,6 +7,7 @@ import {
   HttpException,
   HttpStatus,
   UseGuards,
+  Logger,
 } from '@nestjs/common';
 import { PythonService } from './python.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -14,6 +15,8 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @Controller('python')
 @UseGuards(JwtAuthGuard) // ✅ Proteger todas las rutas de Python
 export class PythonController {
+  private readonly logger = new Logger(PythonController.name);
+
   constructor(private readonly pythonService: PythonService) {}
 
   // ==========================================
@@ -73,8 +76,8 @@ export class PythonController {
   @Get('test-python')
   async testPython() {
     try {
-      const result = await this.pythonService.executeScript(
-        'test_imports.py',
+      const result = await this.pythonService.executeDispatcher(
+        'test_imports',
         [],
       );
       return result;
@@ -173,7 +176,10 @@ export class PythonController {
       const resultado = await this.pythonService.generarPathPDF(datos);
       return resultado;
     } catch (error) {
-      console.error('Error en generarPathPDF controller:', error);
+      this.logger.error(
+        `Error en generarPathPDF controller: ${error.message || error}`,
+        error?.stack,
+      );
       throw new HttpException(
         {
           message: 'Error al generar PDF',
@@ -222,7 +228,10 @@ export class PythonController {
         result: resultado,
       };
     } catch (error) {
-      console.error('Error en execute-file controller:', error);
+      this.logger.error(
+        `Error en execute-file controller: ${error.message || error}`,
+        error?.stack,
+      );
       throw new HttpException(
         {
           message: 'Error al ejecutar archivo',
@@ -266,7 +275,10 @@ export class PythonController {
         result: resultado,
       };
     } catch (error) {
-      console.error('Error en execute-exe controller:', error);
+      this.logger.error(
+        `Error en execute-exe controller: ${error.message || error}`,
+        error?.stack,
+      );
       throw new HttpException(
         {
           message: 'Error al ejecutar ejecutable',
