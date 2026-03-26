@@ -39,10 +39,11 @@ import { PathConfigurationService } from '@app/service/home/PathConfiguration.se
 import { AuthService } from '@services/auth.service';
 import { WebSocketService } from '@services/websocket.service';
 import { LanguageService } from '@services/language.service';
+import { FacilityManagementService } from '@services/set-up/facility-management.service';
+import { OrderManagementService } from '@services/order-management.service';
 
 import { DEFAULT_FACILITIES, DEFAULT_ORDERS } from '@app/pages/constants/facilities.constants';
 import { ProcessingResult } from '@models/processing.types';
-import { OrderManagementService } from '@services/order-management.service';
 
 @Component({
   selector: 'app-home',
@@ -73,6 +74,7 @@ export class Home implements OnInit, OnDestroy {
   private http = inject(HttpClient);
   private webSocketService = inject(WebSocketService);
   languageService = inject(LanguageService);
+  facilityManagementService = inject(FacilityManagementService);
 
   orderService = inject(OrderManagementService);
 
@@ -766,6 +768,143 @@ export class Home implements OnInit, OnDestroy {
 
   ///////
 
+  async processNestOnlyPdf(): Promise<void> {
+    try {
+      this.showProcessConfirmModal.set(false);
+
+      const basePath = this.settingsService.getBasePath();
+      const outputPath = this.settingsService.getOutputPath();
+
+      if (!basePath || !outputPath) {
+        this.notificationService.warning('Please configure Base Path and Output Path first');
+        this.router.navigate(['/Set-Up']);
+        return;
+      }
+
+      const validFiles = this.pdfMetadataService.getValidFiles();
+      if (validFiles.length === 0) {
+        this.notificationService.warning('No valid files to process');
+        return;
+      }
+
+      const separator = basePath.includes('\\') ? '\\' : '/';
+      const apiUrl = await this.settingsService['apiUrlService'].getApiUrl();
+      const token = this.authService.getToken();
+
+      // Obtener warehouse de la facility seleccionada
+      const selectedFacilityId = this.selectedFacility();
+      const selectedProcessId = this.orderService.selectedOrder();
+      const facility = this.facilityManagementService.getFacilityById(selectedFacilityId);
+      const process = this.orderService.getOrderById(selectedProcessId);
+
+      const warehouse = facility?.warehouse || '';
+      const processtype = process?.name || '';
+
+      // Construir items para el batch
+      const items = validFiles.map((file) => {
+        console.log('File:', file);
+        // input: ruta completa del archivo original
+        const input = file.SystemPath || `${basePath}${separator}${file.RelativePath}`;
+
+        // ref: basePath + warehouse + process type + Style + Size.pdf
+        const ref = `${basePath}${separator}${warehouse}${separator}${processtype}${separator}${file.Style}${separator}${file.Size}.pdf`;
+
+        // output: outputPath + carpetas del RelativePath + FileName_out.pdf
+        const outputFileName = file.FileName.replace(/\.pdf$/i, '_out.pdf');
+        // Quitar el nombre del archivo del RelativePath para obtener solo las carpetas
+        const relativeDir = file.RelativePath
+          ? file.RelativePath.substring(0, file.RelativePath.length - file.FileName.length).replace(
+              /[\\\/]+$/,
+              '',
+            )
+          : '';
+        const output = relativeDir
+          ? `${outputPath}${separator}${relativeDir}${separator}${outputFileName}`
+          : `${outputPath}${separator}${outputFileName}`;
+
+        return { input, ref, output };
+      });
+      console.log('Archivos y rutas Procesadas:', items);
+      this.fileProcessingService.isProcessing.set(true);
+      this.fileProcessingService.progress.set(0);
+      this.fileProcessingService.processingState.set('processing');
+
+      // Escuchar progreso via WebSocket
+      const progressSub = this.webSocketService.listen('python-progress').subscribe((data: any) => {
+        if (data && data.scriptName === 'nest_only_pdf') {
+          this.fileProcessingService.progress.set(data.progress);
+        }
+      });
+
+      const result = await firstValueFrom(
+        this.http.post<any>(
+          `${apiUrl}/python/nest-only-pdf-batch`,
+          { items },
+          {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          },
+        ),
+      );
+
+      progressSub.unsubscribe();
+      this.fileProcessingService.progress.set(100);
+      this.fileProcessingService.processingState.set('complete');
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      this.fileProcessingService.isProcessing.set(false);
+
+      if (result.success) {
+        // Mostrar rutas de los archivos generados
+        const outputFiles = result.results
+          .filter((r: any) => r.status === 'fulfilled' && r.data?.output_file)
+          .map((r: any) => r.data.output_file);
+
+        this.notificationService.success(
+          `Processed ${result.completed}/${result.total} files successfully`,
+        );
+
+        if (outputFiles.length > 0) {
+          console.log('Generated files:', outputFiles);
+        }
+
+        // Limpiar archivos y metadata table
+        this.clearAllFiles();
+      } else {
+        // Limpiar solo los exitosos, dejar los fallidos
+        const successfulInputs = result.results
+          .filter((r: any) => r.status === 'fulfilled')
+          .map((r: any) => r.input);
+
+        const successfulFileNames = validFiles
+          .filter((f) => {
+            const input = f.SystemPath || `${basePath}${separator}${f.RelativePath}`;
+            return successfulInputs.includes(input);
+          })
+          .map((f) => f.FileName);
+
+        successfulFileNames.forEach((fileName: string) => {
+          this.pdfMetadataService.removeFileByName(fileName);
+          const currentFiles = this.selectedFiles();
+          const index = currentFiles.findIndex((f) => f.name === fileName);
+          if (index !== -1) {
+            this.fileService.removeFile(index);
+          }
+        });
+
+        this.actualizarJsonMetadatos(this.pdfMetadataService.getValidFiles());
+
+        this.notificationService.warning(
+          `Completed ${result.completed}/${result.total}. Failed: ${result.failed}`,
+        );
+      }
+    } catch (error: any) {
+      this.fileProcessingService.isProcessing.set(false);
+      this.fileProcessingService.progress.set(0);
+      this.fileProcessingService.processingState.set('error');
+      console.error('Error in nest-only-pdf batch:', error);
+      this.notificationService.error(`Error: ${error.message}`);
+    }
+  }
+
   async prorbarGenerarPathPDF(): Promise<void> {
     try {
       // Obtener los default settings desde el backend
@@ -801,6 +940,8 @@ export class Home implements OnInit, OnDestroy {
   async probarGuardarPdfRelativo(): Promise<void> {
     try {
       const outputPath = this.settingsService.getOutputPath();
+      const basePath = this.settingsService.getBasePath();
+
       if (!outputPath) {
         this.notificationService.warning('Por favor configura el Output Path en Set-Up');
         return;

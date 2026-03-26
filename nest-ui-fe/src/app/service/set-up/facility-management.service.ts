@@ -47,8 +47,8 @@ export class FacilityManagementService {
     this.facilities.set(facilities);
   }
 
-  async addFacility(name: string): Promise<boolean> {
-    const newFacility = await this.facilitiesApi.create(name);
+  async addFacility(name: string, warehouse: string = ''): Promise<boolean> {
+    const newFacility = await this.facilitiesApi.create(name, warehouse);
 
     if (newFacility) {
       this.facilities.set([...this.facilities(), newFacility]);
@@ -58,8 +58,8 @@ export class FacilityManagementService {
     return false;
   }
 
-  async updateFacility(id: string, name: string): Promise<boolean> {
-    const updated = await this.facilitiesApi.update(id, name);
+  async updateFacility(id: string, name: string, warehouse: string = ''): Promise<boolean> {
+    const updated = await this.facilitiesApi.update(id, name, warehouse);
 
     if (updated) {
       this.facilities.set(this.facilities().map((f) => (f.id === id ? updated : f)));

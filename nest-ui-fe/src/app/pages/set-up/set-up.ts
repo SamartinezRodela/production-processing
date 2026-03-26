@@ -105,6 +105,10 @@ export class SetUp {
     return this.modalService.editingFacilityName;
   }
 
+  get editingFacilityWarehouse() {
+    return this.modalService.editingFacilityWarehouse;
+  }
+
   get isConfirmModalOpen() {
     return this.modalService.isConfirmModalOpen;
   }
@@ -410,12 +414,13 @@ export class SetUp {
   editFacility(): void {
     const current = this.facilityService.getFacilityById(this.selectedFacility());
     if (current) {
-      this.modalService.openFacilityModal('edit', current.name, 'facility');
+      this.modalService.openFacilityModal('edit', current.name, 'facility', current.warehouse);
     }
   }
 
   async saveFacility(): Promise<void> {
     const name = this.editingFacilityName().trim();
+    const warehouse = this.editingFacilityWarehouse().trim();
 
     if (!name) {
       this.notificationService.warning('Facility name cannot be empty');
@@ -425,14 +430,14 @@ export class SetUp {
     let success = false;
 
     if (this.modalMode() === 'add') {
-      success = await this.facilityService.addFacility(name);
+      success = await this.facilityService.addFacility(name, warehouse);
       if (success) {
         this.notificationService.success('Facility added successfully');
       } else {
         this.notificationService.error('Failed to add facility');
       }
     } else {
-      success = await this.facilityService.updateFacility(this.selectedFacility(), name);
+      success = await this.facilityService.updateFacility(this.selectedFacility(), name, warehouse);
       if (success) {
         this.notificationService.success('Facility updated successfully');
       } else {

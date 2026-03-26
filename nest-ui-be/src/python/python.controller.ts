@@ -133,6 +133,76 @@ export class PythonController {
     }
   }
 
+  /**
+   * Ejecuta nest_only_pdf.exe
+   * POST /python/nest-only-pdf
+   * Body: { input: string, ref: string, output: string }
+   */
+  @Post('nest-only-pdf')
+  async nestOnlyPdf(
+    @Body()
+    body: {
+      input: string;
+      ref: string;
+      output: string;
+    },
+  ) {
+    try {
+      if (!body.input || !body.ref || !body.output) {
+        throw new HttpException(
+          'Se requieren input, ref y output',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      return await this.pythonService.nestOnlyPdf(body);
+    } catch (error: any) {
+      throw new HttpException(
+        {
+          message: 'Error al ejecutar nest_only_pdf',
+          error: error.message || error,
+          details: error,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Ejecuta nest_only_pdf.exe para múltiples archivos en paralelo
+   * POST /python/nest-only-pdf-batch
+   * Body: { items: [{ input, ref, output }, ...] }
+   */
+  @Post('nest-only-pdf-batch')
+  async nestOnlyPdfBatch(
+    @Body()
+    body: {
+      items: { input: string; ref: string; output: string }[];
+    },
+  ) {
+    try {
+      if (
+        !body.items ||
+        !Array.isArray(body.items) ||
+        body.items.length === 0
+      ) {
+        throw new HttpException(
+          'Se requiere un array de items con input, ref y output',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      return await this.pythonService.nestOnlyPdfBatch(body.items);
+    } catch (error: any) {
+      throw new HttpException(
+        {
+          message: 'Error al ejecutar nest_only_pdf batch',
+          error: error.message || error,
+          details: error,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
   @Post('save-metadata')
   async saveMetada(@Body() body: { data: any }) {
     try {

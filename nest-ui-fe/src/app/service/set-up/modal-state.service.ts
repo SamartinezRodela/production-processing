@@ -7,6 +7,7 @@ export class ModalStateService {
   isFacilityModalOpen = signal(false);
   facilityModalMode = signal<'add' | 'edit'>('add');
   editingFacilityName = signal('');
+  editingFacilityWarehouse = signal('');
   modalType = signal<'facility' | 'order'>('facility'); // ✅ NUEVO
 
   //Confirmation Modal
@@ -19,17 +20,19 @@ export class ModalStateService {
     mode: 'add' | 'edit',
     currentName?: string,
     type: 'facility' | 'order' = 'facility',
+    currentWarehouse?: string,
   ): void {
     this.facilityModalMode.set(mode);
     this.editingFacilityName.set(currentName || '');
-    this.modalType.set(type); // ✅ NUEVO
+    this.editingFacilityWarehouse.set(currentWarehouse || '');
+    this.modalType.set(type);
     this.isFacilityModalOpen.set(true);
   }
 
   closeFacilityModal(): void {
     this.isFacilityModalOpen.set(false);
-
     this.editingFacilityName.set('');
+    this.editingFacilityWarehouse.set('');
   }
 
   openConfirmModal(

@@ -648,6 +648,9 @@
       "
       [required]="true"
     />
+    @if (modalType() === 'facility') {
+      <app-input label="Warehouse" [(value)]="editingFacilityWarehouse" placeholder="e.g. 408" />
+    }
   </div>
 
   <!-- Modal Footer -->

@@ -1,9 +1,10 @@
 {
   "version": "1.0.0",
-  "lastModified": "2026-03-19T14:25:34.721Z",
+  "lastModified": "2026-03-26T14:11:38.076Z",
   "facilities": [
     {
       "id": "1",
+      "warehouse": "408",
       "name": "Reynosa",
       "createdAt": "2026-03-09T14:12:11.809Z",
       "updatedAt": "2026-03-09T14:12:11.809Z"
@@ -11,6 +12,14 @@
     {
       "id": "2",
       "name": "Merida",
+      "warehouse": "409",
+      "createdAt": "2026-03-09T14:12:11.809Z",
+      "updatedAt": "2026-03-09T14:12:11.809Z"
+    },
+    {
+      "id": "3",
+      "name": "San Luis",
+      "warehouse": "410",
       "createdAt": "2026-03-09T14:12:11.809Z",
       "updatedAt": "2026-03-09T14:12:11.809Z"
     }

@@ -433,6 +433,159 @@ export class PythonService {
     return this.executeFileWithFallback('guardar_pdf_path', [datosJson]);
   }
 
+  /**
+   * Ejecuta nest_only_pdf.exe con los argumentos --input, --ref, --output
+   * Este es un .exe externo (Grupo A) que procesa PDFs.
+   */
+  async nestOnlyPdf(datos: {
+    input: string;
+    ref: string;
+    output: string;
+  }): Promise<any> {
+    const isMac = process.platform === 'darwin';
+    const exeName = isMac ? 'nest_only_pdf' : 'nest_only_pdf.exe';
+    const args = [
+      '--input',
+      datos.input,
+      '--ref',
+      datos.ref,
+      '--output',
+      datos.output,
+    ];
+
+    // Buscar el exe
+    const exePathRoot = path.join(this.scriptsPath, exeName);
+    const exePathExecutables = path.join(
+      this.scriptsPath,
+      'executables',
+      exeName,
+    );
+    const exePath = fs.existsSync(exePathRoot)
+      ? exePathRoot
+      : fs.existsSync(exePathExecutables)
+        ? exePathExecutables
+        : null;
+
+    if (!exePath) {
+      throw new Error(`Ejecutable no encontrado: ${exeName}`);
+    }
+
+    // Crear carpetas del output si no existen
+    const outputDir = path.dirname(datos.output);
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+      this.logger.log(`Carpetas creadas: ${outputDir}`);
+    }
+
+    // Ejecutar y devolver raw output (el exe no retorna JSON)
+    return new Promise((resolve, reject) => {
+      const proc = require('child_process').spawn(exePath, args);
+      let stdout = '';
+      let stderr = '';
+
+      const timeoutId = setTimeout(() => {
+        proc.kill('SIGKILL');
+        reject({
+          error: 'Timeout exceeded',
+          message: 'El proceso excedió 60 segundos',
+        });
+      }, 60000);
+
+      proc.stdout.on('data', (d: Buffer) => {
+        stdout += d.toString();
+      });
+      proc.stderr.on('data', (d: Buffer) => {
+        stderr += d.toString();
+        this.logger.warn(`nest_only_pdf stderr: ${d}`);
+      });
+
+      proc.on('close', (code: number) => {
+        clearTimeout(timeoutId);
+        if (code !== 0) {
+          reject({ error: 'Executable failed', code, stderr, stdout });
+          return;
+        }
+        // El exe imprime texto plano, no JSON — devolver como éxito
+        const outputFile = datos.output;
+        resolve({
+          success: true,
+          output_file: outputFile,
+          output_exists: fs.existsSync(outputFile),
+          log: stdout.trim(),
+        });
+      });
+
+      proc.on('error', (err: Error) => {
+        clearTimeout(timeoutId);
+        reject({ error: 'Failed to start process', message: err.message });
+      });
+    });
+  }
+
+  /**
+   * Ejecuta nest_only_pdf.exe para múltiples archivos secuencialmente con progreso via WebSocket
+   */
+  async nestOnlyPdfBatch(
+    items: { input: string; ref: string; output: string }[],
+  ): Promise<any> {
+    const results: any[] = [];
+    let completed = 0;
+    let failed = 0;
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const fileName = path.basename(item.input);
+
+      // Emitir progreso: archivo iniciando
+      this.pythonGateway.emitProgress(Math.round((i / items.length) * 100), {
+        scriptName: 'nest_only_pdf',
+        fileName,
+        current: i + 1,
+        total: items.length,
+        status: 'processing',
+      });
+
+      try {
+        const data = await this.nestOnlyPdf(item);
+        completed++;
+        results.push({
+          input: item.input,
+          output: item.output,
+          status: 'fulfilled',
+          data,
+        });
+      } catch (error: any) {
+        failed++;
+        results.push({
+          input: item.input,
+          output: item.output,
+          status: 'rejected',
+          error: error?.error || error,
+        });
+      }
+
+      // Emitir progreso: archivo completado
+      this.pythonGateway.emitProgress(
+        Math.round(((i + 1) / items.length) * 100),
+        {
+          scriptName: 'nest_only_pdf',
+          fileName,
+          current: i + 1,
+          total: items.length,
+          status: 'completed',
+        },
+      );
+    }
+
+    return {
+      success: failed === 0,
+      total: items.length,
+      completed,
+      failed,
+      results,
+    };
+  }
+
   async generarPathPDF(datos: {
     titulo: string;
     contenido: string;

@@ -12,12 +12,12 @@ export class PdfNameValidatorService {
   // Number: Opcional, solo dígitos numéricos (ej: 00, 01, 127, o vacío)
   // Name: Opcional, texto alfanumérico sin dígitos al inicio (ej: MATT, HUGO, o vacío)
   // IMPORTANTE: Number debe ser SOLO dígitos, Name debe ser SOLO letras/guiones bajos
-  private readonly STANDARD_PATTERN = /^([A-Z0-9]{6})_(XXL|XL|XS|M|L|S)_(\d*)_([A-Z_]*)\.pdf$/i;
+  private readonly STANDARD_PATTERN = /^([A-Z0-9]{4,10})_(XXL|XL|XS|M|L|S)_(\d*)_([A-Z_]*)\.pdf$/i;
 
   // Patrón relajado para extraer Style y Size incluso si el archivo es inválido
   // Esto permite mostrar Style y Size en la tabla aunque el orden sea incorrecto
   // Acepta cualquier contenido después de Size (con o sin guiones bajos)
-  private readonly RELAXED_PATTERN = /^([A-Z0-9]{6})_(XXL|XL|XS|M|L|S)_.*\.pdf$/i;
+  private readonly RELAXED_PATTERN = /^([A-Z0-9]{4,10})_(XXL|XL|XS|M|L|S)_.*\.pdf$/i;
 
   //Tamaños Validos
   private readonly VALID_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
@@ -41,16 +41,6 @@ export class PdfNameValidatorService {
     if (match) {
       // Archivo válido con patrón estricto
       const [, style, size] = match;
-
-      // Validar que el style tenga exactamente 6 caracteres
-      if (style.length !== 6) {
-        return {
-          isValid: false,
-          style: style.toUpperCase(),
-          size: size.toUpperCase(),
-          error: `Style must be exactly 6 characters (found: ${style.length})`,
-        };
-      }
 
       // Validar que el size sea válido
       if (!this.VALID_SIZES.includes(size.toUpperCase())) {

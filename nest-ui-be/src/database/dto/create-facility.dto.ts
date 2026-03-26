@@ -16,6 +16,11 @@ export class CreateFacilityDto {
       'Name can only contain letters, numbers, spaces, hyphens and underscores',
   })
   name: string;
+
+  @IsString({ message: 'Warehouse must be a string' })
+  @IsNotEmpty({ message: 'Warehouse is required' })
+  @MaxLength(20, { message: 'Warehouse must not exceed 20 characters' })
+  warehouse: string;
 }
 
 export class UpdateFacilityDto {
@@ -28,4 +33,9 @@ export class UpdateFacilityDto {
       'Name can only contain letters, numbers, spaces, hyphens and underscores',
   })
   name: string;
+
+  @IsString({ message: 'Warehouse must be a string' })
+  @IsNotEmpty({ message: 'Warehouse is required' })
+  @MaxLength(20, { message: 'Warehouse must not exceed 20 characters' })
+  warehouse: string;
 }

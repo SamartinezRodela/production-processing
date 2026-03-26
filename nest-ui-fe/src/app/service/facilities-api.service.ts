@@ -41,11 +41,11 @@ export class FacilitiesApiService {
     }
   }
 
-  async create(name: string): Promise<Facility | null> {
+  async create(name: string, warehouse: string = ''): Promise<Facility | null> {
     const apiUrl = await this.apiUrlService.getApiUrl();
     try {
       const response = await firstValueFrom(
-        this.http.post<ApiResponse<Facility>>(`${apiUrl}/facilities`, { name }),
+        this.http.post<ApiResponse<Facility>>(`${apiUrl}/facilities`, { name, warehouse }),
       );
       return response.data || null;
     } catch (error) {
@@ -54,12 +54,13 @@ export class FacilitiesApiService {
     }
   }
 
-  async update(id: string, name: string): Promise<Facility | null> {
+  async update(id: string, name: string, warehouse: string = ''): Promise<Facility | null> {
     const apiUrl = await this.apiUrlService.getApiUrl();
     try {
       const response = await firstValueFrom(
         this.http.put<ApiResponse<Facility>>(`${apiUrl}/facilities/${id}`, {
           name,
+          warehouse,
         }),
       );
       return response.data || null;

@@ -241,18 +241,21 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         {
           id: '1',
           name: 'Reynosa',
+          warehouse: '408',
           createdAt: now,
           updatedAt: now,
         },
         {
           id: '2',
           name: 'Merida',
+          warehouse: '409',
           createdAt: now,
           updatedAt: now,
         },
         {
           id: '3',
           name: 'San Luis',
+          warehouse: '410',
           createdAt: now,
           updatedAt: now,
         },
@@ -347,7 +350,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   /**
    * Crea una nueva facility
    */
-  createFacility(name: string): Facility {
+  createFacility(name: string, warehouse: string = ''): Facility {
     // const newId = (this.database.facilities.length + 1).toString();
     const newId = crypto.randomUUID();
 
@@ -356,6 +359,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     const newFacility: Facility = {
       id: newId,
       name,
+      warehouse,
       createdAt: now,
       updatedAt: now,
     };
@@ -369,7 +373,11 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   /**
    * Actualiza una facility
    */
-  updateFacility(id: string, name: string): Facility | null {
+  updateFacility(
+    id: string,
+    name: string,
+    warehouse?: string,
+  ): Facility | null {
     const facility = this.getFacilityById(id);
 
     if (!facility) {
@@ -377,6 +385,9 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     }
 
     facility.name = name;
+    if (warehouse !== undefined) {
+      facility.warehouse = warehouse;
+    }
     facility.updatedAt = new Date().toISOString();
     this.saveDatabase();
 

@@ -156,6 +156,36 @@ jobs:
           Write-Host "[OK] Entorno limpio. Solo $exeCount archivos .exe en el paquete final." -ForegroundColor Green
         shell: pwsh
 
+      - name: Download External EXEs from Release
+        run: |
+          Write-Host "Descargando nest_only_pdf.exe desde release..." -ForegroundColor Cyan
+          $outputDir = "nest-files-py-embedded\executables"
+
+          # Descargar nest_only_pdf.exe desde el release tag
+          $releaseTag = "v1.0.0-exes"
+          $assetName = "nest_only_pdf.exe"
+          $repoOwner = "${{ github.repository_owner }}"
+          $repoName = "${{ github.event.repository.name }}"
+
+          $releaseUrl = "https://api.github.com/repos/${repoOwner}/${repoName}/releases/tags/${releaseTag}"
+          $headers = @{ "Authorization" = "token ${{ secrets.GITHUB_TOKEN }}"; "Accept" = "application/vnd.github.v3+json" }
+
+          $release = Invoke-RestMethod -Uri $releaseUrl -Headers $headers
+          $asset = $release.assets | Where-Object { $_.name -eq $assetName }
+
+          if ($asset) {
+            $downloadUrl = $asset.browser_download_url
+            Write-Host "Descargando desde: $downloadUrl" -ForegroundColor Yellow
+            Invoke-WebRequest -Uri $downloadUrl -OutFile "$outputDir\$assetName" -Headers @{ "Authorization" = "token ${{ secrets.GITHUB_TOKEN }}" }
+
+            $sizeMB = [math]::Round((Get-Item "$outputDir\$assetName").Length / 1MB, 2)
+            Write-Host "[OK] $assetName descargado ($sizeMB MB)" -ForegroundColor Green
+          } else {
+            Write-Host "[ERROR] $assetName no encontrado en release $releaseTag" -ForegroundColor Red
+            exit 1
+          }
+        shell: pwsh
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:

@@ -19,11 +19,18 @@ export class FacilitiesService {
   }
 
   create(createFacilityDto: CreateFacilityDto): Facility {
-    return this.databaseService.createFacility(createFacilityDto.name);
+    return this.databaseService.createFacility(
+      createFacilityDto.name,
+      createFacilityDto.warehouse,
+    );
   }
 
   update(id: string, updateFacilityDto: UpdateFacilityDto): Facility | null {
-    return this.databaseService.updateFacility(id, updateFacilityDto.name);
+    return this.databaseService.updateFacility(
+      id,
+      updateFacilityDto.name,
+      updateFacilityDto.warehouse,
+    );
   }
 
   remove(id: string): boolean {
