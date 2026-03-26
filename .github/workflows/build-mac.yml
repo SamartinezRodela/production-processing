@@ -41,11 +41,9 @@ jobs:
           ASSET_NAME="nest_only_pdf"
           REPO="${{ github.repository }}"
 
-          # Obtener info del release
           RELEASE_JSON=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/repos/${REPO}/releases/tags/${RELEASE_TAG}")
 
-          # Buscar el asset (sin extensión para Mac)
           DOWNLOAD_URL=$(echo "$RELEASE_JSON" | python3 -c "
           import sys, json
           data = json.load(sys.stdin)
@@ -60,18 +58,12 @@ jobs:
             curl -L -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
               -o "$OUTPUT_DIR/$ASSET_NAME" "$DOWNLOAD_URL"
             chmod +x "$OUTPUT_DIR/$ASSET_NAME"
-            echo "[OK] $ASSET_NAME descargado"
-            ls -lh "$OUTPUT_DIR/$ASSET_NAME"
+            SIZE=$(du -h "$OUTPUT_DIR/$ASSET_NAME" | cut -f1)
+            echo "[OK] $ASSET_NAME descargado ($SIZE)"
           else
-            echo "[WARN] $ASSET_NAME no encontrado en release $RELEASE_TAG"
-            echo "[WARN] Buscando nest_only_pdf.exe como fallback..."
-            # Si no hay versión Mac, el build continúa sin él
-            echo "[WARN] Continuando sin nest_only_pdf"
+            echo "[ERROR] $ASSET_NAME no encontrado en release $RELEASE_TAG"
+            exit 1
           fi
-
-          echo ""
-          echo "Binarios listos:"
-          ls -lh "$OUTPUT_DIR/" 2>/dev/null || echo "  (vacío)"
 
       - name: Install Frontend dependencies
         working-directory: nest-ui-fe

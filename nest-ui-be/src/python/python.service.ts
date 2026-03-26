@@ -531,57 +531,58 @@ export class PythonService {
     const results: any[] = new Array(items.length);
     let completed = 0;
     let failed = 0;
-    const CONCURRENCY = 4; // Procesar 4 archivos en paralelo
+    let finished = 0;
+    const CONCURRENCY = 4;
+
+    // Emitir progreso inicial
+    this.pythonGateway.emitProgress(0, {
+      scriptName: 'nest_only_pdf',
+      current: 0,
+      total: items.length,
+      status: 'processing',
+    });
 
     for (let i = 0; i < items.length; i += CONCURRENCY) {
       const chunk = items.slice(i, i + CONCURRENCY);
 
-      // Emitir progreso
-      this.pythonGateway.emitProgress(Math.round((i / items.length) * 100), {
-        scriptName: 'nest_only_pdf',
-        fileName: chunk.map((c) => path.basename(c.input)).join(', '),
-        current: i + 1,
-        total: items.length,
-        status: 'processing',
-      });
-
-      // Ejecutar chunk en paralelo
+      // Ejecutar chunk en paralelo, emitiendo progreso por cada archivo que termina
       const chunkResults = await Promise.allSettled(
-        chunk.map((item) => this.nestOnlyPdf(item)),
-      );
+        chunk.map(async (item, j) => {
+          const idx = i + j;
+          const fileName = path.basename(item.input);
 
-      // Procesar resultados del chunk
-      chunkResults.forEach((result, j) => {
-        const idx = i + j;
-        const item = items[idx];
-        if (result.status === 'fulfilled') {
-          completed++;
-          results[idx] = {
-            input: item.input,
-            output: item.output,
-            status: 'fulfilled',
-            data: result.value,
-          };
-        } else {
-          failed++;
-          results[idx] = {
-            input: item.input,
-            output: item.output,
-            status: 'rejected',
-            error: result.reason?.error || result.reason,
-          };
-        }
-      });
+          try {
+            const data = await this.nestOnlyPdf(item);
+            completed++;
+            results[idx] = {
+              input: item.input,
+              output: item.output,
+              status: 'fulfilled',
+              data,
+            };
+          } catch (error: any) {
+            failed++;
+            results[idx] = {
+              input: item.input,
+              output: item.output,
+              status: 'rejected',
+              error: error?.error || error,
+            };
+          }
 
-      // Emitir progreso después del chunk
-      this.pythonGateway.emitProgress(
-        Math.round(((i + chunk.length) / items.length) * 100),
-        {
-          scriptName: 'nest_only_pdf',
-          current: Math.min(i + chunk.length, items.length),
-          total: items.length,
-          status: 'completed',
-        },
+          // Emitir progreso cada vez que un archivo individual termina
+          finished++;
+          this.pythonGateway.emitProgress(
+            Math.round((finished / items.length) * 100),
+            {
+              scriptName: 'nest_only_pdf',
+              fileName,
+              current: finished,
+              total: items.length,
+              status: 'completed',
+            },
+          );
+        }),
       );
     }
 
