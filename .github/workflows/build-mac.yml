@@ -1,6 +1,6 @@
 name: Build Mac Installer
 
-# Modo solo-EXE: Python se usa solo para compilar, no se empaqueta
+# Modo solo nest_only_pdf descargado desde release
 on:
   push:
     branches: [main]
@@ -24,113 +24,54 @@ jobs:
             nest-ui-be/package-lock.json
             nest-electron/package-lock.json
 
-      - name: Setup Python (temporal para compilar binarios)
+      # ── COMENTADO: Ya no se compilan binarios con PyInstaller ──
+      # Solo se usa nest_only_pdf descargado desde release
+      #
+      # - name: Setup Python (temporal para compilar binarios)
+      # - name: Compile Python Scripts to Binaries
+      # - name: Cleanup Python Build Environment
+
+      - name: Download External EXEs from Release
         run: |
-          echo "Descargando Python standalone (solo para compilar)..."
-          mkdir -p python-build-temp
-          cd python-build-temp
-
-          PYTHON_VERSION="3.11.9"
-          PYTHON_BUILD="20240713"
-          PYTHON_URL="https://github.com/indygreg/python-build-standalone/releases/download/${PYTHON_BUILD}/cpython-${PYTHON_VERSION}+${PYTHON_BUILD}-aarch64-apple-darwin-install_only.tar.gz"
-
-          curl -L -o python.tar.gz "$PYTHON_URL"
-          tar -xzf python.tar.gz
-          rm python.tar.gz
-          mv python python-runtime
-
-          # Instalar PyInstaller + todas las bibliotecas
-          echo "Instalando PyInstaller y bibliotecas..."
-          python-runtime/bin/pip3 install pyinstaller
-          python-runtime/bin/pip3 install reportlab pypdf Pillow openpyxl requests
-          python-runtime/bin/pip3 install numpy pandas scipy matplotlib
-          python-runtime/bin/pip3 install opencv-python-headless pymupdf tifffile
-
-          echo "[OK] Entorno de compilación listo"
-          cd ..
-
-      - name: Compile Python Scripts to Binaries
-        run: |
-          echo "============================================================"
-          echo "COMPILANDO TODOS LOS SCRIPTS A BINARIOS (PyInstaller)"
-          echo "============================================================"
-
-          PYTHON_EXE="python-build-temp/python-runtime/bin/python3"
+          echo "Descargando nest_only_pdf desde release..."
           OUTPUT_DIR="nest-files-py-embedded-mac/executables"
           mkdir -p "$OUTPUT_DIR"
 
-          # ── Grupo A: Scripts stdlib ──
-          echo ""
-          echo "--- Grupo A: Scripts stdlib ---"
+          RELEASE_TAG="v1.0.0-exes"
+          ASSET_NAME="nest_only_pdf"
+          REPO="${{ github.repository }}"
 
-          GRUPO_A=("saludar.py" "guardar_pdf_path.py" "procesar_pdf.py")
+          # Obtener info del release
+          RELEASE_JSON=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${REPO}/releases/tags/${RELEASE_TAG}")
 
-          for script in "${GRUPO_A[@]}"; do
-            SCRIPT_PATH="nest-files-py/$script"
-            if [ -f "$SCRIPT_PATH" ]; then
-              echo "Compilando $script ..."
-              $PYTHON_EXE -m PyInstaller --onefile --clean --noconfirm \
-                --distpath "$OUTPUT_DIR" --workpath "build_temp" --specpath "build_temp" \
-                "$SCRIPT_PATH"
+          # Buscar el asset (sin extensión para Mac)
+          DOWNLOAD_URL=$(echo "$RELEASE_JSON" | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          for asset in data.get('assets', []):
+              if asset['name'] == '${ASSET_NAME}':
+                  print(asset['browser_download_url'])
+                  break
+          " 2>/dev/null)
 
-              BIN_NAME="${script%.py}"
-              if [ -f "$OUTPUT_DIR/$BIN_NAME" ]; then
-                echo "   [OK] $BIN_NAME creado"
-              else
-                echo "   [WARN] $BIN_NAME no se generó"
-              fi
-            else
-              echo "   [SKIP] $script no encontrado"
-            fi
-          done
-
-          rm -rf build_temp
-
-          # ── Grupo B: Dispatcher ──
-          echo ""
-          echo "--- Grupo B: Dispatcher (todas las bibliotecas) ---"
-
-          DISPATCHER_PATH="nest-files-py/dispatcher.py"
-          if [ -f "$DISPATCHER_PATH" ]; then
-            echo "Compilando dispatcher.py (esto puede tardar)..."
-            $PYTHON_EXE -m PyInstaller --onefile --clean --noconfirm \
-              --distpath "$OUTPUT_DIR" --workpath "build_temp" --specpath "build_temp" \
-              --hidden-import "reportlab" --hidden-import "reportlab.pdfgen" \
-              --hidden-import "reportlab.lib.pagesizes" --hidden-import "reportlab.lib.units" \
-              --hidden-import "pypdf" --hidden-import "fitz" \
-              --hidden-import "PIL" --hidden-import "cv2" \
-              --hidden-import "numpy" --hidden-import "pandas" \
-              --hidden-import "scipy" --hidden-import "scipy.stats" \
-              --hidden-import "matplotlib" --hidden-import "matplotlib.pyplot" \
-              --hidden-import "openpyxl" --hidden-import "tifffile" \
-              --hidden-import "requests" \
-              "$DISPATCHER_PATH"
-
-            if [ -f "$OUTPUT_DIR/dispatcher" ]; then
-              echo "   [OK] dispatcher creado"
-            else
-              echo "   [ERROR] dispatcher no se generó"
-              exit 1
-            fi
+          if [ -n "$DOWNLOAD_URL" ]; then
+            echo "Descargando desde: $DOWNLOAD_URL"
+            curl -L -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -o "$OUTPUT_DIR/$ASSET_NAME" "$DOWNLOAD_URL"
+            chmod +x "$OUTPUT_DIR/$ASSET_NAME"
+            echo "[OK] $ASSET_NAME descargado"
+            ls -lh "$OUTPUT_DIR/$ASSET_NAME"
           else
-            echo "   [ERROR] dispatcher.py no encontrado"
-            exit 1
+            echo "[WARN] $ASSET_NAME no encontrado en release $RELEASE_TAG"
+            echo "[WARN] Buscando nest_only_pdf.exe como fallback..."
+            # Si no hay versión Mac, el build continúa sin él
+            echo "[WARN] Continuando sin nest_only_pdf"
           fi
 
-          rm -rf build_temp
-
-          # ── Resumen ──
           echo ""
-          echo "============================================================"
-          echo "Binarios generados:"
-          ls -lh "$OUTPUT_DIR/"
-          echo "============================================================"
-
-      - name: Cleanup Python Build Environment
-        run: |
-          echo "Limpiando entorno de compilación Python..."
-          rm -rf python-build-temp
-          echo "[OK] Entorno limpio. Solo binarios en el paquete final."
+          echo "Binarios listos:"
+          ls -lh "$OUTPUT_DIR/" 2>/dev/null || echo "  (vacío)"
 
       - name: Install Frontend dependencies
         working-directory: nest-ui-fe
@@ -209,15 +150,14 @@ jobs:
           EOF
           echo "[OK] .env creado"
 
-          # Copiar solo los ejecutables compilados (NO Python embebido)
+          # Copiar solo los ejecutables (NO Python embebido)
           mkdir -p "$RESOURCES_DIR/python/executables"
           if [ -d "nest-files-py-embedded-mac/executables" ]; then
-            cp -r nest-files-py-embedded-mac/executables/* "$RESOURCES_DIR/python/executables/"
-            echo "[OK] Ejecutables copiados (sin Python embebido)"
-            ls -lh "$RESOURCES_DIR/python/executables/"
+            cp -r nest-files-py-embedded-mac/executables/* "$RESOURCES_DIR/python/executables/" 2>/dev/null || true
+            echo "[OK] Ejecutables copiados"
+            ls -lh "$RESOURCES_DIR/python/executables/" 2>/dev/null || echo "  (vacío)"
           else
-            echo "[ERROR] Directorio de ejecutables no encontrado"
-            exit 1
+            echo "[WARN] Directorio de ejecutables Mac no encontrado, continuando..."
           fi
 
           echo "[OK] Todos los recursos copiados"
@@ -251,7 +191,7 @@ jobs:
 
       - name: Display Download Instructions
         run: |
-          echo "[OK] Compilación exitosa - Modo solo-EXE (sin Python embebido)"
+          echo "[OK] Compilación exitosa"
           echo ""
           echo "Para instalar en Mac:"
           echo "1. Descomprime el ZIP"

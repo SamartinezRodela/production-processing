@@ -27,13 +27,13 @@ export const routes: Routes = [
     canActivate: [authGuard],
     data: { preload: true },
   },
-  {
-    path: 'python-tests',
-    loadComponent: () =>
-      import('./pages/python-tests/python-tests.component').then((m) => m.PythonTestsComponent),
-    canActivate: [authGuard],
-    data: { preload: true },
-  },
+  // {
+  //   path: 'python-tests',
+  //   loadComponent: () =>
+  //     import('./pages/python-tests/python-tests.component').then((m) => m.PythonTestsComponent),
+  //   canActivate: [authGuard],
+  //   data: { preload: true },
+  // },
 
   // ============================================
   // RUTA POR DEFECTO (404 o redirect)

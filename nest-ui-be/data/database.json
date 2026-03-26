@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastModified": "2026-03-26T14:11:38.076Z",
+  "lastModified": "2026-03-26T19:07:22.307Z",
   "facilities": [
     {
       "id": "1",
@@ -50,10 +50,12 @@
     "notifications": true
   },
   "settings": {
+    "selectedFacilityId": "1",
     "basePath": "C:\\Users\\samartinez\\Documents\\BasePath",
     "outputPath": "C:\\Users\\samartinez\\Documents\\OutputPath",
     "os": "windows",
-    "selectedFacilityId": "1",
-    "theme": "dark"
+    "theme": "dark",
+    "autoSave": false,
+    "notifications": true
   }
 }

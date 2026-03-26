@@ -528,49 +528,57 @@ export class PythonService {
   async nestOnlyPdfBatch(
     items: { input: string; ref: string; output: string }[],
   ): Promise<any> {
-    const results: any[] = [];
+    const results: any[] = new Array(items.length);
     let completed = 0;
     let failed = 0;
+    const CONCURRENCY = 4; // Procesar 4 archivos en paralelo
 
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      const fileName = path.basename(item.input);
+    for (let i = 0; i < items.length; i += CONCURRENCY) {
+      const chunk = items.slice(i, i + CONCURRENCY);
 
-      // Emitir progreso: archivo iniciando
+      // Emitir progreso
       this.pythonGateway.emitProgress(Math.round((i / items.length) * 100), {
         scriptName: 'nest_only_pdf',
-        fileName,
+        fileName: chunk.map((c) => path.basename(c.input)).join(', '),
         current: i + 1,
         total: items.length,
         status: 'processing',
       });
 
-      try {
-        const data = await this.nestOnlyPdf(item);
-        completed++;
-        results.push({
-          input: item.input,
-          output: item.output,
-          status: 'fulfilled',
-          data,
-        });
-      } catch (error: any) {
-        failed++;
-        results.push({
-          input: item.input,
-          output: item.output,
-          status: 'rejected',
-          error: error?.error || error,
-        });
-      }
+      // Ejecutar chunk en paralelo
+      const chunkResults = await Promise.allSettled(
+        chunk.map((item) => this.nestOnlyPdf(item)),
+      );
 
-      // Emitir progreso: archivo completado
+      // Procesar resultados del chunk
+      chunkResults.forEach((result, j) => {
+        const idx = i + j;
+        const item = items[idx];
+        if (result.status === 'fulfilled') {
+          completed++;
+          results[idx] = {
+            input: item.input,
+            output: item.output,
+            status: 'fulfilled',
+            data: result.value,
+          };
+        } else {
+          failed++;
+          results[idx] = {
+            input: item.input,
+            output: item.output,
+            status: 'rejected',
+            error: result.reason?.error || result.reason,
+          };
+        }
+      });
+
+      // Emitir progreso después del chunk
       this.pythonGateway.emitProgress(
-        Math.round(((i + 1) / items.length) * 100),
+        Math.round(((i + chunk.length) / items.length) * 100),
         {
           scriptName: 'nest_only_pdf',
-          fileName,
-          current: i + 1,
+          current: Math.min(i + chunk.length, items.length),
           total: items.length,
           status: 'completed',
         },

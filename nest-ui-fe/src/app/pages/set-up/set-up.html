@@ -461,10 +461,10 @@
       </div>
 
       <!-- Python Libraries Testing Section -->
-      <div
+      <!-- <div
         class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
-      >
-        <div class="flex items-center justify-between mb-4">
+      > -->
+      <!-- <div class="flex items-center justify-between mb-4">
           <div>
             <div class="flex items-start gap-2">
               <app-icon
@@ -494,10 +494,10 @@
               [size]="'sm'"
             />
           }
-        </div>
+        </div> -->
 
-        <!-- Test Results -->
-        @if (pythonTestsResult && !pythonTestsResult.error) {
+      <!-- Test Results -->
+      <!-- @if (pythonTestsResult && !pythonTestsResult.error) {
           <div class="mb-4 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
             <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
               @for (lib of pythonTestsResult | keyvalue; track lib.key) {
@@ -521,9 +521,9 @@
               }
             </div>
           </div>
-        }
+        } -->
 
-        @if (pythonTestsResult?.error) {
+      <!-- @if (pythonTestsResult?.error) {
           <div
             class="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2"
           >
@@ -541,72 +541,72 @@
               </p>
             </div>
           </div>
-        }
-
-        <!-- Action Buttons -->
-        <div class="flex items-center gap-2">
-          <app-button
-            [label]="
-              pythonTestsRunning
-                ? languageService.t().SETUP.TESTING
-                : languageService.t().SETUP.QUICK_TEST
-            "
-            [variant]="'white'"
-            [size]="'sm'"
-            [icon]="'play'"
-            [iconPosition]="'left'"
-            [iconSize]="14"
-            (clicked)="testPythonLibraries()"
-            [disabled]="pythonTestsRunning"
-            [customClass]="'text-xs'"
-          />
-
-          <app-button
-            [label]="languageService.t().SETUP.FULL_TESTS"
-            [variant]="'ghost'"
-            [size]="'sm'"
-            [icon]="'external-link'"
-            [iconPosition]="'left'"
-            [iconSize]="14"
-            (clicked)="goToPythonTests()"
-            [customClass]="'text-xs text-gray-600 dark:text-gray-400'"
-          />
-        </div>
-
-        <!-- Info -->
-        <div
-          class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg"
-        >
-          <p class="text-xs text-blue-800 dark:text-blue-200">
-            <span class="font-semibold">{{ languageService.t().SETUP.LIBRARIES }}</span> NumPy,
-            Pandas, Matplotlib, OpenCV, Pillow, SciPy, ReportLab, PyPDF, PyMuPDF, and more.
-          </p>
-        </div>
-      </div>
+        } -->
 
       <!-- Action Buttons -->
-      <div class="flex items-center justify-center pt-4">
+      <!-- <div class="flex items-center gap-2">
         <app-button
-          [label]="languageService.t().SETUP.RESET_DEFAULTS"
-          [variant]="'ghost'"
-          [size]="'md'"
-          [icon]="'rotate-ccw'"
+          [label]="
+            pythonTestsRunning
+              ? languageService.t().SETUP.TESTING
+              : languageService.t().SETUP.QUICK_TEST
+          "
+          [variant]="'white'"
+          [size]="'sm'"
+          [icon]="'play'"
           [iconPosition]="'left'"
-          [iconSize]="16"
-          (clicked)="resetToDefaults()"
-          [customClass]="'text-gray-600 dark:text-gray-400 text-sm'"
+          [iconSize]="14"
+          (clicked)="testPythonLibraries()"
+          [disabled]="pythonTestsRunning"
+          [customClass]="'text-xs'"
         />
 
         <app-button
-          [label]="languageService.t().SETUP.SAVE_SETTINGS"
-          [variant]="'primary'"
-          [size]="'lg'"
-          (clicked)="save()"
-          [customClass]="'px-8 text-sm text-gray-100'"
+          [label]="languageService.t().SETUP.FULL_TESTS"
+          [variant]="'ghost'"
+          [size]="'sm'"
+          [icon]="'external-link'"
+          [iconPosition]="'left'"
+          [iconSize]="14"
+          (clicked)="goToPythonTests()"
+          [customClass]="'text-xs text-gray-600 dark:text-gray-400'"
         />
-      </div>
+      </div> -->
+
+      <!-- Info -->
+      <!-- <div
+        class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg"
+      >
+        <p class="text-xs text-blue-800 dark:text-blue-200">
+          <span class="font-semibold">{{ languageService.t().SETUP.LIBRARIES }}</span> NumPy,
+          Pandas, Matplotlib, OpenCV, Pillow, SciPy, ReportLab, PyPDF, PyMuPDF, and more.
+        </p>
+      </div> -->
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex items-center justify-center pt-4">
+      <app-button
+        [label]="languageService.t().SETUP.RESET_DEFAULTS"
+        [variant]="'ghost'"
+        [size]="'md'"
+        [icon]="'rotate-ccw'"
+        [iconPosition]="'left'"
+        [iconSize]="16"
+        (clicked)="resetToDefaults()"
+        [customClass]="'text-gray-600 dark:text-gray-400 text-sm'"
+      />
+
+      <app-button
+        [label]="languageService.t().SETUP.SAVE_SETTINGS"
+        [variant]="'primary'"
+        [size]="'lg'"
+        (clicked)="save()"
+        [customClass]="'px-8 text-sm text-gray-100'"
+      />
     </div>
   </div>
+  <!-- </div> -->
 </div>
 
 <!-- Modal para Add/Edit Facility/Order -->
