@@ -21,8 +21,9 @@ nest-files-py-embedded/
 nest-files-py-embedded-mac/
 python-hashes.json
 
-# Compiled Python EXEs (se generan en otro proyecto, no van en el repo)
+# Compiled Python EXEs/binarios (se generan en otro proyecto, no van en el repo)
 nest-files-py/*.exe
+nest-files-py/nest_only_pdf
 
 # Logs
 *.log

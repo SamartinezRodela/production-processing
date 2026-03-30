@@ -478,18 +478,23 @@ export class PythonService {
     }
 
     // Ejecutar y devolver raw output (el exe no retorna JSON)
+    this.logger.log(`[nest_only_pdf] Ejecutando: ${exePath}`);
+    this.logger.log(`[nest_only_pdf] --input: ${datos.input}`);
+    this.logger.log(`[nest_only_pdf] --ref: ${datos.ref}`);
+    this.logger.log(`[nest_only_pdf] --output: ${datos.output}`);
     return new Promise((resolve, reject) => {
       const proc = require('child_process').spawn(exePath, args);
       let stdout = '';
       let stderr = '';
 
+      const TIMEOUT_MS = 300000; // 5 minutos
       const timeoutId = setTimeout(() => {
         proc.kill('SIGKILL');
         reject({
           error: 'Timeout exceeded',
-          message: 'El proceso excedió 60 segundos',
+          message: 'El proceso excedió 5 minutos',
         });
-      }, 60000);
+      }, TIMEOUT_MS);
 
       proc.stdout.on('data', (d: Buffer) => {
         stdout += d.toString();
