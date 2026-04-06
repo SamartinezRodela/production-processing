@@ -166,6 +166,23 @@ export class PdfMetadataService {
   }
 
   /**
+   * Actualiza el ProcessStatus de un archivo por nombre
+   */
+  updateProcessStatus(
+    fileName: string,
+    status: 'pending' | 'success' | 'failed' | 'skipped',
+    error?: string,
+  ): void {
+    const container = this.pdfContainer();
+    const file = container.files.find((f) => f.FileName === fileName);
+    if (file) {
+      file.ProcessStatus = status;
+      if (error) file.ProcessError = error;
+      this.pdfContainer.set({ ...container });
+    }
+  }
+
+  /**
    * Limpia el contenedor temporal
    */
   clearContainer(): void {

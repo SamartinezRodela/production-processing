@@ -583,7 +583,47 @@
 
                 <!-- Status -->
                 <td class="px-4 py-4 text-center">
-                  @if (file.Valid) {
+                  @if (file.ProcessStatus === 'success') {
+                    <div
+                      class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-100 dark:bg-green-900/30 rounded-full shadow-sm"
+                    >
+                      <app-icon
+                        [name]="'check'"
+                        [size]="14"
+                        class="text-green-600 dark:text-green-400"
+                      />
+                      <span
+                        class="text-[10px] font-bold text-green-700 dark:text-green-300 uppercase tracking-wide"
+                        >Done</span
+                      >
+                    </div>
+                  } @else if (file.ProcessStatus === 'failed') {
+                    <div
+                      class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-100 dark:bg-red-900/30 rounded-full shadow-sm"
+                      [title]="file.ProcessError"
+                    >
+                      <app-icon [name]="'x'" [size]="14" class="text-red-600 dark:text-red-400" />
+                      <span
+                        class="text-[10px] font-bold text-red-700 dark:text-red-300 uppercase tracking-wide"
+                        >Failed</span
+                      >
+                    </div>
+                  } @else if (file.ProcessStatus === 'skipped') {
+                    <div
+                      class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-yellow-100 dark:bg-yellow-900/30 rounded-full shadow-sm"
+                      [title]="file.ProcessError"
+                    >
+                      <app-icon
+                        [name]="'alert-triangle'"
+                        [size]="14"
+                        class="text-yellow-600 dark:text-yellow-400"
+                      />
+                      <span
+                        class="text-[10px] font-bold text-yellow-700 dark:text-yellow-300 uppercase tracking-wide"
+                        >No Ref</span
+                      >
+                    </div>
+                  } @else if (file.Valid) {
                     <div
                       class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-linear-to-r from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 rounded-full shadow-sm"
                     >

@@ -18,6 +18,10 @@ export interface PDFMetadata {
   Valid: boolean; // true si cumple el patrón estándar, false si no
   ValidationError?: string; // Mensaje de error si no es válido
 
+  // Estado de procesamiento
+  ProcessStatus?: 'pending' | 'success' | 'failed' | 'skipped';
+  ProcessError?: string; // Mensaje de error si falló el procesamiento
+
   // Información adicional
   FileSize: number; // Tamaño del archivo en bytes
   FileType: string; // Tipo MIME del archivo

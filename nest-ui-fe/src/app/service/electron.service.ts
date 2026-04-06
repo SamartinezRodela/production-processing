@@ -118,6 +118,16 @@ export class ElectronService {
     }
   }
 
+  async checkFileExists(filePath: string): Promise<boolean> {
+    if (!this.isElectron) return true; // En web, asumir que existe
+    try {
+      const result = await (window.electronAPI as any).checkFileExists(filePath);
+      return result.exists;
+    } catch {
+      return false;
+    }
+  }
+
   async showItemInFolder(filePath: string): Promise<{ success: boolean; error?: string }> {
     //console.log('🔍 ElectronService.showItemInFolder llamado:', { filePath });
 

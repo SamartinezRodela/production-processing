@@ -617,6 +617,14 @@ ipcMain.handle(
   },
 );
 
+ipcMain.handle("check-file-exists", (_event, filePath: string) => {
+  try {
+    return { exists: fs.existsSync(filePath) };
+  } catch {
+    return { exists: false };
+  }
+});
+
 ipcMain.handle("read-folder", async (_event, folderPath: string) => {
   try {
     const fs = require("fs");

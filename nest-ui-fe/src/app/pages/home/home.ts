@@ -815,7 +815,6 @@ export class Home implements OnInit, OnDestroy {
       const apiUrl = await this.settingsService['apiUrlService'].getApiUrl();
       const token = this.authService.getToken();
 
-      // Obtener warehouse de la facility seleccionada
       const selectedFacilityId = this.selectedFacility();
       const selectedProcessId = this.orderService.selectedOrder();
       const facility = this.facilityManagementService.getFacilityById(selectedFacilityId);
@@ -824,18 +823,14 @@ export class Home implements OnInit, OnDestroy {
       const warehouse = facility?.warehouse || '';
       const processtype = process?.name || '';
 
-      // Construir items para el batch
-      const items = validFiles.map((file) => {
-        console.log('File:', file);
-        // input: ruta completa del archivo original
+      const items: { input: string; ref: string; output: string }[] = [];
+      const skippedFileNames: string[] = []; // Para rastrear qué archivos NO borraremos
+
+      for (const file of validFiles) {
         const input = file.SystemPath || `${basePath}${separator}${file.RelativePath}`;
-
-        // ref: basePath + warehouse + process type + Style + Size.pdf
         const ref = `${basePath}${separator}${warehouse}${separator}${processtype}${separator}${file.Style}${separator}${file.Size}.pdf`;
-
-        // output: outputPath + carpetas del RelativePath + FileName_out.pdf
         const outputFileName = file.FileName.replace(/\.pdf$/i, '_out.pdf');
-        // Quitar el nombre del archivo del RelativePath para obtener solo las carpetas
+
         const relativeDir = file.RelativePath
           ? file.RelativePath.substring(0, file.RelativePath.length - file.FileName.length).replace(
               /[\\\/]+$/,
@@ -846,14 +841,33 @@ export class Home implements OnInit, OnDestroy {
           ? `${outputPath}${separator}${relativeDir}${separator}${outputFileName}`
           : `${outputPath}${separator}${outputFileName}`;
 
-        return { input, ref, output };
-      });
-      console.log('Archivos y rutas Procesadas:', items);
+        // VERIFICACIÓN DE REFERENCIA
+        const refExists = await this.electronService.checkFileExists(ref);
+        if (!refExists) {
+          skippedFileNames.push(file.FileName); // Lo marcamos para que SE QUEDE en la lista
+          this.errorLogService.addError(file.FileName, `Reference file not found: ${ref}`);
+          this.pdfMetadataService.updateProcessStatus(
+            file.FileName,
+            'skipped',
+            `Reference not found: ${ref}`,
+          );
+          continue;
+        }
+
+        items.push({ input, ref, output });
+      }
+
+      if (items.length === 0) {
+        this.notificationService.error('No files to process — all reference files are missing');
+        // Actualizamos el JSON para que el usuario vea el estado "skipped" en la tabla
+        this.actualizarJsonMetadatos(this.pdfMetadataService.getValidFiles());
+        return;
+      }
+
       this.fileProcessingService.isProcessing.set(true);
       this.fileProcessingService.progress.set(0);
       this.fileProcessingService.processingState.set('processing');
 
-      // Escuchar progreso via WebSocket
       const progressSub = this.webSocketService.listen('python-progress').subscribe((data: any) => {
         if (data && data.scriptName === 'nest_only_pdf') {
           this.fileProcessingService.progress.set(data.progress);
@@ -864,9 +878,7 @@ export class Home implements OnInit, OnDestroy {
         this.http.post<any>(
           `${apiUrl}/python/nest-only-pdf-batch`,
           { items },
-          {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          },
+          { headers: token ? { Authorization: `Bearer ${token}` } : {} },
         ),
       );
 
@@ -876,53 +888,61 @@ export class Home implements OnInit, OnDestroy {
       await new Promise((resolve) => setTimeout(resolve, 500));
       this.fileProcessingService.isProcessing.set(false);
 
-      if (result.success) {
-        // Mostrar rutas de los archivos generados
-        const outputFiles = result.results
-          .filter((r: any) => r.status === 'fulfilled' && r.data?.output_file)
-          .map((r: any) => r.data.output_file);
+      // --- LÓGICA DE LIMPIEZA SELECTIVA (EL CAMBIO CLAVE) ---
 
-        this.notificationService.success(
-          `Processed ${result.completed}/${result.total} files successfully`,
+      // 1. Identificar cuáles fueron exitosos en el backend
+      const successfulInputs = result.results
+        .filter((r: any) => r.status === 'fulfilled')
+        .map((r: any) => r.input);
+
+      // 2. Actualizar estados de metadatos para los resultados del backend
+      result.results.forEach((r: any) => {
+        const fileMatch = validFiles.find(
+          (f) => (f.SystemPath || `${basePath}${separator}${f.RelativePath}`) === r.input,
         );
-
-        if (outputFiles.length > 0) {
-          console.log('Generated files:', outputFiles);
-        }
-
-        // Limpiar archivos y metadata table
-        this.clearAllFiles();
-      } else {
-        // Limpiar solo los exitosos, dejar los fallidos
-        const successfulInputs = result.results
-          .filter((r: any) => r.status === 'fulfilled')
-          .map((r: any) => r.input);
-
-        const successfulFileNames = validFiles
-          .filter((f) => {
-            const input = f.SystemPath || `${basePath}${separator}${f.RelativePath}`;
-            return successfulInputs.includes(input);
-          })
-          .map((f) => f.FileName);
-
-        successfulFileNames.forEach((fileName: string) => {
-          this.pdfMetadataService.removeFileByName(fileName);
-          const currentFiles = this.selectedFiles();
-          const index = currentFiles.findIndex((f) => f.name === fileName);
-          if (index !== -1) {
-            this.fileService.removeFile(index);
+        if (fileMatch) {
+          if (r.status === 'fulfilled') {
+            this.pdfMetadataService.updateProcessStatus(fileMatch.FileName, 'success');
+          } else {
+            this.pdfMetadataService.updateProcessStatus(
+              fileMatch.FileName,
+              'failed',
+              r.error?.stderr || r.error?.message || 'Processing failed',
+            );
           }
-        });
+        }
+      });
 
-        this.actualizarJsonMetadatos(this.pdfMetadataService.getValidFiles());
+      // 3. Obtener nombres de archivos exitosos para BORRARLOS
+      const filesToRemove = validFiles
+        .filter((f) => {
+          const input = f.SystemPath || `${basePath}${separator}${f.RelativePath}`;
+          return successfulInputs.includes(input);
+        })
+        .map((f) => f.FileName);
 
+      // 4. Ejecutar la eliminación SOLO de los exitosos
+      filesToRemove.forEach((fileName: string) => {
+        this.pdfMetadataService.removeFileByName(fileName);
+        const currentFiles = this.selectedFiles();
+        const index = currentFiles.findIndex((f) => f.name === fileName);
+        if (index !== -1) {
+          this.fileService.removeFile(index);
+        }
+      });
+
+      // 5. Los archivos en 'skippedFileNames' (como el de tu error) y los 'failed' se mantienen
+      this.actualizarJsonMetadatos(this.pdfMetadataService.getValidFiles());
+
+      if (result.success && result.failed === 0 && skippedFileNames.length === 0) {
+        this.notificationService.success(`Processed ${result.completed} files successfully`);
+      } else {
         this.notificationService.warning(
-          `Completed ${result.completed}/${result.total}. Failed: ${result.failed}`,
+          `Completed: ${result.completed}. Failed: ${result.failed}. Skipped: ${skippedFileNames.length}`,
         );
       }
     } catch (error: any) {
       this.fileProcessingService.isProcessing.set(false);
-      this.fileProcessingService.progress.set(0);
       this.fileProcessingService.processingState.set('error');
       console.error('Error in nest-only-pdf batch:', error);
       this.notificationService.error(`Error: ${error.message}`);

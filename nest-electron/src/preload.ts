@@ -6,6 +6,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getBackendPort: () => ipcRenderer.invoke("get-backend-port"),
   selectFolder: () => ipcRenderer.invoke("dialog:select-folder"),
   selectFolders: () => ipcRenderer.invoke("dialog:select-folders"),
+  checkFileExists: (filePath: string) =>
+    ipcRenderer.invoke("check-file-exists", filePath),
   showItemInFolder: (filePath: string) =>
     ipcRenderer.invoke("shell:show-item-in-folder", filePath),
   getParentPath: (folderPath: string) =>

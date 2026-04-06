@@ -1,14 +1,16 @@
 [
   {
-    "FileName": "J5180A_L_28_GARRUBBA.pdf",
-    "RelativePath": "12055916\\1698642\\J5180A_L_28_GARRUBBA.pdf",
-    "ShortPath": "1698642\\J5180A_L_28_GARRUBBA.pdf",
-    "InputRoot": "12055916",
-    "SystemPath": "C:\\Users\\samartinez\\Documents\\AutonestTest\\ProdFiles\\12055916\\1698642\\J5180A_L_28_GARRUBBA.pdf",
+    "FileName": "J5180A_XXL_30_WESTFALL.pdf",
+    "RelativePath": "ProdFiles\\12055916\\1698642\\J5180A_XXL_30_WESTFALL.pdf",
+    "ShortPath": "12055916\\1698642\\J5180A_XXL_30_WESTFALL.pdf",
+    "InputRoot": "ProdFiles",
+    "SystemPath": "C:\\Users\\samartinez\\Documents\\AutonestTest\\ProdFiles\\12055916\\1698642\\J5180A_XXL_30_WESTFALL.pdf",
     "Style": "J5180A",
-    "Size": "L",
+    "Size": "XXL",
     "Valid": true,
-    "FileSize": 427032,
-    "FileType": "application/pdf"
+    "FileSize": 422725,
+    "FileType": "application/pdf",
+    "ProcessStatus": "skipped",
+    "ProcessError": "Reference not found: C:\\Users\\samartinez\\Documents\\AutonestTest\\Base-Referencia\\409\\Laser\\J5180A\\XXL.pdf"
   }
 ]

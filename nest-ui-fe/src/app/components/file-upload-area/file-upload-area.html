@@ -317,7 +317,7 @@
           (clicked)="triggerFileInput.emit()"
           [customClass]="'text-sm'"
         />
-
+        <!-- 
         <app-button
           [label]="languageService.t().UPLOAD.BROWSE_FOLDERS"
           [variant]="'white'"
@@ -328,13 +328,13 @@
           (clicked)="browseFolderRecursive.emit()"
           [customClass]="'text-sm'"
           [disabled]="isReadingFolder()"
-        />
+        /> -->
 
         <app-button
-          label="Browse Folders"
+          [label]="languageService.t().UPLOAD.BROWSE_FOLDERS"
           [variant]="'white'"
           [size]="'md'"
-          [icon]="'folders'"
+          [icon]="'folder-open'"
           [iconPosition]="'left'"
           [iconSize]="16"
           (clicked)="browseFoldersRecursive.emit()"
@@ -399,7 +399,7 @@
             [customClass]="'text-sm'"
           />
 
-          <app-button
+          <!-- <app-button
             [label]="languageService.t().UPLOAD.BROWSE_FOLDERS"
             [variant]="'white'"
             [size]="'md'"
@@ -409,13 +409,13 @@
             (clicked)="browseFolderRecursive.emit()"
             [customClass]="'text-sm'"
             [disabled]="isReadingFolder()"
-          />
+          /> -->
 
           <app-button
-            label="Browse Folders"
+            [label]="languageService.t().UPLOAD.BROWSE_FOLDERS"
             [variant]="'white'"
             [size]="'md'"
-            [icon]="'folders'"
+            [icon]="'folder-open'"
             [iconPosition]="'left'"
             [iconSize]="16"
             (clicked)="browseFoldersRecursive.emit()"
