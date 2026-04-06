@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // Métodos de sistema (fuera de python)
   getBackendPort: () => ipcRenderer.invoke("get-backend-port"),
   selectFolder: () => ipcRenderer.invoke("dialog:select-folder"),
+  selectFolders: () => ipcRenderer.invoke("dialog:select-folders"),
   showItemInFolder: (filePath: string) =>
     ipcRenderer.invoke("shell:show-item-in-folder", filePath),
   getParentPath: (folderPath: string) =>

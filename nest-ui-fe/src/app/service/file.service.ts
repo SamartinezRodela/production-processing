@@ -30,9 +30,18 @@ export class FileService {
     return { isValid: true };
   }
 
-  // Verificar si un archivo con el mismo nombre ya existe
-  isDuplicateFile(fileName: string): boolean {
-    return this.selectedFiles().some((existingFile) => existingFile.name === fileName);
+  // Verificar si un archivo con el mismo path ya existe
+  isDuplicateFile(file: File): boolean {
+    const systemPath = (file as any).path;
+    if (systemPath) {
+      // Comparar por ruta completa si está disponible
+      return this.selectedFiles().some((existingFile) => {
+        const existingPath = (existingFile as any).path;
+        return existingPath ? existingPath === systemPath : existingFile.name === file.name;
+      });
+    }
+    // Fallback: comparar solo por nombre
+    return this.selectedFiles().some((existingFile) => existingFile.name === file.name);
   }
 
   // Validar archivo incluyendo verificación de duplicados
@@ -43,8 +52,8 @@ export class FileService {
       return basicValidation;
     }
 
-    // Verificar duplicados
-    if (this.isDuplicateFile(file.name)) {
+    // Verificar duplicados por ruta completa
+    if (this.isDuplicateFile(file)) {
       return {
         isValid: false,
         error: `Duplicate file: "${file.name}" already exists in the list`,

@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastModified": "2026-03-26T19:07:22.307Z",
+  "lastModified": "2026-04-06T15:48:46.726Z",
   "facilities": [
     {
       "id": "1",
@@ -51,8 +51,8 @@
   },
   "settings": {
     "selectedFacilityId": "1",
-    "basePath": "C:\\Users\\samartinez\\Documents\\BasePath",
-    "outputPath": "C:\\Users\\samartinez\\Documents\\OutputPath",
+    "basePath": "C:\\Users\\samartinez\\Documents\\AutonestTest\\Base-Referencia",
+    "outputPath": "C:\\Users\\samartinez\\Documents\\AutonestTest\\outputFiles",
     "os": "windows",
     "theme": "dark",
     "autoSave": false,

@@ -136,112 +136,127 @@ export class FileDropService {
     // Determinar el InputRoot automáticamente si no se proporciona
     let detectedInputRoot = inputRoot;
 
-    for (const item of items) {
-      const entry = item.webkitGetAsEntry();
-      if (entry) {
-        // console.log('📁 Processing entry:', {
-        //   name: entry.name,
-        //   fullPath: entry.fullPath,
-        //   isFile: entry.isFile,
-        //   isDirectory: entry.isDirectory,
-        // });
+    // Capturar todos los entries UNA SOLA VEZ (webkitGetAsEntry solo puede llamarse una vez por item)
+    const entries = items
+      .map((item) => ({
+        item,
+        entry: item.webkitGetAsEntry(),
+      }))
+      .filter(({ entry }) => entry !== null);
 
-        // Extraer el InputRoot del primer segmento de la ruta
-        if (!detectedInputRoot) {
-          const pathSegments = entry.fullPath.split('/').filter((s) => s);
-          detectedInputRoot = pathSegments[0] || entry.name;
-          // console.log('🎯 Detected InputRoot:', detectedInputRoot, 'from segments:', pathSegments);
-        }
+    const hasDirectories = entries.some(({ entry }) => entry!.isDirectory);
+    if (hasDirectories) {
+      this.isReadingFolder.set(true);
+    }
 
-        if (entry.isFile) {
-          const file = item.getAsFile();
-          if (file) {
-            // Determinar la ruta a usar
-            let relativeFullPath = entry.fullPath;
-            let detectedRoot = detectedInputRoot;
+    for (const { item, entry } of entries) {
+      if (!entry) continue;
+      // console.log('📁 Processing entry:', {
+      //   name: entry.name,
+      //   fullPath: entry.fullPath,
+      //   isFile: entry.isFile,
+      //   isDirectory: entry.isDirectory,
+      // });
 
-            // Si el fullPath es solo el nombre del archivo (archivo individual arrastrado)
-            // usar el systemPath para extraer la estructura correcta
-            const systemPath = (file as any).path;
-            if (systemPath && entry.fullPath === `/${file.name}`) {
-              // Extraer la estructura desde systemPath
-              const normalizedPath = systemPath.replace(/\\/g, '/');
-              const segments = normalizedPath.split('/').filter((s: string) => s);
+      // Extraer el InputRoot del primer segmento de la ruta
+      if (!detectedInputRoot) {
+        const pathSegments = entry.fullPath.split('/').filter((s) => s);
+        detectedInputRoot = pathSegments[0] || entry.name;
+        // console.log('🎯 Detected InputRoot:', detectedInputRoot, 'from segments:', pathSegments);
+      }
 
-              // Obtener el separador correcto según el OS
-              const separator = this.getPathSeparator();
+      if (entry.isFile) {
+        const file = item.getAsFile();
+        if (file) {
+          // Determinar la ruta a usar
+          let relativeFullPath = entry.fullPath;
+          let detectedRoot = detectedInputRoot;
 
-              // Buscar los últimos 2 o 3 segmentos para construir la ruta relativa
-              if (segments.length >= 3) {
-                // Tomar los últimos 3 segmentos: carpeta1\carpeta2\archivo.pdf (Windows)
-                const relevantSegments = segments.slice(-3);
-                detectedRoot = relevantSegments[0];
+          // Si el fullPath es solo el nombre del archivo (archivo individual arrastrado)
+          // usar el systemPath para extraer la estructura correcta
+          const systemPath = (file as any).path;
+          if (systemPath && entry.fullPath === `/${file.name}`) {
+            // Extraer la estructura desde systemPath
+            const normalizedPath = systemPath.replace(/\\/g, '/');
+            const segments = normalizedPath.split('/').filter((s: string) => s);
+
+            // Obtener el separador correcto según el OS
+            const separator = this.getPathSeparator();
+
+            // Buscar los últimos 2 o 3 segmentos para construir la ruta relativa
+            if (segments.length >= 3) {
+              // Tomar los últimos 3 segmentos: carpeta1\carpeta2\archivo.pdf (Windows)
+              const relevantSegments = segments.slice(-3);
+              detectedRoot = relevantSegments[0];
+              relativeFullPath = relevantSegments.join(separator);
+            } else if (segments.length === 2) {
+              // Tomar los últimos 2 segmentos: carpeta\archivo.pdf (Windows)
+              const relevantSegments = segments.slice(-2);
+              detectedRoot = relevantSegments[0];
+              relativeFullPath = relevantSegments.join(separator);
+            }
+          } else if (systemPath) {
+            // Si el fullPath tiene estructura (carpeta arrastrada)
+            // verificar si necesitamos ajustar el InputRoot
+            const normalizedPath = systemPath.replace(/\\/g, '/');
+            const systemSegments = normalizedPath.split('/').filter((s: string) => s);
+            const entrySegments = entry.fullPath.split('/').filter((s: string) => s);
+
+            // Obtener el separador correcto según el OS
+            const separator = this.getPathSeparator();
+
+            if (entrySegments.length > 0 && systemSegments.length >= 2) {
+              const firstEntrySegment = entrySegments[0];
+              const entryIndexInSystem = systemSegments.indexOf(firstEntrySegment);
+
+              if (entryIndexInSystem > 0) {
+                // El InputRoot es el segmento anterior al primer segmento del entry
+                detectedRoot = systemSegments[entryIndexInSystem - 1];
+                const relevantSegments = systemSegments.slice(entryIndexInSystem - 1);
                 relativeFullPath = relevantSegments.join(separator);
-              } else if (segments.length === 2) {
-                // Tomar los últimos 2 segmentos: carpeta\archivo.pdf (Windows)
-                const relevantSegments = segments.slice(-2);
-                detectedRoot = relevantSegments[0];
-                relativeFullPath = relevantSegments.join(separator);
-              }
-            } else if (systemPath) {
-              // Si el fullPath tiene estructura (carpeta arrastrada)
-              // verificar si necesitamos ajustar el InputRoot
-              const normalizedPath = systemPath.replace(/\\/g, '/');
-              const systemSegments = normalizedPath.split('/').filter((s: string) => s);
-              const entrySegments = entry.fullPath.split('/').filter((s: string) => s);
-
-              // Obtener el separador correcto según el OS
-              const separator = this.getPathSeparator();
-
-              if (entrySegments.length > 0 && systemSegments.length >= 2) {
-                const firstEntrySegment = entrySegments[0];
-                const entryIndexInSystem = systemSegments.indexOf(firstEntrySegment);
-
-                if (entryIndexInSystem > 0) {
-                  // El InputRoot es el segmento anterior al primer segmento del entry
-                  detectedRoot = systemSegments[entryIndexInSystem - 1];
-                  const relevantSegments = systemSegments.slice(entryIndexInSystem - 1);
-                  relativeFullPath = relevantSegments.join(separator);
-                } else {
-                  // Si no encontramos el segmento, usar el primer segmento del entry
-                  const pathWithoutSlash = entry.fullPath.startsWith('/')
-                    ? entry.fullPath.substring(1)
-                    : entry.fullPath;
-                  relativeFullPath = pathWithoutSlash.replace(/\//g, separator);
-                }
+              } else {
+                // Si no encontramos el segmento, usar el primer segmento del entry
+                const pathWithoutSlash = entry.fullPath.startsWith('/')
+                  ? entry.fullPath.substring(1)
+                  : entry.fullPath;
+                relativeFullPath = pathWithoutSlash.replace(/\//g, separator);
               }
             }
-
-            // console.log('📄 File detected:', {
-            //   fileName: file.name,
-            //   systemPath: systemPath,
-            //   entryFullPath: entry.fullPath,
-            //   usingPath: relativeFullPath,
-            //   inputRoot: detectedRoot,
-            // });
-
-            const result = this.validateAndAddFiles([file], detectedRoot, relativeFullPath);
-            allValid.push(...result.valid);
-            allInvalid.push(...result.invalid);
           }
-        } else if (entry.isDirectory) {
-          this.isReadingFolder.set(true);
-          this.folderReadingProgress.set({ current: 0, total: 0, folderName: entry.name });
 
-          try {
-            const filesCount = await this.readDirectory(
-              entry as FileSystemDirectoryEntry,
-              detectedInputRoot,
-              false,
-            );
-            this.notificationService.success(`Added ${filesCount} files from ${entry.name}`);
-          } catch (error) {
-            this.notificationService.error(`Error reading folder: ${entry.name}`);
-          } finally {
-            this.isReadingFolder.set(false);
-          }
+          // console.log('📄 File detected:', {
+          //   fileName: file.name,
+          //   systemPath: systemPath,
+          //   entryFullPath: entry.fullPath,
+          //   usingPath: relativeFullPath,
+          //   inputRoot: detectedRoot,
+          // });
+
+          const result = this.validateAndAddFiles([file], detectedRoot, relativeFullPath);
+          allValid.push(...result.valid);
+          allInvalid.push(...result.invalid);
+        }
+      } else if (entry.isDirectory) {
+        this.folderReadingProgress.set({ current: 0, total: 0, folderName: entry.name });
+
+        // Resetear el InputRoot para cada carpeta nueva
+        const folderRoot = entry.name;
+
+        try {
+          const filesCount = await this.readDirectory(
+            entry as FileSystemDirectoryEntry,
+            folderRoot,
+            false,
+          );
+          this.notificationService.success(`Added ${filesCount} files from ${entry.name}`);
+        } catch (error) {
+          this.notificationService.error(`Error reading folder: ${entry.name}`);
         }
       }
+    }
+
+    if (hasDirectories) {
+      this.isReadingFolder.set(false);
     }
 
     return { valid: allValid, invalid: allInvalid };

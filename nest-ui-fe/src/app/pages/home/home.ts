@@ -671,23 +671,47 @@ export class Home implements OnInit, OnDestroy {
     }
 
     try {
-      //console.log('Opening folder selector for recursive exploration...');
       const result = await this.electronService.selectFolder();
 
       if (!result.canceled && result.path) {
-        //console.log('Selected folder:', result.path);
-
-        // Explorar la carpeta recursivamente
         const filesProcessed = await this.fileDropService.browseFolderRecursive(result.path);
 
         if (filesProcessed > 0) {
           this.notificationService.success(`Added ${filesProcessed} files from folder`);
         }
-      } else {
-        //console.log('Folder selection cancelled');
       }
     } catch (error: any) {
       console.error('Error browsing folder:', error);
+      this.notificationService.error(`Error: ${error.message}`);
+    }
+  }
+
+  async browseFoldersRecursive(): Promise<void> {
+    if (!this.electronService.isElectron) {
+      this.notificationService.warning('This feature is only available in Electron');
+      return;
+    }
+
+    try {
+      const result = await this.electronService.selectFolders();
+
+      if (!result.canceled && result.paths.length > 0) {
+        let totalProcessed = 0;
+
+        for (const folderPath of result.paths) {
+          const filesProcessed = await this.fileDropService.browseFolderRecursive(folderPath);
+          totalProcessed += filesProcessed;
+        }
+
+        if (totalProcessed > 0) {
+          this.notificationService.success(
+            `Added ${totalProcessed} files from ${result.paths.length} folder(s)`,
+          );
+          this.actualizarJsonMetadatos(this.pdfMetadataService.getValidFiles());
+        }
+      }
+    } catch (error: any) {
+      console.error('Error browsing folders:', error);
       this.notificationService.error(`Error: ${error.message}`);
     }
   }

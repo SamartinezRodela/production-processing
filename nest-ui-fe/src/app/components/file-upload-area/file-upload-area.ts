@@ -51,6 +51,7 @@ export class FileUploadArea {
   clearAllFiles = output<void>();
   triggerFileInput = output<void>();
   browseFolderRecursive = output<void>();
+  browseFoldersRecursive = output<void>();
   uploadFiles = output<void>();
 
   // Utility methods (passed as inputs)

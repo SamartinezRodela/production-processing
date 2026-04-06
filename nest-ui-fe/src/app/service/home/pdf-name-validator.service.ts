@@ -12,15 +12,32 @@ export class PdfNameValidatorService {
   // Number: Opcional, solo dígitos numéricos (ej: 00, 01, 127, o vacío)
   // Name: Opcional, texto alfanumérico sin dígitos al inicio (ej: MATT, HUGO, o vacío)
   // IMPORTANTE: Number debe ser SOLO dígitos, Name debe ser SOLO letras/guiones bajos
-  private readonly STANDARD_PATTERN = /^([A-Z0-9]{4,10})_(XXL|XL|XS|M|L|S)_(\d*)_([A-Z_]*)\.pdf$/i;
+  private readonly STANDARD_PATTERN =
+    /^([A-Z0-9]{4,10})_(5XL|5X|4XL|4X|3XL|3X|2XL|2X|XXL|XL|XS|M|L|S)_(\d*)_([A-Z_]*)\.pdf$/i;
 
   // Patrón relajado para extraer Style y Size incluso si el archivo es inválido
   // Esto permite mostrar Style y Size en la tabla aunque el orden sea incorrecto
   // Acepta cualquier contenido después de Size (con o sin guiones bajos)
-  private readonly RELAXED_PATTERN = /^([A-Z0-9]{4,10})_(XXL|XL|XS|M|L|S)_.*\.pdf$/i;
+  private readonly RELAXED_PATTERN =
+    /^([A-Z0-9]{4,10})_(5XL|5X|4XL|4X|3XL|3X|2XL|2X|XXL|XL|XS|M|L|S)_.*\.pdf$/i;
 
   //Tamaños Validos
-  private readonly VALID_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+  private readonly VALID_SIZES = [
+    'XS',
+    'S',
+    'M',
+    'L',
+    'XL',
+    'XXL',
+    '2XL',
+    '2X',
+    '3XL',
+    '3X',
+    '4XL',
+    '4X',
+    '5XL',
+    '5X',
+  ];
 
   /**
    * Valida el nombre de un archivo PDF contra el patrón estándar

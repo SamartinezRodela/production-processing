@@ -331,6 +331,18 @@
         />
 
         <app-button
+          label="Browse Folders"
+          [variant]="'white'"
+          [size]="'md'"
+          [icon]="'folders'"
+          [iconPosition]="'left'"
+          [iconSize]="16"
+          (clicked)="browseFoldersRecursive.emit()"
+          [customClass]="'text-sm'"
+          [disabled]="isReadingFolder()"
+        />
+
+        <app-button
           [label]="
             isProcessing()
               ? languageService.t().UPLOAD.PROCESSING
@@ -395,6 +407,18 @@
             [iconPosition]="'left'"
             [iconSize]="16"
             (clicked)="browseFolderRecursive.emit()"
+            [customClass]="'text-sm'"
+            [disabled]="isReadingFolder()"
+          />
+
+          <app-button
+            label="Browse Folders"
+            [variant]="'white'"
+            [size]="'md'"
+            [icon]="'folders'"
+            [iconPosition]="'left'"
+            [iconSize]="16"
+            (clicked)="browseFoldersRecursive.emit()"
             [customClass]="'text-sm'"
             [disabled]="isReadingFolder()"
           />

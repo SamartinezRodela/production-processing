@@ -505,6 +505,35 @@ ipcMain.handle("dialog:select-folder", async () => {
   }
 });
 
+// Multi-select folders
+ipcMain.handle("dialog:select-folders", async () => {
+  try {
+    const isMac = process.platform === "darwin";
+
+    const dialogOptions: any = {
+      properties: ["openDirectory", "multiSelections"],
+      title: "Select Folders",
+    };
+
+    if (isMac) {
+      dialogOptions.properties.push("createDirectory");
+      dialogOptions.message = "Select one or more folders";
+      dialogOptions.buttonLabel = "Select Folders";
+    }
+
+    const result = await dialog.showOpenDialog(mainWindow!, dialogOptions);
+
+    if (result.canceled) {
+      return { canceled: true, paths: [] };
+    }
+
+    return { canceled: false, paths: result.filePaths };
+  } catch (error: any) {
+    console.error("[IPC] Error en dialog:select-folders:", error);
+    throw new Error(`Error selecting folders: ${error.message}`);
+  }
+});
+
 ipcMain.handle(
   "python:generar-pdf",
   async (

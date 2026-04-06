@@ -103,6 +103,21 @@ export class ElectronService {
     }
   }
 
+  async selectFolders(): Promise<{ canceled: boolean; paths: string[] }> {
+    if (!this.isElectron) {
+      console.warn('selectFolders solo funciona en Electron');
+      return { canceled: true, paths: [] };
+    }
+
+    try {
+      const result = await (window.electronAPI as any).selectFolders();
+      return result;
+    } catch (error) {
+      console.error('Error al seleccionar carpetas:', error);
+      throw error;
+    }
+  }
+
   async showItemInFolder(filePath: string): Promise<{ success: boolean; error?: string }> {
     //console.log('🔍 ElectronService.showItemInFolder llamado:', { filePath });
 
